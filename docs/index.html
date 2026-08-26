@@ -495,11 +495,15 @@ function applyResult(data, dd){
     banner.classList.remove('show');
   }
 
-  // index cards (여전히 샘플 가격 시리즈 — 실데이터 연동은 다음 단계)
-  const spPrice = 5820*(1-dd/100);
-  const ndPrice = 20450*(1-dd/100*1.1);
-  document.getElementById('sp-price').textContent = spPrice.toFixed(0);
-  document.getElementById('nd-price').textContent = ndPrice.toFixed(0);
+  // index cards — 실제 종가(price_snapshot)가 있으면 그 값을 쓰고, 없으면 "샘플" 라벨을 붙인다
+  const realSp = todayData && todayData.price_snapshot && todayData.price_snapshot.sp500_close;
+  const realNd = todayData && todayData.price_snapshot && todayData.price_snapshot.nasdaq100_close;
+  document.getElementById('sp-price').textContent = realSp
+    ? realSp.toLocaleString('ko-KR', {maximumFractionDigits: 0})
+    : '샘플 (실데이터 미확보)';
+  document.getElementById('nd-price').textContent = realNd
+    ? realNd.toLocaleString('ko-KR', {maximumFractionDigits: 0})
+    : '샘플 (실데이터 미확보)';
   const ddEl = document.getElementById('sp-dd');
   ddEl.textContent = `52주 고점 대비 -${dd.toFixed(1)}%`;
   ddEl.className = 'idx-drawdown ' + (dd>=20?'dd-danger':dd>=10?'dd-warn':'dd-ok');

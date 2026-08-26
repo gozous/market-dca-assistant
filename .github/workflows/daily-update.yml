@@ -1,0 +1,37 @@
+name: Daily Score Update
+
+on:
+  schedule:
+    # 21:30 UTC = 미국 동부시간 장 마감(16:00 ET) 후 여유를 둔 시각.
+    # 서머타임 여부에 따라 1시간 정도 오차가 있을 수 있음 — 필요시 조정.
+    - cron: "30 21 * * 1-5"   # 평일만
+  workflow_dispatch: {}        # 수동 실행 버튼 (즉시 갱신용)
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run daily score computation
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python3 scripts/compute_daily.py
+
+      - name: Commit updated data
+        run: |
+          git config user.name "market-dca-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/data/latest.json docs/data/history.csv
+          git diff --cached --quiet || git commit -m "chore: daily score update $(date -u +%Y-%m-%d)"
+          git push
