@@ -76,7 +76,7 @@ def synthesize_sample(
     per_premium_pct = 20 - drawdown_pct.values * 1.2 + noise(8)
     fear_greed = np.clip(70 - drawdown_pct.values * 2.0 + noise(10), 0, 100)
     hy_spread_bp = np.clip(20 + drawdown_pct.values * 3.0 + noise(10), 0, None)
-    ism = np.clip(52 - drawdown_pct.values * 0.5 + noise(3), 30, 65)
+    ism = np.clip(8 - drawdown_pct.values * 1.0 + noise(6), -35, 55)  # 필라델피아 연은 지수 스케일(0=중립)
     net_flow_index = -drawdown_pct.values * 1.5 + noise(20)
     vix = np.clip(14 + drawdown_pct.values * 1.1 + noise(4), 9, None)
 

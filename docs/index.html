@@ -201,8 +201,8 @@
         <div class="name">경기<span class="sub">MACRO · 10</span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-macro" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-macro">0</b>/10</div>
-        <input type="range" id="in-ism" min="30" max="70" value="49" oninput="recalc()">
-        <div class="explain" id="exp-macro">ISM 49.0 — 경기 둔화 신호</div>
+        <input type="range" id="in-ism" min="-40" max="60" value="8" oninput="recalc()">
+        <div class="explain" id="exp-macro">제조업 활동 지수(ISM 프록시) 8.0 — 확장 국면</div>
       </div>
 
       <div class="score-row">
@@ -285,8 +285,8 @@ function fearScore(fg){
 function rateScore(spreadBp){ // wider spread = more stress = higher opportunity score, but also risk flag
   return Math.max(0, Math.min(10, 10 - (spreadBp/100)*10));
 }
-function macroScore(ism){ // below 50 = contraction = higher DCA opportunity score in this simplified model
-  const s = (50-ism)/20*10 + 5;
+function macroScore(ism){ // 필라델피아 연은 지수(ISM 프록시): 0 아래로 갈수록 위축 -> 매수 기회 점수 상승
+  const s = (0-ism)/25*10 + 5;
   return Math.max(0, Math.min(10, s));
 }
 function flowScore(flow){ // net outflow (negative) treated as opportunity
@@ -453,7 +453,7 @@ function localCompute(inputs){
       valuation:{score:pVal, max_score:20, reason:`PER, 역사 평균 대비 ${per>=0?'+':''}${per.toFixed(0)}%`},
       fear_greed:{score:pFear, max_score:20, reason:`CNN Fear & Greed ${fg.toFixed(0)} (${fgLabel})`},
       rate_credit:{score:pRate, max_score:10, reason:`하이일드 스프레드 ${(spread/20).toFixed(1)}%p ${spread>60?'— 확대 경계':'안정권'}`},
-      macro:{score:pMacro, max_score:10, reason:`ISM ${ism.toFixed(1)} — ${ism<50?'경기 둔화 신호':'확장 국면'}`},
+      macro:{score:pMacro, max_score:10, reason:`제조업 활동 지수(ISM 프록시) ${ism.toFixed(1)} — ${ism<0?'경기 둔화 신호':'확장 국면'}`},
       flow:{score:pFlow, max_score:10, reason:`ETF·기관 순${flow>=0?'유입':'유출'} ${Math.abs(flow).toFixed(0)}`},
     },
     buy_pct: buyPct(Math.round(total), dd),
@@ -538,7 +538,7 @@ function randomizeInputs(){
   document.getElementById('in-per').value = Math.round(-20+Math.random()*60);
   document.getElementById('in-feargreed').value = Math.round(Math.random()*100);
   document.getElementById('in-spread').value = Math.round(Math.random()*90);
-  document.getElementById('in-ism').value = Math.round(42+Math.random()*20);
+  document.getElementById('in-ism').value = Math.round(-30+Math.random()*80);
   document.getElementById('in-flow').value = Math.round(-80+Math.random()*160);
   recalc();
 }

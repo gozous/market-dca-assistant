@@ -94,14 +94,17 @@ def rate_credit_score(hy_spread_bp: float, cfg: Dict[str, Any]) -> IndicatorResu
 
 
 def macro_score(ism_value: float, cfg: Dict[str, Any]) -> IndicatorResult:
-    """ISM이 중립선(기본 50) 아래로 갈수록 경기 둔화 -> 점수 상승."""
+    """
+    제조업 활동 지수(기본값: 필라델피아 연은 지수, ISM 대체 프록시)가 중립선 아래로
+    갈수록 경기 둔화 -> 점수 상승. 인자명은 하위호환을 위해 ism_value로 유지.
+    """
     mcfg = cfg["macro"]
     max_score = mcfg["max_score"]
     neutral = mcfg["ism_neutral"]
     rng = mcfg["range"]
     score = _clip((neutral - ism_value) / rng * max_score + max_score / 2, 0, max_score)
     phase = "경기 둔화 신호" if ism_value < neutral else "확장 국면"
-    reason = f"ISM {ism_value:.1f} — {phase}"
+    reason = f"제조업 활동 지수(ISM 프록시) {ism_value:.1f} — {phase}"
     return IndicatorResult(score, max_score, reason, ism_value)
 
 

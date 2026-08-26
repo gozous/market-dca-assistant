@@ -30,7 +30,7 @@ NEUTRAL_DEFAULTS = {
     "per_premium_pct": 0.0,
     "fear_greed": 50.0,
     "hy_spread_bp": 30.0,
-    "ism": 50.0,
+    "ism": 0.0,  # 필라델피아 연은 지수 기준 중립값 (0=중립)
     "net_flow_index": 0.0,
     "vix": 18.0,
 }

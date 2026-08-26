@@ -35,8 +35,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     },
     "macro": {
         "max_score": 10,
-        "ism_neutral": 50,
-        "range": 20,
+        # 필라델피아 연은 제조업 지수(ISM 대체 프록시) 기준. 0=중립, 양수=확장, 음수=위축.
+        "ism_neutral": 0,
+        "range": 25,
     },
     "flow": {
         "max_score": 10,

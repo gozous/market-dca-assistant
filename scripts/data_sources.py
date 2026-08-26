@@ -78,9 +78,14 @@ def fetch_fred_series_latest(series_id: str) -> Optional[float]:
 
 
 def fetch_ism() -> Optional[float]:
-    # FRED에는 ISM 제조업 PMI 원계열이 라이선스 문제로 없는 경우가 많다.
-    # 대체 시리즈(예: NAPM 관련 지표)는 프로젝트 상황에 맞게 series_id를 바꿔써야 한다.
-    return fetch_fred_series_latest("NAPM")
+    """
+    !! ISM 원계열은 FRED에서 2016년에 라이선스 문제로 완전히 삭제됐다 (NAPM 등 22개 시리즈 전부).
+    대신 필라델피아 연은 제조업 지수(Manufacturing Business Outlook Survey, General Activity)를
+    ISM 대체 프록시로 쓴다 — ISM처럼 확장(양수)/위축(음수)을 보여주는 diffusion index다.
+    단, 중심값이 50이 아니라 0이라서 config.py의 macro.ism_neutral도 0으로 맞춰뒀다.
+    """
+    return fetch_fred_series_latest("GACDFSA066MSFRBPHI")
+
 
 
 def fetch_hy_spread_bp() -> Optional[float]:
