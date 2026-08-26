@@ -1,20 +1,20 @@
 {
-  "generated_at_utc": "2026-08-26T08:34:01.905339+00:00",
+  "generated_at_utc": "2026-08-26T09:14:19.075854+00:00",
   "inputs": {
     "drawdown_pct": 1.5605924044153396,
     "per_premium_pct": 0.0,
     "fear_greed": 50.0,
     "hy_spread_bp": 269.0,
-    "ism": 50.0,
+    "ism": 47.4,
     "net_flow_index": 0.0,
-    "vix": 15.699999809265137
+    "vix": 15.6899995803833
   },
   "data_quality": {
     "drawdown_pct": "live",
     "per_premium_pct": "fallback_neutral",
     "fear_greed": "fallback_neutral",
     "hy_spread_bp": "live",
-    "ism": "fallback_neutral",
+    "ism": "live",
     "net_flow_index": "fallback_neutral",
     "vix": "live"
   },
@@ -23,7 +23,7 @@
     "nasdaq100_close": 29209.23046875
   },
   "result": {
-    "total_score": 33.1,
+    "total_score": 28.1,
     "sub_scores": {
       "technical": {
         "score": 0.6,
@@ -50,10 +50,10 @@
         "raw_value": 269.0
       },
       "macro": {
-        "score": 5.0,
+        "score": 0,
         "max_score": 10,
-        "reason": "ISM 50.0 — 확장 국면",
-        "raw_value": 50.0
+        "reason": "제조업 활동 지수(ISM 프록시) 47.4 — 확장 국면",
+        "raw_value": 47.4
       },
       "flow": {
         "score": 5.0,
@@ -63,7 +63,7 @@
       }
     },
     "buy_pct": 50,
-    "percentile_estimate": 67,
+    "percentile_estimate": 72,
     "risk_warnings": [
       "신용 스프레드 확대"
     ]
