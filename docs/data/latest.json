@@ -1,35 +1,35 @@
 {
-  "generated_at_utc": "2026-08-06T06:05:13.487273+00:00",
+  "generated_at_utc": "2026-08-26T08:21:47.178481+00:00",
   "inputs": {
-    "drawdown_pct": 0.0,
+    "drawdown_pct": 1.5605924044153396,
     "per_premium_pct": 0.0,
     "fear_greed": 50.0,
     "hy_spread_bp": 30.0,
     "ism": 50.0,
     "net_flow_index": 0.0,
-    "vix": 18.0
+    "vix": 15.670000076293945
   },
   "data_quality": {
-    "drawdown_pct": "fallback_neutral",
+    "drawdown_pct": "live",
     "per_premium_pct": "fallback_neutral",
     "fear_greed": "fallback_neutral",
     "hy_spread_bp": "fallback_neutral",
     "ism": "fallback_neutral",
     "net_flow_index": "fallback_neutral",
-    "vix": "fallback_neutral"
+    "vix": "live"
   },
   "price_snapshot": {
-    "sp500_close": null,
-    "nasdaq100_close": null
+    "sp500_close": 7677.27978515625,
+    "nasdaq100_close": 29209.23046875
   },
   "result": {
-    "total_score": 39.5,
+    "total_score": 40.1,
     "sub_scores": {
       "technical": {
-        "score": 0,
+        "score": 0.6,
         "max_score": 30,
-        "reason": "52주 최고가 대비 -0.0% 하락",
-        "raw_value": 0.0
+        "reason": "52주 최고가 대비 -1.6% 하락",
+        "raw_value": 1.5605924044153396
       },
       "valuation": {
         "score": 10.0,
@@ -62,7 +62,7 @@
         "raw_value": 0.0
       }
     },
-    "buy_pct": 50,
+    "buy_pct": 100,
     "percentile_estimate": 60,
     "risk_warnings": []
   }
