@@ -1,19 +1,19 @@
 {
-  "generated_at_utc": "2026-08-26T08:21:47.178481+00:00",
+  "generated_at_utc": "2026-08-26T08:34:01.905339+00:00",
   "inputs": {
     "drawdown_pct": 1.5605924044153396,
     "per_premium_pct": 0.0,
     "fear_greed": 50.0,
-    "hy_spread_bp": 30.0,
+    "hy_spread_bp": 269.0,
     "ism": 50.0,
     "net_flow_index": 0.0,
-    "vix": 15.670000076293945
+    "vix": 15.699999809265137
   },
   "data_quality": {
     "drawdown_pct": "live",
     "per_premium_pct": "fallback_neutral",
     "fear_greed": "fallback_neutral",
-    "hy_spread_bp": "fallback_neutral",
+    "hy_spread_bp": "live",
     "ism": "fallback_neutral",
     "net_flow_index": "fallback_neutral",
     "vix": "live"
@@ -23,7 +23,7 @@
     "nasdaq100_close": 29209.23046875
   },
   "result": {
-    "total_score": 40.1,
+    "total_score": 33.1,
     "sub_scores": {
       "technical": {
         "score": 0.6,
@@ -44,10 +44,10 @@
         "raw_value": 50.0
       },
       "rate_credit": {
-        "score": 7.0,
+        "score": 0,
         "max_score": 10,
-        "reason": "하이일드 스프레드 확대 30bp",
-        "raw_value": 30.0
+        "reason": "하이일드 스프레드 확대 269bp",
+        "raw_value": 269.0
       },
       "macro": {
         "score": 5.0,
@@ -62,8 +62,10 @@
         "raw_value": 0.0
       }
     },
-    "buy_pct": 100,
-    "percentile_estimate": 60,
-    "risk_warnings": []
+    "buy_pct": 50,
+    "percentile_estimate": 67,
+    "risk_warnings": [
+      "신용 스프레드 확대"
+    ]
   }
 }
