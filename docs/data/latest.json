@@ -1,13 +1,13 @@
 {
-  "generated_at_utc": "2026-08-26T09:35:15.762521+00:00",
+  "generated_at_utc": "2026-08-27T00:58:21.469376+00:00",
   "inputs": {
-    "drawdown_pct": 1.5605924044153396,
+    "drawdown_pct": 1.5808461782537475,
     "per_premium_pct": 0.0,
     "fear_greed": 50.0,
-    "hy_spread_bp": 269.0,
+    "hy_spread_bp": 270.0,
     "ism": 47.4,
     "net_flow_index": 0.0,
-    "vix": 15.710000038146973
+    "vix": 15.210000038146973
   },
   "data_quality": {
     "drawdown_pct": "live",
@@ -19,8 +19,8 @@
     "vix": "live"
   },
   "price_snapshot": {
-    "sp500_close": 7677.27978515625,
-    "nasdaq100_close": 29209.23046875
+    "sp500_close": 7675.7001953125,
+    "nasdaq100_close": 29224.521484375
   },
   "result": {
     "total_score": 28.1,
@@ -29,7 +29,7 @@
         "score": 0.6,
         "max_score": 30,
         "reason": "52주 최고가 대비 -1.6% 하락",
-        "raw_value": 1.5605924044153396
+        "raw_value": 1.5808461782537475
       },
       "valuation": {
         "score": 10.0,
@@ -46,8 +46,8 @@
       "rate_credit": {
         "score": 0,
         "max_score": 10,
-        "reason": "하이일드 스프레드 확대 269bp",
-        "raw_value": 269.0
+        "reason": "하이일드 스프레드 확대 270bp",
+        "raw_value": 270.0
       },
       "macro": {
         "score": 0,
