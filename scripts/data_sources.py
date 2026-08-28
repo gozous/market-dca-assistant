@@ -97,19 +97,46 @@ def fetch_hy_spread_bp() -> Optional[float]:
 def fetch_fear_greed() -> Optional[float]:
     """
     CNN Fear & Greed 지수. 공식 문서화된 API가 아니라 비공식 엔드포인트를 쓴다.
-    CNN이 언제든 이 엔드포인트를 바꾸거나 막을 수 있으니, 실패하면 조용히 None을 반환하고
-    compute_daily.py에서 fallback(중립값 50)으로 처리한다.
+    이 엔드포인트는 날짜를 경로에 붙여야(.../graphdata/2026-08-26) 정상 응답이 온다 —
+    처음 버전은 이걸 빠뜨려서 항상 실패했었다.
+    CNN이 언제든 이 엔드포인트를 바꾸거나 막을 수 있으니, 실패하면 None을 반환한다.
+    (compute_daily.py가 이걸 VIX 기반 근사치로 먼저 대체 시도하고, 그마저 안 되면 중립값을 쓴다.)
     """
+    from datetime import date as _date
     try:
-        url = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
-        headers = {"User-Agent": "Mozilla/5.0"}
+        today_str = _date.today().isoformat()
+        url = f"https://production.dataviz.cnn.io/index/fearandgreed/graphdata/{today_str}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+            "Accept": "application/json",
+            "Referer": "https://edition.cnn.com/markets/fear-and-greed",
+        }
         resp = requests.get(url, headers=headers, timeout=10)
         resp.raise_for_status()
         data = resp.json()
-        return float(data["fear_and_greed"]["score"])
+        if "fear_and_greed" in data:
+            return float(data["fear_and_greed"]["score"])
+        # 응답 형태가 다르면(히스토리 배열만 오는 경우) 가장 최근 값을 쓴다
+        hist = data.get("fear_and_greed_historical", {}).get("data", [])
+        if hist:
+            return float(hist[-1]["y"])
+        return None
     except Exception as e:
         print(f"[warn] fetch_fear_greed 실패 (비공식 엔드포인트 변경 가능성): {e}")
         return None
+
+
+def derive_fear_greed_from_vix(vix: float) -> float:
+    """
+    CNN 엔드포인트가 막혔을 때 쓰는 근사치. VIX와 시장 심리는 역의 상관관계가 있다는
+    잘 알려진 경험칙을 이용한다 (VIX 낮음=안심/탐욕, 높음=불안/공포).
+    CNN의 실제 산출 방식(7개 지표 조합)과는 다른 단순화된 근사치임을 명심할 것 —
+    data_quality에 'derived_from_vix'로 별도 표시해서 진짜 CNN 값과 구분한다.
+    VIX 12 -> 100(Extreme Greed), VIX 40 -> 0(Extreme Fear) 선형 매핑, 범위 밖은 clip.
+    """
+    score = 100 - (vix - 12) * (100 / 28)
+    return max(0.0, min(100.0, score))
 
 
 def fetch_per_premium_pct() -> Optional[float]:
