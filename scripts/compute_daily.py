@@ -1,13 +1,13 @@
-"""
-매일 1회 실행되는 메인 스크립트 (GitHub Actions 스케줄 잡이 이걸 돌린다).
+﻿"""
+留ㅼ씪 1???ㅽ뻾?섎뒗 硫붿씤 ?ㅽ겕由쏀듃 (GitHub Actions ?ㅼ?以??≪씠 ?닿구 ?뚮┛??.
 
-흐름:
-    1. 실데이터 소스에서 지표를 가져온다 (실패하면 None)
-    2. 못 가져온 지표는 중립값으로 대체하고, 어떤 게 대체됐는지 기록한다 (투명성)
-    3. score_engine.compute_score()로 채점 (대시보드/API/백테스트와 동일 로직)
-    4. docs/data/latest.json 갱신 + docs/data/history.csv에 한 줄 추가(누적 기록)
+?먮쫫:
+    1. ?ㅻ뜲?댄꽣 ?뚯뒪?먯꽌 吏?쒕? 媛?몄삩??(?ㅽ뙣?섎㈃ None)
+    2. 紐?媛?몄삩 吏?쒕뒗 以묐┰媛믪쑝濡??泥댄븯怨? ?대뼡 寃??泥대릱?붿? 湲곕줉?쒕떎 (?щ챸??
+    3. score_engine.compute_score()濡?梨꾩젏 (??쒕낫??API/諛깊뀒?ㅽ듃? ?숈씪 濡쒖쭅)
+    4. docs/data/latest.json 媛깆떊 + docs/data/history.csv????以?異붽?(?꾩쟻 湲곕줉)
 
-출력은 정적 파일(JSON/CSV)이라 별도 서버·DB 없이 GitHub Pages가 그대로 서빙한다.
+異쒕젰? ?뺤쟻 ?뚯씪(JSON/CSV)?대씪 蹂꾨룄 ?쒕쾭쨌DB ?놁씠 GitHub Pages媛 洹몃?濡??쒕튃?쒕떎.
 """
 
 import json
@@ -24,13 +24,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "docs" / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-# 지표를 못 가져왔을 때 쓰는 중립값 (점수에 큰 영향을 주지 않는 값으로 설정)
+# 吏?쒕? 紐?媛?몄솕?????곕뒗 以묐┰媛?(?먯닔?????곹뼢??二쇱? ?딅뒗 媛믪쑝濡??ㅼ젙)
 NEUTRAL_DEFAULTS = {
     "drawdown_pct": 0.0,
     "per_premium_pct": 0.0,
     "fear_greed": 50.0,
     "hy_spread_bp": 30.0,
-    "ism": 0.0,  # 필라델피아 연은 지수 기준 중립값 (0=중립)
+    "ism": 0.0,  # ?꾨씪?명뵾???곗? 吏??湲곗? 以묐┰媛?(0=以묐┰)
     "net_flow_index": 0.0,
     "vix": 18.0,
 }
@@ -53,12 +53,16 @@ def gather_inputs():
     inputs = {}
     data_quality = {}
     for key, value in raw.items():
-        if value is None:
-            inputs[key] = NEUTRAL_DEFAULTS[key]
-            data_quality[key] = "fallback_neutral"
-        else:
+        if value is not None:
             inputs[key] = value
             data_quality[key] = "live"
+        elif key == "fear_greed" and raw.get("vix") is not None:
+            # CNN 鍮꾧났???붾뱶?ъ씤?멸? 留됲삍???? ?대? ?뺣낫??VIX濡?洹쇱궗移섎? 留뚮뱺??            # (以묐┰媛?50?쇰줈 萸됯컻??寃껊낫???뺣낫?됱씠 留롮쓬).
+            inputs[key] = ds.derive_fear_greed_from_vix(raw["vix"])
+            data_quality[key] = "derived_from_vix"
+        else:
+            inputs[key] = NEUTRAL_DEFAULTS[key]
+            data_quality[key] = "fallback_neutral"
 
     price_snapshot = {
         "sp500_close": float(sp_close.iloc[-1]) if sp_close is not None and not sp_close.empty else None,
@@ -76,7 +80,7 @@ def main():
     payload = {
         "generated_at_utc": now.isoformat(),
         "inputs": inputs,
-        "data_quality": data_quality,  # 어떤 지표가 실데이터/대체값인지 투명하게 기록
+        "data_quality": data_quality,  # ?대뼡 吏?쒓? ?ㅻ뜲?댄꽣/?泥닿컪?몄? ?щ챸?섍쾶 湲곕줉
         "price_snapshot": price_snapshot,
         "result": result.to_dict(),
     }
@@ -87,9 +91,9 @@ def main():
     _append_history_row(now, inputs, result)
 
     fallback_fields = [k for k, v in data_quality.items() if v == "fallback_neutral"]
-    print(f"완료: total_score={result.total_score:.1f}, buy_pct={result.buy_pct}")
+    print(f"?꾨즺: total_score={result.total_score:.1f}, buy_pct={result.buy_pct}")
     if fallback_fields:
-        print(f"[주의] 실데이터 못 가져와서 중립값으로 대체된 지표: {fallback_fields}")
+        print(f"[二쇱쓽] ?ㅻ뜲?댄꽣 紐?媛?몄???以묐┰媛믪쑝濡??泥대맂 吏?? {fallback_fields}")
 
 
 def _append_history_row(now, inputs, result):

@@ -1,3 +1,4 @@
+@'
 """
 매일 1회 실행되는 메인 스크립트 (GitHub Actions 스케줄 잡이 이걸 돌린다).
 
@@ -113,3 +114,4 @@ def _append_history_row(now, inputs, result):
 
 if __name__ == "__main__":
     main()
+'@ | Set-Content -Path ".\scripts\compute_daily.py" -Encoding UTF8
