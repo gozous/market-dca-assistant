@@ -1,35 +1,35 @@
 {
-  "generated_at_utc": "2026-08-06T06:05:13.487273+00:00",
+  "generated_at_utc": "2026-08-28T07:45:59.512859+00:00",
   "inputs": {
-    "drawdown_pct": 0.0,
+    "drawdown_pct": 0.8719077464705793,
     "per_premium_pct": 0.0,
-    "fear_greed": 50.0,
-    "hy_spread_bp": 30.0,
-    "ism": 50.0,
+    "fear_greed": 57.7428571428571,
+    "hy_spread_bp": 267.0,
+    "ism": 47.4,
     "net_flow_index": 0.0,
-    "vix": 18.0
+    "vix": 14.550000190734863
   },
   "data_quality": {
-    "drawdown_pct": "fallback_neutral",
+    "drawdown_pct": "live",
     "per_premium_pct": "fallback_neutral",
-    "fear_greed": "fallback_neutral",
-    "hy_spread_bp": "fallback_neutral",
-    "ism": "fallback_neutral",
+    "fear_greed": "live",
+    "hy_spread_bp": "live",
+    "ism": "live",
     "net_flow_index": "fallback_neutral",
-    "vix": "fallback_neutral"
+    "vix": "live"
   },
   "price_snapshot": {
-    "sp500_close": null,
-    "nasdaq100_close": null
+    "sp500_close": 7730.990234375,
+    "nasdaq100_close": 29641.560546875
   },
   "result": {
-    "total_score": 39.5,
+    "total_score": 25.9,
     "sub_scores": {
       "technical": {
-        "score": 0,
+        "score": 0.3,
         "max_score": 30,
-        "reason": "52주 최고가 대비 -0.0% 하락",
-        "raw_value": 0.0
+        "reason": "52주 최고가 대비 -0.9% 하락",
+        "raw_value": 0.8719077464705793
       },
       "valuation": {
         "score": 10.0,
@@ -38,22 +38,22 @@
         "raw_value": 0.0
       },
       "fear_greed": {
-        "score": 12.5,
+        "score": 10.6,
         "max_score": 20,
-        "reason": "CNN Fear & Greed 50 (Neutral)",
-        "raw_value": 50.0
+        "reason": "CNN Fear & Greed 58 (Neutral)",
+        "raw_value": 57.7428571428571
       },
       "rate_credit": {
-        "score": 7.0,
+        "score": 0,
         "max_score": 10,
-        "reason": "하이일드 스프레드 확대 30bp",
-        "raw_value": 30.0
+        "reason": "하이일드 스프레드 확대 267bp",
+        "raw_value": 267.0
       },
       "macro": {
-        "score": 5.0,
+        "score": 0,
         "max_score": 10,
-        "reason": "ISM 50.0 — 확장 국면",
-        "raw_value": 50.0
+        "reason": "제조업 활동 지수(ISM 프록시) 47.4 — 확장 국면",
+        "raw_value": 47.4
       },
       "flow": {
         "score": 5.0,
@@ -63,7 +63,9 @@
       }
     },
     "buy_pct": 50,
-    "percentile_estimate": 60,
-    "risk_warnings": []
+    "percentile_estimate": 74,
+    "risk_warnings": [
+      "신용 스프레드 확대"
+    ]
   }
 }
