@@ -1,13 +1,13 @@
 {
-  "generated_at_utc": "2026-08-29T03:15:55.985112+00:00",
+  "generated_at_utc": "2026-09-01T00:43:55.852093+00:00",
   "inputs": {
-    "drawdown_pct": 1.1184841386968403,
+    "drawdown_pct": 1.446983446124206,
     "per_premium_pct": 0.0,
-    "fear_greed": 54.4285714285714,
-    "hy_spread_bp": 263.0,
+    "fear_greed": 49.7142857142857,
+    "hy_spread_bp": 260.0,
     "ism": 47.4,
     "net_flow_index": 0.0,
-    "vix": 14.430000305175781
+    "vix": 14.920000076293945
   },
   "data_quality": {
     "drawdown_pct": "live",
@@ -19,17 +19,17 @@
     "vix": "live"
   },
   "price_snapshot": {
-    "sp500_close": 7711.759765625,
-    "nasdaq100_close": 29433.427734375
+    "sp500_close": 7686.14013671875,
+    "nasdaq100_close": 29456.97265625
   },
   "result": {
-    "total_score": 26.8,
+    "total_score": 28.2,
     "sub_scores": {
       "technical": {
-        "score": 0.4,
+        "score": 0.6,
         "max_score": 30,
-        "reason": "52주 최고가 대비 -1.1% 하락",
-        "raw_value": 1.1184841386968403
+        "reason": "52주 최고가 대비 -1.4% 하락",
+        "raw_value": 1.446983446124206
       },
       "valuation": {
         "score": 10.0,
@@ -38,16 +38,16 @@
         "raw_value": 0.0
       },
       "fear_greed": {
-        "score": 11.4,
+        "score": 12.6,
         "max_score": 20,
-        "reason": "CNN Fear & Greed 54 (Neutral)",
-        "raw_value": 54.4285714285714
+        "reason": "CNN Fear & Greed 50 (Neutral)",
+        "raw_value": 49.7142857142857
       },
       "rate_credit": {
         "score": 0,
         "max_score": 10,
-        "reason": "하이일드 스프레드 확대 263bp",
-        "raw_value": 263.0
+        "reason": "하이일드 스프레드 확대 260bp",
+        "raw_value": 260.0
       },
       "macro": {
         "score": 0,
@@ -63,7 +63,7 @@
       }
     },
     "buy_pct": 50,
-    "percentile_estimate": 73,
+    "percentile_estimate": 72,
     "risk_warnings": [
       "신용 스프레드 확대"
     ]
