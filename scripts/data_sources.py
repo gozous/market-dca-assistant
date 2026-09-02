@@ -142,29 +142,52 @@ def derive_fear_greed_from_vix(vix: float) -> float:
 
 def fetch_per_premium_pct() -> Optional[float]:
     """
-    PER의 역사 평균 대비 프리미엄(%). 예일대 로버트 실러 교수의 CAPE(Shiller PE) 데이터셋을 쓴다
-    (shillerdata.com, 1871년부터 매달 갱신되는 학술 공개 데이터 — CNN 비공식 API보다 훨씬 안정적).
+    PER의 역사 평균 대비 프리미엄(%). 예일대 로버트 실러 교수의 CAPE(Shiller PE) 데이터셋을 쓴다.
 
-    절차: shillerdata.com에서 최신 ie_data.xls의 실제 다운로드 링크(서명된 URL, 매번 바뀔 수 있음)를
-    페이지에서 긁어온 뒤, 그 파일의 CAPE 컬럼에서 "현재값 vs 전체 역사 평균" 프리미엄을 계산한다.
-
-    구조가 바뀌면(컬럼명, 링크 위치 등) 조용히 None을 반환하고 compute_daily.py가 중립값으로 대체한다.
+    1순위: 예일대 옛 고정 경로(econ.yale.edu)로 바로 시도 — 스크레이핑이 필요 없는 고정 URL이라 더 안정적.
+    2순위: shillerdata.com 페이지에서 서명된 다운로드 링크를 긁어와서 시도 (1순위가 막혔을 때만).
+    둘 다 실패하면 None을 반환하고 compute_daily.py가 중립값으로 대체한다.
     """
+    xls_bytes = _try_fetch_yale_direct() or _try_fetch_shillerdata_scrape()
+    if xls_bytes is None:
+        return None
+    return _parse_cape_premium(xls_bytes)
+
+
+def _try_fetch_yale_direct() -> Optional[bytes]:
+    try:
+        resp = requests.get(
+            "http://www.econ.yale.edu/~shiller/data/ie_data.xls",
+            headers={"User-Agent": "Mozilla/5.0"}, timeout=20,
+        )
+        resp.raise_for_status()
+        return resp.content
+    except Exception as e:
+        print(f"[warn] fetch_per_premium_pct: 예일대 고정 URL 실패, shillerdata.com로 재시도: {e}")
+        return None
+
+
+def _try_fetch_shillerdata_scrape() -> Optional[bytes]:
     try:
         page = requests.get("https://shillerdata.com/", headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
         page.raise_for_status()
         match = re.search(r'https://img1\.wsimg\.com/blobby/go/[^"]+?ie_data\.xls[^"]*', page.text)
         if not match:
-            print("[warn] fetch_per_premium_pct: shillerdata.com에서 ie_data.xls 링크를 못 찾음")
+            print("[warn] fetch_per_premium_pct: shillerdata.com에서도 ie_data.xls 링크를 못 찾음")
             return None
-        file_url = match.group(0)
-
-        xls_resp = requests.get(file_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
+        xls_resp = requests.get(match.group(0), headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
         xls_resp.raise_for_status()
+        return xls_resp.content
+    except Exception as e:
+        print(f"[warn] fetch_per_premium_pct: shillerdata.com 대체 경로도 실패: {e}")
+        return None
 
+
+def _parse_cape_premium(xls_bytes: bytes) -> Optional[float]:
+    try:
         import pandas as pd
         from io import BytesIO
-        df = pd.read_excel(BytesIO(xls_resp.content), sheet_name="Data", skiprows=7, engine="xlrd")
+        df = pd.read_excel(BytesIO(xls_bytes), sheet_name="Data", skiprows=7, engine="xlrd")
 
         cape_col = next((c for c in df.columns if "cape" in str(c).lower()), None)
         if cape_col is None:
