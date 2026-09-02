@@ -1,17 +1,17 @@
 {
-  "generated_at_utc": "2026-09-02T07:16:23.375196+00:00",
+  "generated_at_utc": "2026-09-02T07:33:20.049782+00:00",
   "inputs": {
     "drawdown_pct": 2.1479706282088284,
-    "per_premium_pct": 0.0,
-    "fear_greed": 29.4857142857143,
+    "per_premium_pct": 77.05565547639843,
+    "fear_greed": 31.2571428571429,
     "hy_spread_bp": 263.0,
     "ism": 47.4,
     "net_flow_index": 0.0,
-    "vix": 16.34000015258789
+    "vix": 16.360000610351562
   },
   "data_quality": {
     "drawdown_pct": "live",
-    "per_premium_pct": "fallback_neutral",
+    "per_premium_pct": "live",
     "fear_greed": "live",
     "hy_spread_bp": "live",
     "ism": "live",
@@ -23,7 +23,7 @@
     "nasdaq100_close": 29077.220703125
   },
   "result": {
-    "total_score": 31.7,
+    "total_score": 20.0,
     "sub_scores": {
       "technical": {
         "score": 0.9,
@@ -32,16 +32,16 @@
         "raw_value": 2.1479706282088284
       },
       "valuation": {
-        "score": 10.0,
+        "score": 0,
         "max_score": 20,
-        "reason": "PER, 역사 평균 대비 0% 프리미엄",
-        "raw_value": 0.0
+        "reason": "PER, 역사 평균 대비 77% 프리미엄",
+        "raw_value": 77.05565547639843
       },
       "fear_greed": {
-        "score": 17.6,
+        "score": 17.2,
         "max_score": 20,
-        "reason": "CNN Fear & Greed 29 (Fear)",
-        "raw_value": 29.4857142857143
+        "reason": "CNN Fear & Greed 31 (Fear)",
+        "raw_value": 31.2571428571429
       },
       "rate_credit": {
         "score": 0,
@@ -57,8 +57,9 @@
       }
     },
     "buy_pct": 50,
-    "percentile_estimate": 68,
+    "percentile_estimate": 80,
     "risk_warnings": [
+      "PER 역사 고평가권",
       "신용 스프레드 확대"
     ],
     "excluded_categories": [
