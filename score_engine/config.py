@@ -11,6 +11,7 @@ from typing import Any, Dict
 
 DEFAULT_CONFIG: Dict[str, Any] = {
     "technical": {
+        "enabled": True,
         "max_score": 30,
         # [drawdown_pct_from_52w_high, score] — 구간 사이는 선형 보간
         "buckets": [
@@ -18,11 +19,13 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         ],
     },
     "valuation": {
+        "enabled": True,
         "max_score": 20,
         # PER가 역사 평균 대비 몇 %p 프리미엄/디스카운트인지. 범위 밖은 clip.
         "premium_range_pct": 60,  # +60% 프리미엄 -> 0점, -60% -> 만점 근방
     },
     "fear_greed": {
+        "enabled": True,
         "max_score": 20,
         # [상한값(이하), 점수]
         "buckets": [
@@ -30,18 +33,24 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         ],
     },
     "rate_credit": {
+        "enabled": True,
         "max_score": 10,
         "spread_range_bp": 100,  # 하이일드 스프레드 확대폭(bp) 범위
     },
     "macro": {
+        "enabled": True,
         "max_score": 10,
         # 필라델피아 연은 제조업 지수(ISM 대체 프록시) 기준. 0=중립, 양수=확장, 음수=위축.
         "ism_neutral": 0,
         "range": 25,
     },
     "flow": {
+        # 무료로 안정적인 ETF/기관 순유입 소스가 없어서 비활성화.
+        # 중립값으로 채우면 결과가 왜곡되므로(항상 절반 점수 고정), 아예 점수 계산에서
+        # 제외하고 나머지 지표의 만점 합계 기준으로 100점을 재배분한다 (engine.py 참고).
+        "enabled": False,
         "max_score": 10,
-        "range": 100,  # 순유입/유출 지수 스케일
+        "range": 100,  # 순유입/유출 지수 스케일 (비활성화 상태라 현재 미사용)
     },
     "buy_rules": {
         # [총점 상한(이하), 매수 비중 %]

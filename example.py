@@ -12,7 +12,7 @@ sample_inputs = {
     "per_premium_pct": 15,
     "fear_greed": 55,
     "hy_spread_bp": 30,
-    "ism": 49,
+    "ism": 5,  # 필라델피아 연은 지수 스케일 (0=중립)
     "net_flow_index": 10,
     "vix": 16.8,
 }

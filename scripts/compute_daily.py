@@ -53,7 +53,12 @@ def gather_inputs():
     inputs = {}
     data_quality = {}
     for key, value in raw.items():
-        if value is not None:
+        if key == "net_flow_index":
+            # 안정적인 무료 소스가 없어 config에서 이 카테고리 자체를 비활성화했다.
+            # 값이 있어도 점수 계산엔 안 쓰이므로, 기록용으로만 남기고 정직하게 표시한다.
+            inputs[key] = value if value is not None else NEUTRAL_DEFAULTS[key]
+            data_quality[key] = "excluded_from_scoring"
+        elif value is not None:
             inputs[key] = value
             data_quality[key] = "live"
         elif key == "fear_greed" and raw.get("vix") is not None:

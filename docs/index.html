@@ -205,12 +205,11 @@
         <div class="explain" id="exp-macro">제조업 활동 지수(ISM 프록시) 8.0 — 확장 국면</div>
       </div>
 
-      <div class="score-row">
-        <div class="name">수급<span class="sub">FLOWS · 10</span></div>
-        <div class="bar-track"><div class="bar-fill" id="bar-flow" style="background:var(--zone-1)"></div></div>
-        <div class="points"><b id="pts-flow">0</b>/10</div>
-        <input type="range" id="in-flow" min="-100" max="100" value="10" oninput="recalc()">
-        <div class="explain" id="exp-flow">ETF·기관 순유입 완만</div>
+      <div class="score-row" style="opacity:0.5;">
+        <div class="name">수급<span class="sub">FLOWS · 비활성화</span></div>
+        <div class="bar-track"><div class="bar-fill" style="background:var(--text-faint); width:0%;"></div></div>
+        <div class="points">제외</div>
+        <div class="explain">안정적인 무료 소스가 없어 점수 계산에서 제외 — 나머지 90점 기준으로 재배분됨</div>
       </div>
     </div>
   </div>
@@ -289,10 +288,7 @@ function macroScore(ism){ // 필라델피아 연은 지수(ISM 프록시): 0 아
   const s = (0-ism)/25*10 + 5;
   return Math.max(0, Math.min(10, s));
 }
-function flowScore(flow){ // net outflow (negative) treated as opportunity
-  const s = 5 - (flow/100)*5;
-  return Math.max(0, Math.min(10, s));
-}
+// flow는 비활성화되어 더 이상 클라이언트에서 계산하지 않음 (engine.py와 동일 정책)
 
 function zoneColor(score){
   if(score<=20) return getCss('--zone-0');
@@ -429,17 +425,19 @@ async function loadTodayData(){
     document.getElementById('in-feargreed').value = todayData.inputs.fear_greed;
     document.getElementById('in-spread').value = todayData.inputs.hy_spread_bp;
     document.getElementById('in-ism').value = todayData.inputs.ism;
-    document.getElementById('in-flow').value = todayData.inputs.net_flow_index;
     if(document.getElementById('vix-val')) document.getElementById('vix-val').textContent = todayData.inputs.vix.toFixed(1);
   }
 }
 
 // score_engine과 동일한 규칙의 클라이언트 계산 (정적 배포라 서버 없이 슬라이더 조작 시 여기서 계산)
+// 수급(flow)은 서버와 동일하게 계산에서 제외하고 90점 만점 기준으로 100점 재배분한다.
 function localCompute(inputs){
-  const {drawdown_pct:dd, per_premium_pct:per, fear_greed:fg, hy_spread_bp:spread, ism, net_flow_index:flow} = inputs;
+  const {drawdown_pct:dd, per_premium_pct:per, fear_greed:fg, hy_spread_bp:spread, ism} = inputs;
   const pTech = techScore(dd), pVal = valScore(per), pFear = fearScore(fg),
-        pRate = rateScore(spread), pMacro = macroScore(ism), pFlow = flowScore(flow);
-  const total = pTech+pVal+pFear+pRate+pMacro+pFlow;
+        pRate = rateScore(spread), pMacro = macroScore(ism);
+  const rawTotal = pTech+pVal+pFear+pRate+pMacro;
+  const maxPossible = 90; // flow(10점) 제외
+  const total = rawTotal / maxPossible * 100;
   const fgLabel = fg<=20?'Extreme Fear':fg<=40?'Fear':fg<=60?'Neutral':fg<=80?'Greed':'Extreme Greed';
   const risks=[];
   if(per>=40) risks.push('PER 역사 고평가권');
@@ -451,10 +449,9 @@ function localCompute(inputs){
     sub_scores: {
       technical:{score:pTech, max_score:30, reason:`52주 최고가 대비 -${dd.toFixed(0)}% 하락`},
       valuation:{score:pVal, max_score:20, reason:`PER, 역사 평균 대비 ${per>=0?'+':''}${per.toFixed(0)}%`},
-      fear_greed:{score:pFear, max_score:20, reason:`CNN Fear & Greed ${fg.toFixed(0)} (${fgLabel})`},
+      fear_greed:{score:pFear, max_score:20, reason:`Fear & Greed ${fg.toFixed(0)} (${fgLabel})`},
       rate_credit:{score:pRate, max_score:10, reason:`하이일드 스프레드 ${(spread/20).toFixed(1)}%p ${spread>60?'— 확대 경계':'안정권'}`},
       macro:{score:pMacro, max_score:10, reason:`제조업 활동 지수(ISM 프록시) ${ism.toFixed(1)} — ${ism<0?'경기 둔화 신호':'확장 국면'}`},
-      flow:{score:pFlow, max_score:10, reason:`ETF·기관 순${flow>=0?'유입':'유출'} ${Math.abs(flow).toFixed(0)}`},
     },
     buy_pct: buyPct(Math.round(total), dd),
     percentile_estimate: Math.max(1, Math.min(99, Math.round(100-total))),
@@ -467,7 +464,7 @@ function applyResult(data, dd){
   const s = data.sub_scores;
   const rows = [
     ['tech', s.technical, 30], ['val', s.valuation, 20], ['fear', s.fear_greed, 20],
-    ['rate', s.rate_credit, 10], ['macro', s.macro, 10], ['flow', s.flow, 10],
+    ['rate', s.rate_credit, 10], ['macro', s.macro, 10],
   ];
   rows.forEach(([key, r, max])=>{
     document.getElementById(`pts-${key}`).textContent = r.score.toFixed(1);
@@ -522,12 +519,11 @@ async function recalc(){
   const fg = parseFloat(document.getElementById('in-feargreed').value);
   const spread = parseFloat(document.getElementById('in-spread').value);
   const ism = parseFloat(document.getElementById('in-ism').value);
-  const flow = parseFloat(document.getElementById('in-flow').value);
   const vix = parseFloat(document.getElementById('vix-val').textContent);
 
   const inputs = {
     drawdown_pct: dd, per_premium_pct: per, fear_greed: fg,
-    hy_spread_bp: spread, ism: ism, net_flow_index: flow, vix: vix,
+    hy_spread_bp: spread, ism: ism, vix: vix,
   };
 
   applyResult(localCompute(inputs), dd);
@@ -539,7 +535,6 @@ function randomizeInputs(){
   document.getElementById('in-feargreed').value = Math.round(Math.random()*100);
   document.getElementById('in-spread').value = Math.round(Math.random()*90);
   document.getElementById('in-ism').value = Math.round(-30+Math.random()*80);
-  document.getElementById('in-flow').value = Math.round(-80+Math.random()*160);
   recalc();
 }
 

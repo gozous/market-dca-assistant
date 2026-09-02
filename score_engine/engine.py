@@ -30,6 +30,8 @@ class EngineResult:
     buy_pct: float
     percentile_estimate: int
     risk_warnings: List[str] = field(default_factory=list)
+    excluded_categories: List[str] = field(default_factory=list)  # 계산에서 제외된 카테고리(비활성화)
+    max_possible_raw: float = 100.0  # 제외 전 원점수 만점 합계 (재배분 배율 참고용)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -46,33 +48,57 @@ class EngineResult:
             "buy_pct": self.buy_pct,
             "percentile_estimate": self.percentile_estimate,
             "risk_warnings": self.risk_warnings,
+            "excluded_categories": self.excluded_categories,
         }
+
+
+# 카테고리명 -> (계산 함수, inputs에서 쓸 키)
+_INDICATOR_FUNCS = {
+    "technical": (technical_score, "drawdown_pct"),
+    "valuation": (valuation_score, "per_premium_pct"),
+    "fear_greed": (fear_greed_score, "fear_greed"),
+    "rate_credit": (rate_credit_score, "hy_spread_bp"),
+    "macro": (macro_score, "ism"),
+    "flow": (flow_score, "net_flow_index"),
+}
 
 
 def compute_score(inputs: Dict[str, float], config: Optional[Dict[str, Any]] = None) -> EngineResult:
     """
-    inputs 필수 키:
+    inputs 키 (해당 카테고리가 config에서 enabled=True일 때만 필수):
         drawdown_pct        : 52주 최고가 대비 하락률 (%, 양수)
         per_premium_pct     : PER의 역사 평균 대비 프리미엄 (%, 음수면 저평가)
-        fear_greed          : CNN Fear & Greed 지수 (0~100)
+        fear_greed          : Fear & Greed 지수 (0~100)
         hy_spread_bp        : 하이일드 스프레드 (bp)
-        ism                 : ISM 제조업 지수
-        net_flow_index      : ETF/기관 순유입 지수 (음수면 순유출)
+        ism                 : 제조업 활동 지수(ISM 프록시)
+        net_flow_index      : ETF/기관 순유입 지수 (음수면 순유출) — 기본 비활성화
     선택 키 (리스크 경고에만 사용):
         vix                 : VIX 지수
+
+    설계 원칙: 안정적인 데이터 소스가 없는 카테고리는 중립값으로 채우지 않는다.
+    config에서 enabled=False로 표시된 카테고리는 계산에서 통째로 제외하고,
+    나머지 활성 카테고리의 만점 합계를 기준으로 100점 만점으로 재배분한다.
+    이렇게 하면 "측정 안 된 지표"가 점수를 절반 고정시키는 왜곡이 생기지 않는다.
     """
     cfg = config or default_config()
 
-    sub_scores = {
-        "technical": technical_score(inputs["drawdown_pct"], cfg),
-        "valuation": valuation_score(inputs["per_premium_pct"], cfg),
-        "fear_greed": fear_greed_score(inputs["fear_greed"], cfg),
-        "rate_credit": rate_credit_score(inputs["hy_spread_bp"], cfg),
-        "macro": macro_score(inputs["ism"], cfg),
-        "flow": flow_score(inputs["net_flow_index"], cfg),
-    }
+    sub_scores = {}
+    excluded = []
+    raw_total = 0.0
+    max_possible = 0.0
 
-    total = sum(r.score for r in sub_scores.values())
+    for name, (fn, key) in _INDICATOR_FUNCS.items():
+        cat_cfg = cfg[name]
+        if not cat_cfg.get("enabled", True):
+            excluded.append(name)
+            continue
+        result = fn(inputs[key], cfg)
+        sub_scores[name] = result
+        raw_total += result.score
+        max_possible += cat_cfg["max_score"]
+
+    total = (raw_total / max_possible * 100) if max_possible > 0 else 0.0
+
     buy_pct = _resolve_buy_pct(total, inputs["drawdown_pct"], cfg["buy_rules"])
     percentile = _estimate_percentile(total)
     warnings = _check_risk_warnings(inputs, cfg["risk_thresholds"])
@@ -83,6 +109,8 @@ def compute_score(inputs: Dict[str, float], config: Optional[Dict[str, Any]] = N
         buy_pct=buy_pct,
         percentile_estimate=percentile,
         risk_warnings=warnings,
+        excluded_categories=excluded,
+        max_possible_raw=max_possible,
     )
 
 

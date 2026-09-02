@@ -24,14 +24,31 @@ def test_fear_greed_extremes():
     assert fear_greed_score(100, cfg).score == 0
 
 
-def test_total_score_is_sum_of_subscores():
+def test_total_score_is_rescaled_over_enabled_categories():
+    # flow는 config에서 비활성화(enabled=False) 상태라 계산에서 빠지고,
+    # 나머지 5개 카테고리(90점 만점)를 기준으로 100점으로 재배분되어야 한다.
     inputs = {
         "drawdown_pct": 20, "per_premium_pct": -10, "fear_greed": 20,
         "hy_spread_bp": 10, "ism": 45, "net_flow_index": -50, "vix": 20,
     }
     result = compute_score(inputs)
-    assert abs(result.total_score - sum(r.score for r in result.sub_scores.values())) < 1e-9
+    assert "flow" not in result.sub_scores
+    assert "flow" in result.excluded_categories
+    raw_sum = sum(r.score for r in result.sub_scores.values())
+    expected = raw_sum / 90 * 100
+    assert abs(result.total_score - expected) < 1e-9
     assert 0 <= result.total_score <= 100
+
+
+def test_excluded_category_does_not_silently_fill_neutral():
+    # flow를 극단값으로 줘도(중립이 아니어도) 결과에 전혀 영향이 없어야 한다 — 계산에서 아예 빠지므로.
+    base_inputs = {
+        "drawdown_pct": 15, "per_premium_pct": 5, "fear_greed": 40,
+        "hy_spread_bp": 25, "ism": 10, "vix": 18,
+    }
+    result_a = compute_score({**base_inputs, "net_flow_index": -100})
+    result_b = compute_score({**base_inputs, "net_flow_index": 100})
+    assert result_a.total_score == result_b.total_score
 
 
 def test_buy_pct_bucket_and_overlay():
