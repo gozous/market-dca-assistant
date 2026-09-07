@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-09-04T23:11:35.989153+00:00",
+  "generated_at_utc": "2026-09-07T23:39:39.142512+00:00",
   "inputs": {
     "drawdown_pct": 1.0307762197780512,
     "per_premium_pct": 77.05565547639843,
@@ -7,7 +7,7 @@
     "hy_spread_bp": 265.0,
     "ism": 47.4,
     "net_flow_index": 0.0,
-    "vix": 14.529999732971191
+    "vix": 15.300000190734863
   },
   "data_quality": {
     "drawdown_pct": "live",
@@ -20,7 +20,7 @@
   },
   "price_snapshot": {
     "sp500_close": 7718.60009765625,
-    "nasdaq100_close": 29544.154296875
+    "nasdaq100_close": 29544.150390625
   },
   "result": {
     "total_score": 16.6,
