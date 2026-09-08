@@ -1,19 +1,19 @@
 {
-  "generated_at_utc": "2026-09-07T23:39:39.142512+00:00",
+  "generated_at_utc": "2026-09-08T06:19:54.821902+00:00",
   "inputs": {
     "drawdown_pct": 1.0307762197780512,
-    "per_premium_pct": 77.05565547639843,
+    "cape_percentile": 75.83333333333333,
     "fear_greed": 41.8571428571429,
-    "hy_spread_bp": 265.0,
+    "hy_spread_percentile": 3.689567430025445,
     "ism": 47.4,
     "net_flow_index": 0.0,
     "vix": 15.300000190734863
   },
   "data_quality": {
     "drawdown_pct": "live",
-    "per_premium_pct": "live",
+    "cape_percentile": "live",
     "fear_greed": "live",
-    "hy_spread_bp": "live",
+    "hy_spread_percentile": "live",
     "ism": "live",
     "net_flow_index": "excluded_from_scoring",
     "vix": "live"
@@ -23,7 +23,7 @@
     "nasdaq100_close": 29544.150390625
   },
   "result": {
-    "total_score": 16.6,
+    "total_score": 22.4,
     "sub_scores": {
       "technical": {
         "score": 0.4,
@@ -32,22 +32,22 @@
         "raw_value": 1.0307762197780512
       },
       "valuation": {
-        "score": 0,
+        "score": 4.8,
         "max_score": 20,
-        "reason": "PER, 역사 평균 대비 77% 프리미엄",
-        "raw_value": 77.05565547639843
+        "reason": "CAPE 역사 백분위 76퍼센타일 — 고평가 구간",
+        "raw_value": 75.83333333333333
       },
       "fear_greed": {
         "score": 14.5,
         "max_score": 20,
-        "reason": "CNN Fear & Greed 42 (Neutral)",
+        "reason": "Fear & Greed 42 (Neutral)",
         "raw_value": 41.8571428571429
       },
       "rate_credit": {
-        "score": 0,
+        "score": 0.4,
         "max_score": 10,
-        "reason": "하이일드 스프레드 확대 265bp",
-        "raw_value": 265.0
+        "reason": "하이일드 스프레드(OAS) 역사 백분위 4퍼센타일",
+        "raw_value": 3.689567430025445
       },
       "macro": {
         "score": 0,
@@ -56,14 +56,14 @@
         "raw_value": 47.4
       }
     },
-    "buy_pct": 0,
-    "percentile_estimate": 83,
-    "risk_warnings": [
-      "PER 역사 고평가권",
-      "신용 스프레드 확대"
-    ],
+    "buy_pct": 50,
+    "percentile_estimate": 78,
+    "risk_warnings": [],
     "excluded_categories": [
       "flow"
     ]
+  },
+  "calibration": {
+    "fear_greed_vix_shadow_estimate": 88.21428503308977
   }
 }
