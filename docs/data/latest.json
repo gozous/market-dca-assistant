@@ -1,69 +1,69 @@
 {
-  "generated_at_utc": "2026-08-06T06:05:13.487273+00:00",
+  "generated_at_utc": "2026-09-07T23:39:39.142512+00:00",
   "inputs": {
-    "drawdown_pct": 0.0,
-    "per_premium_pct": 0.0,
-    "fear_greed": 50.0,
-    "hy_spread_bp": 30.0,
-    "ism": 50.0,
+    "drawdown_pct": 1.0307762197780512,
+    "per_premium_pct": 77.05565547639843,
+    "fear_greed": 41.8571428571429,
+    "hy_spread_bp": 265.0,
+    "ism": 47.4,
     "net_flow_index": 0.0,
-    "vix": 18.0
+    "vix": 15.300000190734863
   },
   "data_quality": {
-    "drawdown_pct": "fallback_neutral",
-    "per_premium_pct": "fallback_neutral",
-    "fear_greed": "fallback_neutral",
-    "hy_spread_bp": "fallback_neutral",
-    "ism": "fallback_neutral",
-    "net_flow_index": "fallback_neutral",
-    "vix": "fallback_neutral"
+    "drawdown_pct": "live",
+    "per_premium_pct": "live",
+    "fear_greed": "live",
+    "hy_spread_bp": "live",
+    "ism": "live",
+    "net_flow_index": "excluded_from_scoring",
+    "vix": "live"
   },
   "price_snapshot": {
-    "sp500_close": null,
-    "nasdaq100_close": null
+    "sp500_close": 7718.60009765625,
+    "nasdaq100_close": 29544.150390625
   },
   "result": {
-    "total_score": 39.5,
+    "total_score": 16.6,
     "sub_scores": {
       "technical": {
-        "score": 0,
+        "score": 0.4,
         "max_score": 30,
-        "reason": "52주 최고가 대비 -0.0% 하락",
-        "raw_value": 0.0
+        "reason": "52주 최고가 대비 -1.0% 하락",
+        "raw_value": 1.0307762197780512
       },
       "valuation": {
-        "score": 10.0,
+        "score": 0,
         "max_score": 20,
-        "reason": "PER, 역사 평균 대비 0% 프리미엄",
-        "raw_value": 0.0
+        "reason": "PER, 역사 평균 대비 77% 프리미엄",
+        "raw_value": 77.05565547639843
       },
       "fear_greed": {
-        "score": 12.5,
+        "score": 14.5,
         "max_score": 20,
-        "reason": "CNN Fear & Greed 50 (Neutral)",
-        "raw_value": 50.0
+        "reason": "CNN Fear & Greed 42 (Neutral)",
+        "raw_value": 41.8571428571429
       },
       "rate_credit": {
-        "score": 7.0,
+        "score": 0,
         "max_score": 10,
-        "reason": "하이일드 스프레드 확대 30bp",
-        "raw_value": 30.0
+        "reason": "하이일드 스프레드 확대 265bp",
+        "raw_value": 265.0
       },
       "macro": {
-        "score": 5.0,
+        "score": 0,
         "max_score": 10,
-        "reason": "ISM 50.0 — 확장 국면",
-        "raw_value": 50.0
-      },
-      "flow": {
-        "score": 5.0,
-        "max_score": 10,
-        "reason": "ETF·기관 순유입 0",
-        "raw_value": 0.0
+        "reason": "제조업 활동 지수(ISM 프록시) 47.4 — 확장 국면",
+        "raw_value": 47.4
       }
     },
-    "buy_pct": 50,
-    "percentile_estimate": 60,
-    "risk_warnings": []
+    "buy_pct": 0,
+    "percentile_estimate": 83,
+    "risk_warnings": [
+      "PER 역사 고평가권",
+      "신용 스프레드 확대"
+    ],
+    "excluded_categories": [
+      "flow"
+    ]
   }
 }
