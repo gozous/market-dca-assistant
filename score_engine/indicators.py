@@ -49,26 +49,38 @@ def technical_score(drawdown_pct: float, cfg: Dict[str, Any]) -> IndicatorResult
     return IndicatorResult(score, tcfg["max_score"], reason, drawdown_pct)
 
 
-def valuation_score(per_premium_pct: float, cfg: Dict[str, Any]) -> IndicatorResult:
-    """PER가 역사 평균 대비 프리미엄(%)이면 감점, 디스카운트면 가점."""
+def valuation_score(cape_percentile: float, cfg: Dict[str, Any]) -> IndicatorResult:
+    """
+    CAPE(Shiller PE)의 "역사 전체 시계열 대비 백분위"(0~100). 100에 가까울수록 역사상
+    가장 비쌌던 구간, 0에 가까울수록 가장 쌌던 구간이다. 단순 평균 대비 프리미엄 방식은
+    수십 년간의 구조적 레벨 변화를 무시해 오래 0점에 눌러붙는 문제가 있어 percentile로 교체.
+    """
     vcfg = cfg["valuation"]
     max_score = vcfg["max_score"]
-    rng = vcfg["premium_range_pct"]
-    # premium 0% -> 만점의 절반, +range -> 0점, -range -> 만점
-    normalized = _clip((rng - per_premium_pct) / (2 * rng), 0, 1)
-    score = normalized * max_score
-    direction = "프리미엄" if per_premium_pct >= 0 else "디스카운트"
-    reason = f"PER, 역사 평균 대비 {abs(per_premium_pct):.0f}% {direction}"
-    return IndicatorResult(score, max_score, reason, per_premium_pct)
+    score = _clip((100 - cape_percentile) / 100 * max_score, 0, max_score)
+    if cape_percentile >= 70:
+        zone = "고평가 구간"
+    elif cape_percentile <= 30:
+        zone = "저평가 구간"
+    else:
+        zone = "중립 구간"
+    reason = f"CAPE 역사 백분위 {cape_percentile:.0f}퍼센타일 — {zone}"
+    return IndicatorResult(score, max_score, reason, cape_percentile)
 
 
 def fear_greed_score(index_value: float, cfg: Dict[str, Any]) -> IndicatorResult:
-    """CNN Fear & Greed 지수(0~100). 낮을수록(공포) 점수가 높다."""
+    """
+    Fear & Greed 지수(0~100). 낮을수록(공포) 점수가 높다.
+    CNN 원본이든 VIX 대체 근사치든 현재는 동일한 신뢰도로 취급한다 — 대체값에 대한
+    할인 계수는 실제 오차를 측정하기 전까지는 임의로 정하지 않는다(config.py 주석 참고).
+    어떤 소스였는지는 raw_value가 아니라 상위 계층(compute_daily.py의 data_quality)에서 추적한다.
+    """
     fcfg = cfg["fear_greed"]
+    max_score = fcfg["max_score"]
     score = _interp_buckets(index_value, [[b[0], b[1]] for b in fcfg["buckets"]])
     label = _fear_greed_label(index_value)
-    reason = f"CNN Fear & Greed {index_value:.0f} ({label})"
-    return IndicatorResult(score, fcfg["max_score"], reason, index_value)
+    reason = f"Fear & Greed {index_value:.0f} ({label})"
+    return IndicatorResult(score, max_score, reason, index_value)
 
 
 def _fear_greed_label(v: float) -> str:
@@ -83,14 +95,17 @@ def _fear_greed_label(v: float) -> str:
     return "Extreme Greed"
 
 
-def rate_credit_score(hy_spread_bp: float, cfg: Dict[str, Any]) -> IndicatorResult:
-    """하이일드 스프레드 확대(bp)가 클수록 시장 스트레스 -> 매수 기회 점수는 높지만 리스크 신호도 겸한다."""
+def rate_credit_score(hy_spread_percentile: float, cfg: Dict[str, Any]) -> IndicatorResult:
+    """
+    하이일드 OAS의 "역사 전체 시계열(FRED, 1996~) 대비 백분위"(0~100).
+    100에 가까울수록 역사상 가장 스프레드가 넓었던(신용시장이 가장 불안했던) 구간 —
+    다른 지표들과 동일하게 "시장이 불안해질수록 매수 기회 점수 상승" 방향으로 맞춤.
+    """
     rcfg = cfg["rate_credit"]
     max_score = rcfg["max_score"]
-    rng = rcfg["spread_range_bp"]
-    score = _clip(max_score - (hy_spread_bp / rng) * max_score, 0, max_score)
-    reason = f"하이일드 스프레드 확대 {hy_spread_bp:.0f}bp"
-    return IndicatorResult(score, max_score, reason, hy_spread_bp)
+    score = _clip(hy_spread_percentile / 100 * max_score, 0, max_score)
+    reason = f"하이일드 스프레드(OAS) 역사 백분위 {hy_spread_percentile:.0f}퍼센타일"
+    return IndicatorResult(score, max_score, reason, hy_spread_percentile)
 
 
 def macro_score(ism_value: float, cfg: Dict[str, Any]) -> IndicatorResult:

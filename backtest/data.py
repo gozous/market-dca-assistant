@@ -16,13 +16,13 @@ import numpy as np
 import pandas as pd
 
 REQUIRED_COLUMNS = [
-    "close",            # 종가 (지수 포인트)
-    "per_premium_pct",  # PER, 역사 평균 대비 프리미엄(%)
-    "fear_greed",        # CNN Fear & Greed (0~100)
-    "hy_spread_bp",       # 하이일드 스프레드 (bp)
-    "ism",                 # ISM 제조업 지수
-    "net_flow_index",       # ETF/기관 순유입 지수
-    "vix",                   # VIX
+    "close",              # 종가 (지수 포인트)
+    "cape_percentile",     # CAPE의 최근 N년 시계열 대비 백분위 (0~100, 높을수록 고평가)
+    "fear_greed",           # Fear & Greed (0~100)
+    "hy_spread_percentile",  # 하이일드 OAS의 역사 시계열 대비 백분위 (0~100, 높을수록 스트레스)
+    "ism",                    # 제조업 활동 지수(필라델피아 연은, ISM 프록시)
+    "net_flow_index",          # ETF/기관 순유입 지수 (현재 점수 계산에서 제외됨)
+    "vix",                       # VIX
 ]
 
 
@@ -30,6 +30,14 @@ def load_from_csv(path: Union[str, Path], drawdown_window: int = 252) -> pd.Data
     """
     CSV는 'date' 컬럼(파싱 가능한 날짜) + REQUIRED_COLUMNS를 포함해야 한다.
     drawdown_pct는 여기서 rolling max 기준으로 자동 계산한다(52주 ≈ 252거래일).
+
+    ⚠ Look-ahead bias 주의: cape_percentile, hy_spread_percentile처럼 "역사 시계열 대비
+    백분위"인 컬럼은, CSV를 만들 때 각 날짜마다 "그 날짜까지의 데이터만" 써서 백분위를
+    계산해야 한다. 전체 기간(미래 포함) 데이터로 한 번에 백분위를 계산해서 넣으면,
+    미래 정보가 과거 시점의 판단에 새어 들어가는 룩어헤드 편향이 생겨 백테스트 성과가
+    실제보다 부풀려진다. score_engine의 실시간 계산(compute_daily.py)은 항상 "그 시점까지의
+    데이터"만 쓰므로 이 문제가 없지만, 백테스트용 CSV는 사용자가 직접 만들 때 이 원칙을
+    지켜야 한다.
     """
     df = pd.read_csv(path, parse_dates=["date"])
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
@@ -73,18 +81,18 @@ def synthesize_sample(
 
     # 보조지표: drawdown과 대략적으로 연동 + 노이즈 (실데이터의 상관관계를 흉내만 낸 것)
     noise = lambda scale: rng.normal(0, scale, n)
-    per_premium_pct = 20 - drawdown_pct.values * 1.2 + noise(8)
+    cape_percentile = np.clip(55 - drawdown_pct.values * 1.8 + noise(12), 0, 100)
     fear_greed = np.clip(70 - drawdown_pct.values * 2.0 + noise(10), 0, 100)
-    hy_spread_bp = np.clip(20 + drawdown_pct.values * 3.0 + noise(10), 0, None)
+    hy_spread_percentile = np.clip(25 + drawdown_pct.values * 2.5 + noise(12), 0, 100)
     ism = np.clip(8 - drawdown_pct.values * 1.0 + noise(6), -35, 55)  # 필라델피아 연은 지수 스케일(0=중립)
     net_flow_index = -drawdown_pct.values * 1.5 + noise(20)
     vix = np.clip(14 + drawdown_pct.values * 1.1 + noise(4), 9, None)
 
     df = pd.DataFrame({
         "close": close.values,
-        "per_premium_pct": per_premium_pct,
+        "cape_percentile": cape_percentile,
         "fear_greed": fear_greed,
-        "hy_spread_bp": hy_spread_bp,
+        "hy_spread_percentile": hy_spread_percentile,
         "ism": ism,
         "net_flow_index": net_flow_index,
         "vix": vix,

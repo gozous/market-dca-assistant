@@ -21,8 +21,11 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "valuation": {
         "enabled": True,
         "max_score": 20,
-        # PER가 역사 평균 대비 몇 %p 프리미엄/디스카운트인지. 범위 밖은 clip.
-        "premium_range_pct": 60,  # +60% 프리미엄 -> 0점, -60% -> 만점 근방
+        # CAPE(Shiller PE)의 "최근 N년 시계열 대비 백분위"를 쓴다.
+        # 전체 역사(1871~)를 다 쓰면 지금과 완전히 다른 통화·세제 체제였던 구간까지
+        # 섞여서 왜곡되므로, 닷컴버블·금융위기·코로나를 포함하는 최근 30년 롤링 윈도우로 제한.
+        # percentile 0(윈도우 내 최저) -> 만점, 100(윈도우 내 최고) -> 0점
+        "lookback_years": 30,
     },
     "fear_greed": {
         "enabled": True,
@@ -31,11 +34,17 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "buckets": [
             [20, 20], [40, 15], [60, 10], [80, 5], [100, 0],
         ],
+        # VIX 대체값에 대한 신뢰도 할인 계수는 아직 넣지 않는다 — 임의로 정할 수 없고,
+        # CNN 원본과 VIX 대체값이 동시에 관측된 기간의 실제 오차를 측정해서 도출해야 한다.
+        # compute_daily.py가 매일 두 값을 함께 기록해서 캘리브레이션용 데이터를 쌓고 있으니,
+        # 충분히 쌓이면 이 자리에 계수를 추가한다.
     },
     "rate_credit": {
         "enabled": True,
         "max_score": 10,
-        "spread_range_bp": 100,  # 하이일드 스프레드 확대폭(bp) 범위
+        # 하이일드 OAS의 "역사 전체 시계열 대비 백분위"를 쓴다 (FRED, 1996~).
+        # 절대 bp 구간을 임의로 정하면 평시/위기 구간 비율을 왜곡할 수 있어 CAPE와
+        # 동일하게 percentile 방식으로 통일. percentile 100(역사상 가장 스트레스) -> 만점.
     },
     "macro": {
         "enabled": True,
@@ -63,10 +72,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         ],
     },
     "risk_thresholds": {
-        "per_premium_pct": 40,
+        "cape_percentile": 90,  # 역사(최근 30년) 상위 90퍼센타일 이상이면 "고평가권" 경고
         "vix": 28,
         "fear_greed_extreme": 80,
-        "credit_spread_bp": 70,
+        "credit_spread_percentile": 90,  # 역사 상위 90퍼센타일 이상이면 신용 스트레스 경고
     },
 }
 

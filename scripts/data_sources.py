@@ -35,11 +35,18 @@ def fetch_price_series(ticker: str, period: str = "1y"):
         return None
 
 
-def compute_drawdown_pct(close_series) -> Optional[float]:
+def compute_drawdown_pct(close_series, window: int = 252) -> Optional[float]:
+    """
+    52주 최고가 대비 하락률(%). 백테스트(backtest/data.py의 rolling(252).max())와
+    반드시 동일한 방법론을 써야 하므로, "받아온 시계열 전체의 최댓값"이 아니라
+    "최근 window(기본 252)거래일의 최댓값"으로 명시적으로 고정한다.
+    (yfinance의 period="1y"는 공휴일 등에 따라 정확히 252개가 아닐 수 있어 이 슬라이싱이 필요함)
+    """
     if close_series is None or close_series.empty:
         return None
-    rolling_high = close_series.max()
-    current = close_series.iloc[-1]
+    windowed = close_series.tail(window)
+    rolling_high = windowed.max()
+    current = windowed.iloc[-1]
     return float((1 - current / rolling_high) * 100)
 
 
@@ -50,6 +57,40 @@ def fetch_vix() -> Optional[float]:
     return float(series.iloc[-1])
 
 
+def fetch_fred_series_history(series_id: str, limit: int = 100000):
+    """
+    FRED 시리즈의 전체(또는 limit까지) 과거 관측치를 오름차순으로 가져온다.
+    percentile 계산처럼 "지금 값이 역사적으로 어디쯤인지"를 봐야 할 때 쓴다.
+    실패 시 None.
+    """
+    if not FRED_API_KEY:
+        print("[warn] FRED_API_KEY 미설정 — FRED 지표 스킵")
+        return None
+    try:
+        url = "https://api.stlouisfed.org/fred/series/observations"
+        params = {
+            "series_id": series_id,
+            "api_key": FRED_API_KEY,
+            "file_type": "json",
+            "sort_order": "asc",
+            "limit": limit,
+        }
+        resp = requests.get(url, params=params, timeout=20)
+        resp.raise_for_status()
+        obs = resp.json().get("observations", [])
+        values = [float(o["value"]) for o in obs if o["value"] != "."]
+        return values if values else None
+    except Exception as e:
+        print(f"[warn] fetch_fred_series_history({series_id}) 실패: {e}")
+        return None
+
+
+def _percentile_rank(history: list, current: float) -> float:
+    """history(과거 관측치 목록) 안에서 current가 몇 퍼센타일인지 (0~100)."""
+    if not history:
+        return 50.0  # 비교할 역사가 없으면 중립
+    rank = sum(1 for v in history if v <= current) / len(history) * 100
+    return rank
 def fetch_fred_series_latest(series_id: str) -> Optional[float]:
     """
     FRED(세인트루이스 연은) API. 무료 API 키 필요 (https://fred.stlouisfed.org/docs/api/api_key.html)
@@ -89,10 +130,17 @@ def fetch_ism() -> Optional[float]:
 
 
 
-def fetch_hy_spread_bp() -> Optional[float]:
-    # ICE BofA US High Yield Index Option-Adjusted Spread (%) -> bp로 변환
-    pct = fetch_fred_series_latest("BAMLH0A0HYM2")
-    return pct * 100 if pct is not None else None
+def fetch_hy_spread_percentile() -> Optional[float]:
+    """
+    하이일드 OAS의 "역사 전체 시계열(FRED, 1996~) 대비 백분위"(0~100).
+    절대 bp 구간을 임의로 정하면 평시/위기 구간 비율을 왜곡할 수 있어서,
+    CAPE와 동일하게 percentile 방식으로 통일했다.
+    """
+    history = fetch_fred_series_history("BAMLH0A0HYM2")
+    if not history:
+        return None
+    current = history[-1]
+    return _percentile_rank(history[:-1], current)
 
 
 def fetch_fear_greed() -> Optional[float]:
@@ -140,18 +188,21 @@ def derive_fear_greed_from_vix(vix: float) -> float:
     return max(0.0, min(100.0, score))
 
 
-def fetch_per_premium_pct() -> Optional[float]:
+def fetch_cape_percentile(lookback_years: int = 30) -> Optional[float]:
     """
-    PER의 역사 평균 대비 프리미엄(%). 예일대 로버트 실러 교수의 CAPE(Shiller PE) 데이터셋을 쓴다.
+    CAPE(Shiller PE)의 "최근 lookback_years년 시계열 대비 백분위"(0~100). 예일대 로버트 실러
+    교수의 CAPE 데이터셋을 쓴다. 전체 역사(1871~)를 다 쓰면 지금과 완전히 다른 통화·세제
+    체제였던 구간까지 섞여 왜곡되므로, 최근 N년 롤링 윈도우로 제한한다 (기본 30년: 닷컴버블·
+    금융위기·코로나를 포함하면서 1980년대 이전 레짐은 배제하는 절충값 — config.py에서 조정 가능).
 
-    1순위: 예일대 옛 고정 경로(econ.yale.edu)로 바로 시도 — 스크레이핑이 필요 없는 고정 URL이라 더 안정적.
-    2순위: shillerdata.com 페이지에서 서명된 다운로드 링크를 긁어와서 시도 (1순위가 막혔을 때만).
+    1순위: 예일대 옛 고정 경로(econ.yale.edu)로 바로 시도.
+    2순위: shillerdata.com 페이지에서 서명된 다운로드 링크를 긁어와서 시도.
     둘 다 실패하면 None을 반환하고 compute_daily.py가 중립값으로 대체한다.
     """
     xls_bytes = _try_fetch_yale_direct() or _try_fetch_shillerdata_scrape()
     if xls_bytes is None:
         return None
-    return _parse_cape_premium(xls_bytes)
+    return _parse_cape_percentile(xls_bytes, lookback_years)
 
 
 def _try_fetch_yale_direct() -> Optional[bytes]:
@@ -163,7 +214,7 @@ def _try_fetch_yale_direct() -> Optional[bytes]:
         resp.raise_for_status()
         return resp.content
     except Exception as e:
-        print(f"[warn] fetch_per_premium_pct: 예일대 고정 URL 실패, shillerdata.com로 재시도: {e}")
+        print(f"[warn] fetch_cape_percentile: 예일대 고정 URL 실패, shillerdata.com로 재시도: {e}")
         return None
 
 
@@ -173,17 +224,17 @@ def _try_fetch_shillerdata_scrape() -> Optional[bytes]:
         page.raise_for_status()
         match = re.search(r'https://img1\.wsimg\.com/blobby/go/[^"]+?ie_data\.xls[^"]*', page.text)
         if not match:
-            print("[warn] fetch_per_premium_pct: shillerdata.com에서도 ie_data.xls 링크를 못 찾음")
+            print("[warn] fetch_cape_percentile: shillerdata.com에서도 ie_data.xls 링크를 못 찾음")
             return None
         xls_resp = requests.get(match.group(0), headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
         xls_resp.raise_for_status()
         return xls_resp.content
     except Exception as e:
-        print(f"[warn] fetch_per_premium_pct: shillerdata.com 대체 경로도 실패: {e}")
+        print(f"[warn] fetch_cape_percentile: shillerdata.com 대체 경로도 실패: {e}")
         return None
 
 
-def _parse_cape_premium(xls_bytes: bytes) -> Optional[float]:
+def _parse_cape_percentile(xls_bytes: bytes, lookback_years: int) -> Optional[float]:
     try:
         import pandas as pd
         from io import BytesIO
@@ -191,7 +242,7 @@ def _parse_cape_premium(xls_bytes: bytes) -> Optional[float]:
 
         cape_col = next((c for c in df.columns if "cape" in str(c).lower()), None)
         if cape_col is None:
-            print("[warn] fetch_per_premium_pct: CAPE 컬럼을 못 찾음 — 파일 구조 변경 가능성")
+            print("[warn] fetch_cape_percentile: CAPE 컬럼을 못 찾음 — 파일 구조 변경 가능성")
             return None
 
         series = pd.to_numeric(df[cape_col], errors="coerce").dropna()
@@ -199,12 +250,14 @@ def _parse_cape_premium(xls_bytes: bytes) -> Optional[float]:
             return None
 
         current_cape = float(series.iloc[-1])
-        historical_avg = float(series.mean())
-        if historical_avg == 0:
+        # Shiller 데이터는 월 단위이므로 lookback_years*12개월치만 윈도우로 쓴다 (현재값 제외한 과거분).
+        window_size = lookback_years * 12
+        history = series.iloc[:-1].tail(window_size).tolist()
+        if not history:
             return None
-        return (current_cape - historical_avg) / historical_avg * 100
+        return _percentile_rank(history, current_cape)
     except Exception as e:
-        print(f"[warn] fetch_per_premium_pct 실패 (Shiller 데이터 구조/접근 변경 가능성): {e}")
+        print(f"[warn] fetch_cape_percentile 실패 (Shiller 데이터 구조/접근 변경 가능성): {e}")
         return None
 
 

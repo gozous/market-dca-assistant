@@ -37,11 +37,11 @@ app.add_middleware(
 
 class ScoreInputs(BaseModel):
     drawdown_pct: float = Field(..., ge=0, le=100, description="52주 최고가 대비 하락률 (%)")
-    per_premium_pct: float = Field(..., description="PER, 역사 평균 대비 프리미엄 (%)")
-    fear_greed: float = Field(..., ge=0, le=100, description="CNN Fear & Greed 지수")
-    hy_spread_bp: float = Field(..., ge=0, description="하이일드 스프레드 (bp)")
-    ism: float = Field(..., description="ISM 제조업 지수")
-    net_flow_index: float = Field(..., description="ETF/기관 순유입 지수")
+    cape_percentile: float = Field(..., ge=0, le=100, description="CAPE의 최근 N년 시계열 대비 백분위 (0~100)")
+    fear_greed: float = Field(..., ge=0, le=100, description="Fear & Greed 지수")
+    hy_spread_percentile: float = Field(..., ge=0, le=100, description="하이일드 OAS의 역사 시계열 대비 백분위 (0~100)")
+    ism: float = Field(..., description="제조업 활동 지수(필라델피아 연은, ISM 프록시)")
+    net_flow_index: float = Field(..., description="ETF/기관 순유입 지수 (현재 점수 계산에서 제외됨)")
     vix: Optional[float] = Field(None, description="VIX 지수 (리스크 경고용, 선택)")
 
 

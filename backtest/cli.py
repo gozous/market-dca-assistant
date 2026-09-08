@@ -55,6 +55,8 @@ def main():
     for k, v in result.benchmark_metrics.items():
         print(f"  {k}: {v}")
     print(f"\n결과 저장됨 -> {out_dir}/ (trade_log.csv, equity_curve.csv, metrics.json)")
+    print("[참고] cagr_pct_twr는 매수 타이밍 효과를 반영하지 못합니다 — "
+          "전략 vs 벤치마크 비교는 cumulative_return_pct를 보세요.")
 
 
 if __name__ == "__main__":

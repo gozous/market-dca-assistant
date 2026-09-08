@@ -24,9 +24,9 @@ from score_engine import compute_score
 
 inputs = {
     "drawdown_pct": 8,        # 52주 최고가 대비 하락률(%)
-    "per_premium_pct": 15,    # PER 역사평균 대비 프리미엄(%)
+    "cape_percentile": 55,    # CAPE 역사(최근 30년) 백분위 (0~100)
     "fear_greed": 55,         # CNN Fear & Greed (0~100)
-    "hy_spread_bp": 30,       # 하이일드 스프레드(bp)
+    "hy_spread_percentile": 30,  # 하이일드 OAS 역사 백분위 (0~100)
     "ism": 49,                 # ISM 제조업 지수
     "net_flow_index": 10,      # ETF/기관 순유입 지수
     "vix": 16.8,                # 선택, 리스크 경고용
@@ -78,17 +78,46 @@ python3 -m backtest.cli --csv my_history.csv --base-amount 1000000 --out results
 |---|---|
 | date | 날짜 |
 | close | 지수 종가 |
-| per_premium_pct | PER, 역사 평균 대비 프리미엄(%) |
+| cape_percentile | CAPE의 최근 30년 시계열 대비 백분위 (0~100) |
 | fear_greed | CNN Fear & Greed (0~100) |
-| hy_spread_bp | 하이일드 스프레드(bp) |
+| hy_spread_percentile | 하이일드 OAS의 역사 시계열 대비 백분위 (0~100) |
 | ism | ISM 제조업 지수 |
 | net_flow_index | ETF/기관 순유입 지수 |
 | vix | VIX |
 
 `drawdown_pct`(52주 최고가 대비 하락률)는 `close`로부터 자동 계산되므로 CSV에 넣지 않아도 됩니다.
+실시간(`scripts/data_sources.py`)과 백테스트(`backtest/data.py`)는 둘 다 "최근 252거래일
+최고 종가 대비 하락률"로 완전히 동일한 방법론을 씁니다 (`tests/test_backtest.py`의
+`test_drawdown_matches_between_realtime_and_backtest`, `test_drawdown_252_boundary_conditions`로 검증됨).
 
-출력물(`--out` 폴더): `trade_log.csv`(매수 이벤트별 점수·매수비중), `equity_curve.csv`(일별 포트폴리오 가치),
-`metrics.json`(전략 vs "매회 고정 100% 매수" 벤치마크 비교).
+**⚠ Look-ahead bias — 두 가지 독립된 조건**: 이건 하나의 문제가 아니라 서로 독립적으로
+깨질 수 있는 두 조건입니다. 하나만 지키고 다른 하나를 놓치면 여전히 룩어헤드가 생깁니다.
+
+1. **타이밍 (신호일 < 실행일)**: `run_backtest()`가 강제합니다. 신호를 계산한 날(`signal_date`)의
+   데이터로 점수를 매기되, 실제 매수는 `execution_lag_days`(기본 1, **거래일** 기준이지 달력일이
+   아님)만큼 뒤의 거래일 종가로 체결합니다. 신호 계산일 당일 종가에 사고 싶다면
+   `execution_lag_days=0`으로 명시적으로 지정해야 합니다. `daily_log`에 `signal_date`,
+   `execution_date`가 둘 다 기록되어 검증 가능합니다.
+2. **데이터 발표 시점 (release_date ≤ signal_date)**: `cape_percentile`, `hy_spread_percentile`처럼
+   "역사 시계열 대비 백분위"인 값은, CSV를 만들 때 각 날짜마다 "그 시점에 실제로 이미 발표되어
+   있던 값"만 써야 합니다. **이 조건은 아직 `run_backtest()`에 연결되지 않았습니다** — 실제
+   vintage(재공표 이력) 데이터가 없어서, `backtest/point_in_time.py`에 선택/검증 로직(스키마,
+   `as_of()`, `validate_no_lookahead()`)만 미리 만들어뒀습니다. 실제 과거 데이터를 구할 때
+   이 모듈을 백테스트 데이터 로딩 단계에 연결해야 합니다. 자세한 건 아래 "다음 단계" 참고.
+
+출력물(`--out` 폴더): `trade_log.csv`(신호일·실행일·매수비중·누적보유수량 등 거래별 기록),
+`equity_curve.csv`(일별 포트폴리오 가치 + 개별 현금흐름 `contribution`),
+`metrics.json`(전략 vs "매회 고정 100% 매수" 벤치마크 비교, 벤치마크도 동일한 실행 지연이 적용됨).
+
+**지표 해석 주의**: `cagr_pct_twr`(시간가중수익률)는 매수 타이밍/금액과 무관하게 "그 자산 자체가
+얼마나 올랐는지"만 측정하므로, 같은 지수를 사는 전략끼리는 항상 거의 동일하게 나옵니다 —
+**"점수 기반 타이밍이 효과가 있었는가"를 비교하는 데 쓰면 안 됩니다.** 이건 근사치가 아니라
+정의상 그렇게 설계된 지표입니다 (`tests/test_backtest.py`의 `test_twr_matches_theoretical_closed_form`으로
+이론값과 오차 0.05%p 이내임을 검증). 전략 비교에는 지금은 `cumulative_return_pct`(누적수익률)를
+쓰세요. 타이밍 효과까지 반영한 진짜 자금가중수익률(XIRR)은 아직 구현하지 않았지만,
+`equity_curve.csv`의 `contribution` 컬럼과 `trade_log.csv`의 `cumulative_shares_held`에
+날짜별 개별 현금흐름·보유수량을 이미 보존해뒀으므로, 실제 과거 데이터로 백테스트를 시작할 때
+엔진 구조를 다시 뜯어고치지 않고 추가할 수 있습니다.
 
 
 
@@ -104,4 +133,18 @@ python3 -m backtest.cli --csv my_history.csv --base-amount 1000000 --out results
   백테스트로 실데이터 기준 과거 점수 분포가 쌓이면 실제 percentile rank로 교체해야 합니다.
 - **백테스트 결과 반영**: 실데이터로 백테스트를 돌려본 뒤, `buy_rules`나 지표 가중치를
   `config.py`(또는 JSON override)에서 조정하는 루프를 반복하게 될 가능성이 높습니다.
+- **실제 과거 데이터 엔진을 만들 때 반드시 지킬 원칙(point-in-time)**: `backtest/point_in_time.py`에
+  스키마(`observation_date`/`release_date`/`value`)와 선택 로직(`as_of()` — release_date가
+  기준일 이전인 후보 중 가장 최신 observation_date를 고름), 검증 로직(`validate_no_lookahead()`,
+  `load_vintage_csv()`의 자체 검증)까지 이미 만들어뒀고 synthetic 데이터로 테스트도 통과했습니다.
+  **아직 안 된 것**: 이 모듈이 `run_backtest()`/`backtest/data.py`의 실제 데이터 로딩에 연결되어
+  있지 않습니다. CAPE·Philly Fed·HY OAS·Fear & Greed 각각의 실제 vintage(재공표 이력) 데이터를
+  구해서 `load_vintage_csv()` 형식으로 만들고, `backtest/data.py`가 각 signal_date마다
+  `as_of(vintage_df, signal_date)`로 그 시점에 실제 알려져 있던 값만 가져오도록 바꿔야 합니다.
+  가짜 release_date를 만들어서 임시로 연결하면 검증 자체가 무의미해지므로, 반드시 실제 vintage
+  데이터가 확보된 뒤에 연결해야 합니다.
+- **XIRR(자금가중수익률)**: 아직 구현하지 않았지만, `equity_curve`에 이미 날짜별
+  `contribution`(그날의 개별 현금흐름) 컬럼을 저장해두었으므로, 실제 과거 데이터로
+  백테스트를 시작할 때 이 컬럼을 그대로 현금흐름 목록으로 써서 추가하면 됩니다 —
+  엔진 구조를 다시 뜯어고칠 필요가 없습니다.
 

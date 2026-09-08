@@ -138,7 +138,7 @@
     </div>
     <div class="header-right">
       <span id="conn-status"><span class="live-dot" id="conn-dot"></span><span id="conn-label">데이터 확인 중…</span></span>
-      <button class="refresh-btn" onclick="randomizeInputs()">↻ 시나리오 테스트</button>
+      <button class="refresh-btn" onclick="resetToTodayData()">↻ 오늘 데이터로 리셋</button>
     </div>
   </header>
 
@@ -177,8 +177,8 @@
         <div class="name">밸류에이션<span class="sub">VALUATION · 20</span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-val" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-val">0</b>/20</div>
-        <input type="range" id="in-per" min="-40" max="60" value="15" oninput="recalc()">
-        <div class="explain" id="exp-val">PER, 역사 평균 대비 +15%</div>
+        <input type="range" id="in-per" min="0" max="100" value="55" oninput="recalc()">
+        <div class="explain" id="exp-val">CAPE 역사 백분위 55퍼센타일</div>
       </div>
 
       <div class="score-row">
@@ -186,7 +186,7 @@
         <div class="bar-track"><div class="bar-fill" id="bar-fear" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-fear">0</b>/20</div>
         <input type="range" id="in-feargreed" min="0" max="100" value="55" oninput="recalc()">
-        <div class="explain" id="exp-fear">CNN Fear & Greed 55 (Neutral)</div>
+        <div class="explain" id="exp-fear">Fear & Greed 55 (Neutral)</div>
       </div>
 
       <div class="score-row">
@@ -194,7 +194,7 @@
         <div class="bar-track"><div class="bar-fill" id="bar-rate" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-rate">0</b>/10</div>
         <input type="range" id="in-spread" min="0" max="100" value="30" oninput="recalc()">
-        <div class="explain" id="exp-rate">하이일드 스프레드 안정권</div>
+        <div class="explain" id="exp-rate">하이일드 스프레드(OAS) 역사 백분위 30퍼센타일</div>
       </div>
 
       <div class="score-row">
@@ -269,10 +269,9 @@ function techScore(dd){
   }}
   return 0;
 }
-function valScore(perPremiumPct){
-  // premium above historical avg PER, in %. Negative = cheap.
-  const s = 10 - (perPremiumPct/60)*10; // -40%..+60% mapped roughly to 20..0, capped
-  return Math.max(0, Math.min(20, s*2));
+function valScore(capePercentile){
+  // CAPE 역사 백분위(0~100). 높을수록 고평가 -> 점수 낮음.
+  return Math.max(0, Math.min(20, (100-capePercentile)/100*20));
 }
 function fearScore(fg){
   if(fg<=20) return 20;
@@ -281,8 +280,9 @@ function fearScore(fg){
   if(fg<=80) return 5;
   return 0;
 }
-function rateScore(spreadBp){ // wider spread = more stress = higher opportunity score, but also risk flag
-  return Math.max(0, Math.min(10, 10 - (spreadBp/100)*10));
+function rateScore(spreadPercentile){
+  // 하이일드 OAS 역사 백분위(0~100). 높을수록 신용시장 스트레스 -> 점수 높음(매수 기회).
+  return Math.max(0, Math.min(10, spreadPercentile/100*10));
 }
 function macroScore(ism){ // 필라델피아 연은 지수(ISM 프록시): 0 아래로 갈수록 위축 -> 매수 기회 점수 상승
   const s = (0-ism)/25*10 + 5;
@@ -421,9 +421,9 @@ async function loadTodayData(){
   setUpdatedBadge(todayData);
   if(todayData){
     document.getElementById('in-drawdown').value = todayData.inputs.drawdown_pct;
-    document.getElementById('in-per').value = todayData.inputs.per_premium_pct;
+    document.getElementById('in-per').value = todayData.inputs.cape_percentile;
     document.getElementById('in-feargreed').value = todayData.inputs.fear_greed;
-    document.getElementById('in-spread').value = todayData.inputs.hy_spread_bp;
+    document.getElementById('in-spread').value = todayData.inputs.hy_spread_percentile;
     document.getElementById('in-ism').value = todayData.inputs.ism;
     if(document.getElementById('vix-val')) document.getElementById('vix-val').textContent = todayData.inputs.vix.toFixed(1);
   }
@@ -432,25 +432,25 @@ async function loadTodayData(){
 // score_engine과 동일한 규칙의 클라이언트 계산 (정적 배포라 서버 없이 슬라이더 조작 시 여기서 계산)
 // 수급(flow)은 서버와 동일하게 계산에서 제외하고 90점 만점 기준으로 100점 재배분한다.
 function localCompute(inputs){
-  const {drawdown_pct:dd, per_premium_pct:per, fear_greed:fg, hy_spread_bp:spread, ism} = inputs;
-  const pTech = techScore(dd), pVal = valScore(per), pFear = fearScore(fg),
+  const {drawdown_pct:dd, cape_percentile:cape, fear_greed:fg, hy_spread_percentile:spread, ism} = inputs;
+  const pTech = techScore(dd), pVal = valScore(cape), pFear = fearScore(fg),
         pRate = rateScore(spread), pMacro = macroScore(ism);
   const rawTotal = pTech+pVal+pFear+pRate+pMacro;
   const maxPossible = 90; // flow(10점) 제외
   const total = rawTotal / maxPossible * 100;
   const fgLabel = fg<=20?'Extreme Fear':fg<=40?'Fear':fg<=60?'Neutral':fg<=80?'Greed':'Extreme Greed';
   const risks=[];
-  if(per>=40) risks.push('PER 역사 고평가권');
+  if(cape>=90) risks.push('CAPE 역사 고평가권');
   if(inputs.vix>=28) risks.push('VIX 과열');
   if(fg>=80) risks.push('Extreme Greed 국면');
-  if(spread>=70) risks.push('신용 스프레드 확대');
+  if(spread>=90) risks.push('신용 스프레드 역사적 확대');
   return {
     total_score: total,
     sub_scores: {
       technical:{score:pTech, max_score:30, reason:`52주 최고가 대비 -${dd.toFixed(0)}% 하락`},
-      valuation:{score:pVal, max_score:20, reason:`PER, 역사 평균 대비 ${per>=0?'+':''}${per.toFixed(0)}%`},
+      valuation:{score:pVal, max_score:20, reason:`CAPE 역사 백분위 ${cape.toFixed(0)}퍼센타일`},
       fear_greed:{score:pFear, max_score:20, reason:`Fear & Greed ${fg.toFixed(0)} (${fgLabel})`},
-      rate_credit:{score:pRate, max_score:10, reason:`하이일드 스프레드 ${(spread/20).toFixed(1)}%p ${spread>60?'— 확대 경계':'안정권'}`},
+      rate_credit:{score:pRate, max_score:10, reason:`하이일드 스프레드(OAS) 역사 백분위 ${spread.toFixed(0)}퍼센타일`},
       macro:{score:pMacro, max_score:10, reason:`제조업 활동 지수(ISM 프록시) ${ism.toFixed(1)} — ${ism<0?'경기 둔화 신호':'확장 국면'}`},
     },
     buy_pct: buyPct(Math.round(total), dd),
@@ -515,27 +515,22 @@ function applyResult(data, dd){
 /* ---------------- Main recalc ---------------- */
 async function recalc(){
   const dd = parseFloat(document.getElementById('in-drawdown').value);
-  const per = parseFloat(document.getElementById('in-per').value);
+  const cape = parseFloat(document.getElementById('in-per').value);
   const fg = parseFloat(document.getElementById('in-feargreed').value);
   const spread = parseFloat(document.getElementById('in-spread').value);
   const ism = parseFloat(document.getElementById('in-ism').value);
   const vix = parseFloat(document.getElementById('vix-val').textContent);
 
   const inputs = {
-    drawdown_pct: dd, per_premium_pct: per, fear_greed: fg,
-    hy_spread_bp: spread, ism: ism, vix: vix,
+    drawdown_pct: dd, cape_percentile: cape, fear_greed: fg,
+    hy_spread_percentile: spread, ism: ism, vix: vix,
   };
 
   applyResult(localCompute(inputs), dd);
 }
 
-function randomizeInputs(){
-  document.getElementById('in-drawdown').value = Math.round(Math.random()*35);
-  document.getElementById('in-per').value = Math.round(-20+Math.random()*60);
-  document.getElementById('in-feargreed').value = Math.round(Math.random()*100);
-  document.getElementById('in-spread').value = Math.round(Math.random()*90);
-  document.getElementById('in-ism').value = Math.round(-30+Math.random()*80);
-  recalc();
+function resetToTodayData(){
+  loadTodayData().then(recalc);
 }
 
 document.getElementById('today-tag').textContent = new Date().toLocaleDateString('ko-KR');
