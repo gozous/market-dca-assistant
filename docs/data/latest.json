@@ -1,13 +1,13 @@
 {
-  "generated_at_utc": "2026-09-08T06:19:54.821902+00:00",
+  "generated_at_utc": "2026-09-08T23:33:39.325424+00:00",
   "inputs": {
-    "drawdown_pct": 1.0307762197780512,
+    "drawdown_pct": 1.6088007687293238,
     "cape_percentile": 75.83333333333333,
-    "fear_greed": 41.8571428571429,
-    "hy_spread_percentile": 3.689567430025445,
+    "fear_greed": 40.8,
+    "hy_spread_percentile": 7.908163265306123,
     "ism": 47.4,
     "net_flow_index": 0.0,
-    "vix": 15.300000190734863
+    "vix": 15.720000267028809
   },
   "data_quality": {
     "drawdown_pct": "live",
@@ -19,17 +19,17 @@
     "vix": "live"
   },
   "price_snapshot": {
-    "sp500_close": 7718.60009765625,
-    "nasdaq100_close": 29544.150390625
+    "sp500_close": 7673.52001953125,
+    "nasdaq100_close": 29507.701171875
   },
   "result": {
-    "total_score": 22.4,
+    "total_score": 23.4,
     "sub_scores": {
       "technical": {
-        "score": 0.4,
+        "score": 0.6,
         "max_score": 30,
-        "reason": "52주 최고가 대비 -1.0% 하락",
-        "raw_value": 1.0307762197780512
+        "reason": "52주 최고가 대비 -1.6% 하락",
+        "raw_value": 1.6088007687293238
       },
       "valuation": {
         "score": 4.8,
@@ -38,16 +38,16 @@
         "raw_value": 75.83333333333333
       },
       "fear_greed": {
-        "score": 14.5,
+        "score": 14.8,
         "max_score": 20,
-        "reason": "Fear & Greed 42 (Neutral)",
-        "raw_value": 41.8571428571429
+        "reason": "Fear & Greed 41 (Neutral)",
+        "raw_value": 40.8
       },
       "rate_credit": {
-        "score": 0.4,
+        "score": 0.8,
         "max_score": 10,
-        "reason": "하이일드 스프레드(OAS) 역사 백분위 4퍼센타일",
-        "raw_value": 3.689567430025445
+        "reason": "하이일드 스프레드(OAS) 역사 백분위 8퍼센타일",
+        "raw_value": 7.908163265306123
       },
       "macro": {
         "score": 0,
@@ -57,13 +57,13 @@
       }
     },
     "buy_pct": 50,
-    "percentile_estimate": 78,
+    "percentile_estimate": 77,
     "risk_warnings": [],
     "excluded_categories": [
       "flow"
     ]
   },
   "calibration": {
-    "fear_greed_vix_shadow_estimate": 88.21428503308977
+    "fear_greed_vix_shadow_estimate": 86.71428476061139
   }
 }
