@@ -1,9 +1,9 @@
 {
-  "generated_at_utc": "2026-09-10T23:20:46.001366+00:00",
+  "generated_at_utc": "2026-09-11T07:24:40.031708+00:00",
   "inputs": {
     "drawdown_pct": 2.657908688599764,
     "cape_percentile": 75.83333333333333,
-    "fear_greed": 33.2571428571429,
+    "fear_greed": 31.2,
     "hy_spread_percentile": 12.72264631043257,
     "ism": 47.4,
     "net_flow_index": 0.0,
@@ -20,10 +20,10 @@
   },
   "price_snapshot": {
     "sp500_close": 7591.7001953125,
-    "nasdaq100_close": 29103.513671875
+    "nasdaq100_close": 29103.509765625
   },
   "result": {
-    "total_score": 26.5,
+    "total_score": 27.1,
     "sub_scores": {
       "technical": {
         "score": 1.1,
@@ -38,10 +38,10 @@
         "raw_value": 75.83333333333333
       },
       "fear_greed": {
-        "score": 16.7,
+        "score": 17.2,
         "max_score": 20,
-        "reason": "Fear & Greed 33 (Fear)",
-        "raw_value": 33.2571428571429
+        "reason": "Fear & Greed 31 (Fear)",
+        "raw_value": 31.2
       },
       "rate_credit": {
         "score": 1.3,
