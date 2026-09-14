@@ -1,13 +1,13 @@
 {
-  "generated_at_utc": "2026-09-11T23:29:26.025905+00:00",
+  "generated_at_utc": "2026-09-14T23:57:04.510381+00:00",
   "inputs": {
-    "drawdown_pct": 1.8208800067516795,
+    "drawdown_pct": 2.2953003982136067,
     "cape_percentile": 75.83333333333333,
-    "fear_greed": 33.3428571428571,
-    "hy_spread_percentile": 10.814249363867685,
+    "fear_greed": 31.0571428571429,
+    "hy_spread_percentile": 3.826530612244898,
     "ism": 47.4,
     "net_flow_index": 0.0,
-    "vix": 15.84000015258789
+    "vix": 17.100000381469727
   },
   "data_quality": {
     "drawdown_pct": "live",
@@ -19,17 +19,17 @@
     "vix": "live"
   },
   "price_snapshot": {
-    "sp500_close": 7656.97998046875,
-    "nasdaq100_close": 29368.439453125
+    "sp500_close": 7619.97998046875,
+    "nasdaq100_close": 29127.158203125
   },
   "result": {
-    "total_score": 25.9,
+    "total_score": 26.0,
     "sub_scores": {
       "technical": {
-        "score": 0.7,
+        "score": 0.9,
         "max_score": 30,
-        "reason": "52주 최고가 대비 -1.8% 하락",
-        "raw_value": 1.8208800067516795
+        "reason": "52주 최고가 대비 -2.3% 하락",
+        "raw_value": 2.2953003982136067
       },
       "valuation": {
         "score": 4.8,
@@ -38,16 +38,16 @@
         "raw_value": 75.83333333333333
       },
       "fear_greed": {
-        "score": 16.7,
+        "score": 17.2,
         "max_score": 20,
-        "reason": "Fear & Greed 33 (Fear)",
-        "raw_value": 33.3428571428571
+        "reason": "Fear & Greed 31 (Fear)",
+        "raw_value": 31.0571428571429
       },
       "rate_credit": {
-        "score": 1.1,
+        "score": 0.4,
         "max_score": 10,
-        "reason": "하이일드 스프레드(OAS) 역사 백분위 11퍼센타일",
-        "raw_value": 10.814249363867685
+        "reason": "하이일드 스프레드(OAS) 역사 백분위 4퍼센타일",
+        "raw_value": 3.826530612244898
       },
       "macro": {
         "score": 0,
@@ -64,6 +64,6 @@
     ]
   },
   "calibration": {
-    "fear_greed_vix_shadow_estimate": 86.28571374075753
+    "fear_greed_vix_shadow_estimate": 81.78571292332241
   }
 }
