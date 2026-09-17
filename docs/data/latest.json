@@ -1,13 +1,13 @@
 {
-  "generated_at_utc": "2026-09-16T23:44:26.344919+00:00",
+  "generated_at_utc": "2026-09-17T23:37:12.281012+00:00",
   "inputs": {
-    "drawdown_pct": 3.1693869123181284,
+    "drawdown_pct": 2.067324921620717,
     "cape_percentile": 75.83333333333333,
-    "fear_greed": 26.4857142857143,
-    "hy_spread_percentile": 20.127388535031848,
-    "ism": 47.4,
+    "fear_greed": 28.6857142857143,
+    "hy_spread_percentile": 11.068702290076336,
+    "ism": 37.8,
     "net_flow_index": 0.0,
-    "vix": 17.709999084472656
+    "vix": 15.4399995803833
   },
   "data_quality": {
     "drawdown_pct": "live",
@@ -19,17 +19,17 @@
     "vix": "live"
   },
   "price_snapshot": {
-    "sp500_close": 7551.81005859375,
-    "nasdaq100_close": 28945.060546875
+    "sp500_close": 7637.759765625,
+    "nasdaq100_close": 29446.98046875
   },
   "result": {
-    "total_score": 29.4,
+    "total_score": 27.3,
     "sub_scores": {
       "technical": {
-        "score": 1.3,
+        "score": 0.8,
         "max_score": 30,
-        "reason": "52주 최고가 대비 -3.2% 하락",
-        "raw_value": 3.1693869123181284
+        "reason": "52주 최고가 대비 -2.1% 하락",
+        "raw_value": 2.067324921620717
       },
       "valuation": {
         "score": 4.8,
@@ -38,32 +38,32 @@
         "raw_value": 75.83333333333333
       },
       "fear_greed": {
-        "score": 18.4,
+        "score": 17.8,
         "max_score": 20,
-        "reason": "Fear & Greed 26 (Fear)",
-        "raw_value": 26.4857142857143
+        "reason": "Fear & Greed 29 (Fear)",
+        "raw_value": 28.6857142857143
       },
       "rate_credit": {
-        "score": 2.0,
+        "score": 1.1,
         "max_score": 10,
-        "reason": "하이일드 스프레드(OAS) 역사 백분위 20퍼센타일",
-        "raw_value": 20.127388535031848
+        "reason": "하이일드 스프레드(OAS) 역사 백분위 11퍼센타일",
+        "raw_value": 11.068702290076336
       },
       "macro": {
         "score": 0,
         "max_score": 10,
-        "reason": "제조업 활동 지수(ISM 프록시) 47.4 — 확장 국면",
-        "raw_value": 47.4
+        "reason": "제조업 활동 지수(ISM 프록시) 37.8 — 확장 국면",
+        "raw_value": 37.8
       }
     },
     "buy_pct": 50,
-    "percentile_estimate": 71,
+    "percentile_estimate": 73,
     "risk_warnings": [],
     "excluded_categories": [
       "flow"
     ]
   },
   "calibration": {
-    "fear_greed_vix_shadow_estimate": 79.60714612688336
+    "fear_greed_vix_shadow_estimate": 87.71428721291679
   }
 }
