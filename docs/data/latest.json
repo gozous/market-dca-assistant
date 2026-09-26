@@ -1,35 +1,35 @@
 {
-  "generated_at_utc": "2026-09-24T23:57:52.045730+00:00",
+  "generated_at_utc": "2026-09-26T00:01:35.283633+00:00",
   "inputs": {
-    "drawdown_pct": 1.2163158141215713,
+    "drawdown_pct": 0.7126573627445287,
     "cape_percentile": 75.83333333333333,
-    "fear_greed": 36.1142857142857,
-    "hy_spread_percentile": 16.539440203562343,
-    "ism": 37.8,
+    "fear_greed": 37.0,
+    "hy_spread_percentile": 25.699745547073793,
+    "ism": 0.0,
     "net_flow_index": 0.0,
-    "vix": 15.670000076293945
+    "vix": 14.869999885559082
   },
   "data_quality": {
     "drawdown_pct": "live",
     "cape_percentile": "live",
     "fear_greed": "live",
     "hy_spread_percentile": "live",
-    "ism": "live",
+    "ism": "fallback_neutral",
     "net_flow_index": "excluded_from_scoring",
     "vix": "live"
   },
   "price_snapshot": {
-    "sp500_close": 7704.1298828125,
-    "nasdaq100_close": 30478.85546875
+    "sp500_close": 7743.41015625,
+    "nasdaq100_close": 30608.134765625
   },
   "result": {
-    "total_score": 25.5,
+    "total_score": 31.6,
     "sub_scores": {
       "technical": {
-        "score": 0.5,
+        "score": 0.3,
         "max_score": 30,
-        "reason": "52주 최고가 대비 -1.2% 하락",
-        "raw_value": 1.2163158141215713
+        "reason": "52주 최고가 대비 -0.7% 하락",
+        "raw_value": 0.7126573627445287
       },
       "valuation": {
         "score": 4.8,
@@ -38,32 +38,32 @@
         "raw_value": 75.83333333333333
       },
       "fear_greed": {
-        "score": 16.0,
+        "score": 15.8,
         "max_score": 20,
-        "reason": "Fear & Greed 36 (Fear)",
-        "raw_value": 36.1142857142857
+        "reason": "Fear & Greed 37 (Fear)",
+        "raw_value": 37.0
       },
       "rate_credit": {
-        "score": 1.7,
+        "score": 2.6,
         "max_score": 10,
-        "reason": "하이일드 스프레드(OAS) 역사 백분위 17퍼센타일",
-        "raw_value": 16.539440203562343
+        "reason": "하이일드 스프레드(OAS) 역사 백분위 26퍼센타일",
+        "raw_value": 25.699745547073793
       },
       "macro": {
-        "score": 0,
+        "score": 5.0,
         "max_score": 10,
-        "reason": "제조업 활동 지수(ISM 프록시) 37.8 — 확장 국면",
-        "raw_value": 37.8
+        "reason": "제조업 활동 지수(ISM 프록시) 0.0 — 확장 국면",
+        "raw_value": 0.0
       }
     },
     "buy_pct": 50,
-    "percentile_estimate": 75,
+    "percentile_estimate": 68,
     "risk_warnings": [],
     "excluded_categories": [
       "flow"
     ]
   },
   "calibration": {
-    "fear_greed_vix_shadow_estimate": 86.89285687037876
+    "fear_greed_vix_shadow_estimate": 89.75000040871757
   }
 }
