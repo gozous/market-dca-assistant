@@ -1,13 +1,13 @@
 {
-  "generated_at_utc": "2026-10-02T01:01:42.973518+00:00",
+  "generated_at_utc": "2026-10-03T00:38:22.543623+00:00",
   "inputs": {
-    "drawdown_pct": 1.6994512761192238,
+    "drawdown_pct": 0.9779473654817572,
     "cape_percentile": 75.83333333333333,
-    "fear_greed": 28.0857142857143,
-    "hy_spread_percentile": 58.59872611464968,
+    "fear_greed": 31.1714285714286,
+    "hy_spread_percentile": 75.15923566878982,
     "ism": 37.8,
     "net_flow_index": 0.0,
-    "vix": 16.389999389648438
+    "vix": 15.3100004196167
   },
   "data_quality": {
     "drawdown_pct": "live",
@@ -19,17 +19,17 @@
     "vix": "live"
   },
   "price_snapshot": {
-    "sp500_close": 7666.4501953125,
-    "nasdaq100_close": 30501.560546875
+    "sp500_close": 7722.72021484375,
+    "nasdaq100_close": 30807.931640625
   },
   "result": {
-    "total_score": 32.6,
+    "total_score": 33.3,
     "sub_scores": {
       "technical": {
-        "score": 0.7,
+        "score": 0.4,
         "max_score": 30,
-        "reason": "52주 최고가 대비 -1.7% 하락",
-        "raw_value": 1.6994512761192238
+        "reason": "52주 최고가 대비 -1.0% 하락",
+        "raw_value": 0.9779473654817572
       },
       "valuation": {
         "score": 4.8,
@@ -38,16 +38,16 @@
         "raw_value": 75.83333333333333
       },
       "fear_greed": {
-        "score": 18.0,
+        "score": 17.2,
         "max_score": 20,
-        "reason": "Fear & Greed 28 (Fear)",
-        "raw_value": 28.0857142857143
+        "reason": "Fear & Greed 31 (Fear)",
+        "raw_value": 31.1714285714286
       },
       "rate_credit": {
-        "score": 5.9,
+        "score": 7.5,
         "max_score": 10,
-        "reason": "하이일드 스프레드(OAS) 역사 백분위 59퍼센타일",
-        "raw_value": 58.59872611464968
+        "reason": "하이일드 스프레드(OAS) 역사 백분위 75퍼센타일",
+        "raw_value": 75.15923566878982
       },
       "macro": {
         "score": 0,
@@ -64,6 +64,6 @@
     ]
   },
   "calibration": {
-    "fear_greed_vix_shadow_estimate": 84.32143075125558
+    "fear_greed_vix_shadow_estimate": 88.17856992994035
   }
 }
