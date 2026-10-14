@@ -81,8 +81,17 @@
   .hero-stat .val.accent{color:var(--zone-4);}
 
   /* ---------- Breakdown ---------- */
-  .breakdown-panel{display:flex; flex-direction:column; gap:14px;}
-  .score-row{display:grid; grid-template-columns:120px 1fr 60px; align-items:center; gap:12px;}
+  .breakdown-panel{display:flex; flex-direction:column; gap:10px;}
+  .score-row{
+    display:grid; grid-template-columns:120px 1fr 60px; align-items:center; gap:12px;
+    background:var(--panel-2); border:1px solid var(--border-soft); border-left:4px solid var(--border-soft);
+    border-radius:10px; padding:14px 16px 14px 14px;
+  }
+  .score-row.cat-technical{border-left-color:#3B7FC4; background:var(--panel-2); background:color-mix(in srgb, #3B7FC4 7%, var(--panel-2));}
+  .score-row.cat-valuation{border-left-color:#9F7AEA; background:var(--panel-2); background:color-mix(in srgb, #9F7AEA 7%, var(--panel-2));}
+  .score-row.cat-feargreed{border-left-color:#F0A93A; background:var(--panel-2); background:color-mix(in srgb, #F0A93A 7%, var(--panel-2));}
+  .score-row.cat-rate{border-left-color:#F0677D; background:var(--panel-2); background:color-mix(in srgb, #F0677D 7%, var(--panel-2));}
+  .score-row.cat-macro{border-left-color:#2FBFAE; background:var(--panel-2); background:color-mix(in srgb, #2FBFAE 7%, var(--panel-2));}
   .score-row .name{font-size:13px; font-weight:500;}
   .score-row .sub{display:block; font-family:var(--mono); font-size:10px; color:var(--text-faint); margin-top:2px;}
   .bar-track{position:relative; height:8px; background:var(--bg); border-radius:5px; overflow:hidden; border:1px solid var(--border-soft);}
@@ -94,9 +103,16 @@
   }
   input[type=range]{-webkit-appearance:none; background:transparent;}
   input[type=range]::-webkit-slider-runnable-track{height:4px; background:var(--border); border-radius:2px;}
+  input[type=range]::-moz-range-track{height:4px; background:var(--border); border-radius:2px;}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--text); margin-top:-5px; cursor:pointer; border:2px solid var(--bg);}
+  /* 방향성 그라데이션: dir-asc = 값이 클수록 매수신호 강함(초록이 오른쪽), dir-desc = 값이 작을수록 강함(초록이 왼쪽) */
+  input[type=range].dir-asc::-webkit-slider-runnable-track{background:linear-gradient(90deg, var(--zone-0) 0%, var(--zone-0) 15%, var(--zone-4) 85%, var(--zone-4) 100%);}
+  input[type=range].dir-asc::-moz-range-track{background:linear-gradient(90deg, var(--zone-0) 0%, var(--zone-0) 15%, var(--zone-4) 85%, var(--zone-4) 100%);}
+  input[type=range].dir-desc::-webkit-slider-runnable-track{background:linear-gradient(90deg, var(--zone-4) 0%, var(--zone-4) 15%, var(--zone-0) 85%, var(--zone-0) 100%);}
+  input[type=range].dir-desc::-moz-range-track{background:linear-gradient(90deg, var(--zone-4) 0%, var(--zone-4) 15%, var(--zone-0) 85%, var(--zone-0) 100%);}
+  .dir-labels{display:flex; justify-content:space-between; font-family:var(--mono); font-size:9px; color:var(--text-faint); margin-top:4px; grid-column:1/4;}
 
-  .explain{font-family:var(--mono); font-size:11px; color:var(--text-faint); margin-top:2px; grid-column:1/4;}
+  .explain{font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:8px; padding-top:8px; border-top:1px solid var(--border); grid-column:1/4;}
 
   /* ---------- Index cards ---------- */
   .idx-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;}
@@ -150,8 +166,13 @@
       <div class="gauge-zone-tag" id="zone-tag">—</div>
       <div class="hero-stats">
         <div class="hero-stat" style="flex:1 1 100%;">
-          <div class="lbl">추천 매수 비중</div>
+          <div class="lbl">참고 신호 · 매수 비중 (검증 미완료)</div>
           <div class="val accent" id="buy-pct">0%</div>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat" style="flex:1 1 100%;">
+          <div class="lbl" style="line-height:1.6;">이 신호는 과거 데이터에서 투자 성과 개선 효과가 충분히 검증되지 않았습니다. 실제 매수 비율을 정하는 용도가 아니며, 정기적인 고정 DCA 원칙을 대체하지 않습니다. 신호 기반 배분은 앞으로 쌓이는 기록으로 검증하기 위한 참고 지표로만 씁니다.</div>
         </div>
       </div>
       <div class="hero-stats">
@@ -165,44 +186,49 @@
     <div class="panel breakdown-panel">
       <div class="panel-label">Score Breakdown — 왜 이 점수인가</div>
 
-      <div class="score-row">
+      <div class="score-row cat-technical">
         <div class="name">기술적<span class="sub">TECHNICAL · 30</span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-tech" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-tech">0</b>/30</div>
-        <input type="range" id="in-drawdown" min="0" max="45" value="8" oninput="recalc()">
-        <div class="explain" id="exp-tech">52주 최고가 대비 -8% 하락</div>
+        <input type="range" class="dir-asc" id="in-drawdown" min="0" max="45" value="8" oninput="recalc()">
+        <div class="dir-labels"><span>낮은 하락 (신호 약함)</span><span>깊은 하락 (신호 강함)</span></div>
+        <div class="explain" id="exp-tech">최근 1년 최고가보다 8% 낮은 가격이에요</div>
       </div>
 
-      <div class="score-row">
+      <div class="score-row cat-valuation">
         <div class="name">밸류에이션<span class="sub">VALUATION · 20</span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-val" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-val">0</b>/20</div>
-        <input type="range" id="in-per" min="0" max="100" value="55" oninput="recalc()">
-        <div class="explain" id="exp-val">CAPE 역사 백분위 55퍼센타일</div>
+        <input type="range" class="dir-desc" id="in-per" min="0" max="100" value="55" oninput="recalc()">
+        <div class="dir-labels"><span>저평가 (신호 강함)</span><span>고평가 (신호 약함)</span></div>
+        <div class="explain" id="exp-val">최근 30년 주가 수준과 비교하면 지금은 비싼 편이에요(상위 45%)</div>
       </div>
 
-      <div class="score-row">
+      <div class="score-row cat-feargreed">
         <div class="name">공포·탐욕<span class="sub">FEAR & GREED · 20</span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-fear" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-fear">0</b>/20</div>
-        <input type="range" id="in-feargreed" min="0" max="100" value="55" oninput="recalc()">
-        <div class="explain" id="exp-fear">Fear & Greed 55 (Neutral)</div>
+        <input type="range" class="dir-desc" id="in-feargreed" min="0" max="100" value="55" oninput="recalc()">
+        <div class="dir-labels"><span>공포 (신호 강함)</span><span>탐욕 (신호 약함)</span></div>
+        <div class="explain" id="exp-fear">지금 투자 심리는 '보통' 상태예요</div>
       </div>
 
-      <div class="score-row">
+      <div class="score-row cat-rate">
         <div class="name">금리·신용<span class="sub">RATES & CREDIT · 10</span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-rate" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-rate">0</b>/10</div>
-        <input type="range" id="in-spread" min="0" max="100" value="30" oninput="recalc()">
-        <div class="explain" id="exp-rate">하이일드 스프레드(OAS) 역사 백분위 30퍼센타일</div>
+        <input type="range" class="dir-asc" id="in-spread" min="0" max="100" value="30" oninput="recalc()">
+        <div class="dir-labels"><span>안정 (신호 약함)</span><span>스트레스 확대 (신호 강함)</span></div>
+        <div class="explain" id="exp-rate">회사채 시장 분위기는 안정적인 편이에요(하위 30%)</div>
       </div>
 
-      <div class="score-row">
+      <div class="score-row cat-macro">
         <div class="name">경기<span class="sub">MACRO · 10</span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-macro" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-macro">0</b>/10</div>
-        <input type="range" id="in-ism" min="-40" max="60" value="8" oninput="recalc()">
-        <div class="explain" id="exp-macro">제조업 활동 지수(ISM 프록시) 8.0 — 확장 국면</div>
+        <input type="range" class="dir-desc" id="in-ism" min="-40" max="60" value="8" oninput="recalc()">
+        <div class="dir-labels"><span>위축 (신호 강함)</span><span>확장 (신호 약함)</span></div>
+        <div class="explain" id="exp-macro">제조업 경기는 지금 확장 국면이에요</div>
       </div>
 
       <div class="score-row" style="opacity:0.5;">
@@ -274,11 +300,16 @@ function valScore(capePercentile){
   return Math.max(0, Math.min(20, (100-capePercentile)/100*20));
 }
 function fearScore(fg){
-  if(fg<=20) return 20;
-  if(fg<=40) return 15;
-  if(fg<=60) return 10;
-  if(fg<=80) return 5;
-  return 0;
+  // engine.py(indicators.fear_greed_score)와 동일: 버킷 경계 사이는 선형 보간.
+  const b=[[20,20],[40,15],[60,10],[80,5],[100,0]];
+  if(fg<=b[0][0]) return b[0][1];
+  if(fg>=b[b.length-1][0]) return b[b.length-1][1];
+  for(let i=0;i<b.length-1;i++){
+    if(fg>=b[i][0] && fg<=b[i+1][0]){
+      return b[i][1] + (fg-b[i][0])/(b[i+1][0]-b[i][0])*(b[i+1][1]-b[i][1]);
+    }
+  }
+  return b[b.length-1][1];
 }
 function rateScore(spreadPercentile){
   // 하이일드 OAS 역사 백분위(0~100). 높을수록 신용시장 스트레스 -> 점수 높음(매수 기회).
@@ -298,11 +329,11 @@ function zoneColor(score){
   return getCss('--zone-4');
 }
 function zoneLabel(score){
-  if(score<=20) return '관망 구간';
-  if(score<=40) return '약 매수 구간';
-  if(score<=60) return '기준 매수 구간';
-  if(score<=80) return '적극 매수 구간';
-  return '공격 매수 구간';
+  if(score<=20) return '신호 낮음';
+  if(score<=40) return '신호 약함';
+  if(score<=60) return '신호 보통';
+  if(score<=80) return '신호 강함';
+  return '신호 매우 강함';
 }
 function buyPct(score, dd){
   let base;
@@ -438,22 +469,24 @@ function localCompute(inputs){
   const rawTotal = pTech+pVal+pFear+pRate+pMacro;
   const maxPossible = 90; // flow(10점) 제외
   const total = rawTotal / maxPossible * 100;
-  const fgLabel = fg<=20?'Extreme Fear':fg<=40?'Fear':fg<=60?'Neutral':fg<=80?'Greed':'Extreme Greed';
+  const fgLabelKr = fg<=20?'극단적 공포':fg<=40?'공포':fg<=60?'보통':fg<=80?'탐욕':'극단적 탐욕';
   const risks=[];
   if(cape>=90) risks.push('CAPE 역사 고평가권');
   if(inputs.vix>=28) risks.push('VIX 과열');
   if(fg>=80) risks.push('Extreme Greed 국면');
   if(spread>=90) risks.push('신용 스프레드 역사적 확대');
+  const valDesc = cape>=50 ? `비싼 편이에요(최근 30년 중 상위 ${(100-cape).toFixed(0)}%)` : `저렴한 편이에요(최근 30년 중 하위 ${cape.toFixed(0)}%)`;
+  const rateDesc = spread>=50 ? `불안한 편이에요(최근 역사 중 상위 ${(100-spread).toFixed(0)}%)` : `안정적인 편이에요(최근 역사 중 하위 ${spread.toFixed(0)}%)`;
   return {
     total_score: total,
     sub_scores: {
-      technical:{score:pTech, max_score:30, reason:`52주 최고가 대비 -${dd.toFixed(0)}% 하락`},
-      valuation:{score:pVal, max_score:20, reason:`CAPE 역사 백분위 ${cape.toFixed(0)}퍼센타일`},
-      fear_greed:{score:pFear, max_score:20, reason:`Fear & Greed ${fg.toFixed(0)} (${fgLabel})`},
-      rate_credit:{score:pRate, max_score:10, reason:`하이일드 스프레드(OAS) 역사 백분위 ${spread.toFixed(0)}퍼센타일`},
-      macro:{score:pMacro, max_score:10, reason:`제조업 활동 지수(ISM 프록시) ${ism.toFixed(1)} — ${ism<0?'경기 둔화 신호':'확장 국면'}`},
+      technical:{score:pTech, max_score:30, reason:`최근 1년 최고가보다 ${dd.toFixed(0)}% 낮은 가격이에요`},
+      valuation:{score:pVal, max_score:20, reason:`최근 30년 주가 수준과 비교하면 지금은 ${valDesc}`},
+      fear_greed:{score:pFear, max_score:20, reason:`지금 투자 심리는 '${fgLabelKr}' 상태예요`},
+      rate_credit:{score:pRate, max_score:10, reason:`회사채 시장 분위기는 ${rateDesc}`},
+      macro:{score:pMacro, max_score:10, reason:`제조업 경기는 지금 ${ism<0?'위축':'확장'} 국면이에요`},
     },
-    buy_pct: buyPct(Math.round(total), dd),
+    buy_pct: buyPct(total, dd),  // engine.py처럼 반올림 전 점수로 버킷 판정
     percentile_estimate: Math.max(1, Math.min(99, Math.round(100-total))),
     risk_warnings: risks,
   };

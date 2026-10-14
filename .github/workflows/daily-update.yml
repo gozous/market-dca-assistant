@@ -32,6 +32,6 @@ jobs:
         run: |
           git config user.name "market-dca-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add docs/data/latest.json docs/data/history.csv
+          git add -A docs/data
           git diff --cached --quiet || git commit -m "chore: daily score update $(date -u +%Y-%m-%d)"
           git push

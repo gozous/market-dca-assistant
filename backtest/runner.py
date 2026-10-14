@@ -148,7 +148,9 @@ def _select_investment_dates(index: pd.DatetimeIndex, frequency: str) -> set:
         return set(index)
     period = index.to_series().dt.to_period("M" if frequency == "M" else "W")
     first_of_period = index.to_series().groupby(period).min()
-    return set(first_of_period.values)
+    # numpy datetime64 대신 Timestamp로 돌려준다(Timestamp를 키로 쓰는 date_pos 조회가 pandas/numpy 버전에 따라
+    # KeyError가 나던 문제 방지).
+    return set(pd.DatetimeIndex(first_of_period.values))
 
 
 def _run_fixed_dca(df: pd.DataFrame, base_amount: float, invest_dates: set, execution_lag_days: int = 1):

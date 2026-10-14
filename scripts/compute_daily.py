@@ -107,6 +107,7 @@ def main():
     latest_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     _append_history_row(now, inputs, result, fear_greed_vix_shadow)
+    _record_oos_row(now, inputs, data_quality, price_snapshot, result)
 
     fallback_fields = [k for k, v in data_quality.items() if v == "fallback_neutral"]
     print(f"완료: total_score={result.total_score:.1f}, buy_pct={result.buy_pct}")
@@ -130,6 +131,80 @@ def _append_history_row(now, inputs, result, fear_greed_vix_shadow):
             *[inputs[k] for k in inputs.keys()], fear_greed_vix_shadow,
             ";".join(result.risk_warnings),
         ])
+
+
+# 표본 외(out-of-sample) 검증용 기록. 규칙이 동결된 시점 이후의 신호와 가격만 쌓는다.
+# 점수식/버킷을 바꾸면 RULES_VERSION을 새로 올려서 이전 기록과 섞이지 않게 한다.
+RULES_VERSION = "v1-frozen-2026-10-12"
+
+
+def _read_rows(path):
+    """CSV 전체를 읽는다. 파일이 깨졌거나 읽을 수 없으면 None."""
+    import csv
+    try:
+        with open(path, newline="", encoding="utf-8") as f:
+            return list(csv.reader(f))
+    except (csv.Error, UnicodeDecodeError, OSError):
+        return None
+
+
+def _atomic_write_csv(path, header, rows):
+    """임시 파일에 끝까지 쓴 뒤 한 번에 교체한다. 쓰는 도중 중단돼도 기존 파일은 그대로 남는다."""
+    import csv, os
+    tmp = path.with_name(path.name + ".tmp")
+    with open(tmp, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f); w.writerow(header); w.writerows(rows)
+        f.flush(); os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+def _quarantine(path, now, why):
+    """기존 파일을 지우거나 덮어쓰지 않고 옆으로 옮겨서 보존한다."""
+    target = path.with_name(f"{path.stem}_old_{now.strftime('%Y%m%d%H%M%S')}{path.suffix}")
+    n = 1
+    while target.exists():
+        target = path.with_name(f"{path.stem}_old_{now.strftime('%Y%m%d%H%M%S')}_{n}{path.suffix}"); n += 1
+    path.rename(target)
+    print(f"[주의] {path.name}: {why} -> {target.name}로 보존하고 새 파일로 기록")
+
+
+def _record_oos_row(now, inputs, data_quality, price_snapshot, result):
+    """표본 외 검증 기록 두 가지를 쓴다. 점수 계산에는 영향 없음.
+    - docs/data/history_oos.csv: 하루 한 행. 같은 날 재실행하면 그 날 행만 교체된다.
+    - docs/data/history_oos_runs.csv: 실행할 때마다 한 줄씩 쌓이는 이력(기존 행은 수정/삭제하지 않음).
+    두 파일 모두 임시 파일에 쓴 뒤 교체하고, 헤더가 다르거나 파일이 깨졌으면 옆으로 보존한 뒤 새로 시작한다.
+    참고: 기존 history.csv(_append_history_row)는 같은 날 재실행하면 행이 중복될 수 있다. 표본 외 검증에는
+    쓰지 않고 history_oos.csv만 쓴다."""
+    keys = list(inputs.keys())
+    header = ["date_utc", "rules_version", "sp500_close", "nasdaq100_close", "total_score", "buy_pct",
+              *keys, *[f"dq_{k}" for k in keys], "risk_warnings"]
+    row = [now.date().isoformat(), RULES_VERSION, price_snapshot.get("sp500_close"),
+           price_snapshot.get("nasdaq100_close"), round(result.total_score, 1), result.buy_pct,
+           *[inputs[k] for k in keys], *[data_quality.get(k) for k in keys], ";".join(result.risk_warnings)]
+    clean = [("" if v is None else v) for v in row]
+
+    path = DATA_DIR / "history_oos.csv"
+    rows = []
+    if path.exists():
+        existing = _read_rows(path)
+        if existing is None or not existing or existing[0] != header:
+            _quarantine(path, now, "읽을 수 없거나 헤더가 달라서")
+        else:
+            rows = [r for r in existing[1:] if r and r[0] != clean[0]]
+    rows.append(clean)
+    _atomic_write_csv(path, header, rows)
+
+    runs = DATA_DIR / "history_oos_runs.csv"
+    run_header = ["run_utc", *header]
+    run_rows = []
+    if runs.exists() and runs.stat().st_size > 0:
+        existing = _read_rows(runs)
+        if existing is None or not existing or existing[0] != run_header:
+            _quarantine(runs, now, "읽을 수 없거나 헤더가 달라서")
+        else:
+            run_rows = existing[1:]
+    run_rows.append([now.isoformat(), *clean])
+    _atomic_write_csv(runs, run_header, run_rows)
 
 
 if __name__ == "__main__":
