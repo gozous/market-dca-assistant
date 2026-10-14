@@ -1,9 +1,9 @@
 {
-  "generated_at_utc": "2026-10-14T00:29:27.330885+00:00",
+  "generated_at_utc": "2026-10-14T04:45:58.545187+00:00",
   "inputs": {
     "drawdown_pct": 0.17240185250028128,
     "cape_percentile": 75.83333333333333,
-    "fear_greed": 44.7428571428571,
+    "fear_greed": 44.6,
     "hy_spread_percentile": 57.8544061302682,
     "ism": 37.8,
     "net_flow_index": 0.0,
@@ -23,36 +23,36 @@
     "nasdaq100_close": 30569.48046875
   },
   "result": {
-    "total_score": 27.2,
+    "total_score": 27.3,
     "sub_scores": {
       "technical": {
         "score": 0.1,
         "max_score": 30,
-        "reason": "52주 최고가 대비 -0.2% 하락",
+        "reason": "최근 1년 최고가보다 0% 낮은 가격이에요",
         "raw_value": 0.17240185250028128
       },
       "valuation": {
         "score": 4.8,
         "max_score": 20,
-        "reason": "CAPE 역사 백분위 76퍼센타일 — 고평가 구간",
+        "reason": "최근 30년 주가 수준과 비교하면 지금은 비싼 편이에요(최근 30년 중 상위 24%)",
         "raw_value": 75.83333333333333
       },
       "fear_greed": {
         "score": 13.8,
         "max_score": 20,
-        "reason": "Fear & Greed 45 (Neutral)",
-        "raw_value": 44.7428571428571
+        "reason": "지금 투자 심리는 '보통' 상태예요",
+        "raw_value": 44.6
       },
       "rate_credit": {
         "score": 5.8,
         "max_score": 10,
-        "reason": "하이일드 스프레드(OAS) 역사 백분위 58퍼센타일",
+        "reason": "회사채 시장 분위기는 불안한 편이에요(최근 역사 중 상위 42%)",
         "raw_value": 57.8544061302682
       },
       "macro": {
         "score": 0,
         "max_score": 10,
-        "reason": "제조업 활동 지수(ISM 프록시) 37.8 — 확장 국면",
+        "reason": "제조업 경기는 지금 확장 국면이에요",
         "raw_value": 37.8
       }
     },
