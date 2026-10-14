@@ -45,7 +45,7 @@ def technical_score(drawdown_pct: float, cfg: Dict[str, Any]) -> IndicatorResult
     """52주 최고가 대비 하락률(%, 양수)이 클수록 점수가 높다."""
     tcfg = cfg["technical"]
     score = _clip(_interp_buckets(drawdown_pct, tcfg["buckets"]), 0, tcfg["max_score"])
-    reason = f"52주 최고가 대비 -{drawdown_pct:.1f}% 하락"
+    reason = f"최근 1년 최고가보다 {drawdown_pct:.0f}% 낮은 가격이에요"
     return IndicatorResult(score, tcfg["max_score"], reason, drawdown_pct)
 
 
@@ -58,13 +58,11 @@ def valuation_score(cape_percentile: float, cfg: Dict[str, Any]) -> IndicatorRes
     vcfg = cfg["valuation"]
     max_score = vcfg["max_score"]
     score = _clip((100 - cape_percentile) / 100 * max_score, 0, max_score)
-    if cape_percentile >= 70:
-        zone = "고평가 구간"
-    elif cape_percentile <= 30:
-        zone = "저평가 구간"
+    if cape_percentile >= 50:
+        desc = f"비싼 편이에요(최근 30년 중 상위 {100 - cape_percentile:.0f}%)"
     else:
-        zone = "중립 구간"
-    reason = f"CAPE 역사 백분위 {cape_percentile:.0f}퍼센타일 — {zone}"
+        desc = f"저렴한 편이에요(최근 30년 중 하위 {cape_percentile:.0f}%)"
+    reason = f"최근 30년 주가 수준과 비교하면 지금은 {desc}"
     return IndicatorResult(score, max_score, reason, cape_percentile)
 
 
@@ -78,21 +76,21 @@ def fear_greed_score(index_value: float, cfg: Dict[str, Any]) -> IndicatorResult
     fcfg = cfg["fear_greed"]
     max_score = fcfg["max_score"]
     score = _interp_buckets(index_value, [[b[0], b[1]] for b in fcfg["buckets"]])
-    label = _fear_greed_label(index_value)
-    reason = f"Fear & Greed {index_value:.0f} ({label})"
+    label_kr = _fear_greed_label_kr(index_value)
+    reason = f"지금 투자 심리는 '{label_kr}' 상태예요"
     return IndicatorResult(score, max_score, reason, index_value)
 
 
-def _fear_greed_label(v: float) -> str:
+def _fear_greed_label_kr(v: float) -> str:
     if v <= 20:
-        return "Extreme Fear"
+        return "극단적 공포"
     if v <= 40:
-        return "Fear"
+        return "공포"
     if v <= 60:
-        return "Neutral"
+        return "보통"
     if v <= 80:
-        return "Greed"
-    return "Extreme Greed"
+        return "탐욕"
+    return "극단적 탐욕"
 
 
 def rate_credit_score(hy_spread_percentile: float, cfg: Dict[str, Any]) -> IndicatorResult:
@@ -104,7 +102,11 @@ def rate_credit_score(hy_spread_percentile: float, cfg: Dict[str, Any]) -> Indic
     rcfg = cfg["rate_credit"]
     max_score = rcfg["max_score"]
     score = _clip(hy_spread_percentile / 100 * max_score, 0, max_score)
-    reason = f"하이일드 스프레드(OAS) 역사 백분위 {hy_spread_percentile:.0f}퍼센타일"
+    if hy_spread_percentile >= 50:
+        desc = f"불안한 편이에요(최근 역사 중 상위 {100 - hy_spread_percentile:.0f}%)"
+    else:
+        desc = f"안정적인 편이에요(최근 역사 중 하위 {hy_spread_percentile:.0f}%)"
+    reason = f"회사채 시장 분위기는 {desc}"
     return IndicatorResult(score, max_score, reason, hy_spread_percentile)
 
 
@@ -118,8 +120,8 @@ def macro_score(ism_value: float, cfg: Dict[str, Any]) -> IndicatorResult:
     neutral = mcfg["ism_neutral"]
     rng = mcfg["range"]
     score = _clip((neutral - ism_value) / rng * max_score + max_score / 2, 0, max_score)
-    phase = "경기 둔화 신호" if ism_value < neutral else "확장 국면"
-    reason = f"제조업 활동 지수(ISM 프록시) {ism_value:.1f} — {phase}"
+    phase = "위축 국면이에요" if ism_value < neutral else "확장 국면이에요"
+    reason = f"제조업 경기는 지금 {phase}"
     return IndicatorResult(score, max_score, reason, ism_value)
 
 
