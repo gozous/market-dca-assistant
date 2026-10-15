@@ -120,3 +120,31 @@ def test_snapshot_has_series_start_matching_first_point():
     snap = ds.snapshot_from_series(s, points=3)
     assert snap["series"] == [101.0, 102.0, 103.0]
     assert snap["series_start"] == s.index[1].date().isoformat()
+
+
+def test_fred_item_from_observations_builds_series_and_skips_bad_values():
+    obs = [  # FRED desc: 최신 -> 과거
+        {"date": "2026-10-14", "value": "."},
+        {"date": "2026-10-13", "value": "4.20"},
+        {"date": "2026-10-10", "value": "nan"},
+        {"date": "2026-10-09", "value": "4.10"},
+        {"date": "2026-10-08", "value": "-1"},
+        {"date": "2026-10-07", "value": "4.00"},
+    ]
+    item = ds.fred_item_from_observations(obs)
+    assert item["value"] == 4.20 and item["date"] == "2026-10-13"
+    assert item["series"] == [4.00, 4.10, 4.20] and item["series_start"] == "2026-10-07"
+    assert ds.fred_item_from_observations([{"date": "2026-10-14", "value": "."}]) is None
+    assert ds.fred_item_from_observations([]) is None
+
+
+def test_yfinance_snapshot_has_series(monkeypatch):
+    import sys, types
+    import pandas as pd
+    idx = pd.bdate_range("2026-08-03", periods=80).tz_localize("America/New_York")
+    df = pd.DataFrame({"Close": [1300.0 + i for i in range(80)]}, index=idx)
+    fake = types.SimpleNamespace(Ticker=lambda t: types.SimpleNamespace(history=lambda **k: df))
+    monkeypatch.setitem(sys.modules, "yfinance", fake)
+    item = ds.fetch_yfinance_snapshot("USDKRW=X")
+    assert len(item["series"]) == 60 and item["series"][-1] == item["value"] == 1379.0
+    assert item["series_start"] == idx[-60].date().isoformat() and item["date"] == idx[-1].date().isoformat()

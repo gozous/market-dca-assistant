@@ -293,7 +293,10 @@ def _parse_cape_percentile(xls_bytes: bytes, lookback_years: int) -> Optional[fl
 
 
 
-def fetch_yfinance_snapshot(ticker: str, period: str = "10d", us_close_only: bool = False) -> Optional[dict]:
+MACRO_SERIES_POINTS = 60  # 매크로 칸 추이 그래프에 쓰는 최근 관측 개수
+
+
+def fetch_yfinance_snapshot(ticker: str, period: str = "4mo", us_close_only: bool = False) -> Optional[dict]:
     """최근 시계열의 마지막 관측값과 관측일을 반환한다. 실패 시 None.
     us_close_only=True면 미국 장중에 미확정인 오늘 봉은 제외한다(VIX처럼 점수 입력에 쓰이는 지수용)."""
     try:
@@ -308,10 +311,29 @@ def fetch_yfinance_snapshot(ticker: str, period: str = "10d", us_close_only: boo
         if valid.empty:
             return None
         idx = valid.index[-1]
-        return {"value": float(valid.iloc[-1]), "date": idx.date().isoformat()}
+        tail = valid.tail(MACRO_SERIES_POINTS)
+        return {"value": float(valid.iloc[-1]), "date": idx.date().isoformat(),
+                "series_start": tail.index[0].date().isoformat(),
+                "series": [round(float(x), 4) for x in tail.tolist()]}
     except Exception as e:
         print(f"[warn] fetch_yfinance_snapshot({ticker}) 실패: {e}")
         return None
+
+
+def fred_item_from_observations(obs, points: int = MACRO_SERIES_POINTS):
+    """FRED observations(최신순)에서 최신 유효값 + 최근 points개 추이를 만든다. 유효값이 없으면 None.
+    '.'(결측), 비정상 값(NaN/무한대/0 이하)은 건너뛴다."""
+    good = []
+    for o in obs or []:
+        v, d = o.get("value"), o.get("date")
+        if v in (None, ".") or not d or not _finite_positive(v):
+            continue
+        good.append((d, float(v)))
+    if not good:
+        return None
+    recent = list(reversed(good[:points]))  # 오래된 -> 최신
+    return {"value": good[0][1], "date": good[0][0],
+            "series_start": recent[0][0], "series": [round(v, 4) for _, v in recent]}
 
 
 def fetch_macro_snapshot() -> dict:
@@ -319,7 +341,7 @@ def fetch_macro_snapshot() -> dict:
     # Yahoo Finance: USD/KRW, 달러지수, VIX. Treasury와 HY OAS는 FRED 최신 관측값 우선.
     out = {}
     for key, ticker in (("usd_krw", "USDKRW=X"), ("dxy", "DX-Y.NYB")):
-        item = fetch_yfinance_snapshot(ticker, "10d")
+        item = fetch_yfinance_snapshot(ticker, "4mo")
         out[key] = item
     for key, series_id in (("us_2y", "DGS2"), ("us_10y", "DGS10"), ("hy_oas", "BAMLH0A0HYM2")):
         item = None
@@ -328,17 +350,14 @@ def fetch_macro_snapshot() -> dict:
             try:
                 resp = requests.get("https://api.stlouisfed.org/fred/series/observations", params={
                     "series_id": series_id, "api_key": FRED_API_KEY, "file_type": "json",
-                    "sort_order": "desc", "limit": 10,
+                    "sort_order": "desc", "limit": 90,
                 }, timeout=15)
                 resp.raise_for_status()
-                obs = resp.json().get("observations", [])
-                found = next((o for o in obs if o.get("value") not in (None, ".")), None)
-                if found and _finite_positive(found["value"]):
-                    item = {"value": float(found["value"]), "date": found["date"]}
+                item = fred_item_from_observations(resp.json().get("observations", []))
             except Exception as e:
                 print(f"[warn] fetch_macro_snapshot({series_id}) FRED 실패: {e}")
         out[key] = item
-    vix = fetch_yfinance_snapshot("^VIX", "10d", us_close_only=True)
+    vix = fetch_yfinance_snapshot("^VIX", "4mo", us_close_only=True)
     out["vix"] = vix
     return out
 

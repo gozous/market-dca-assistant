@@ -54,6 +54,15 @@
   .refresh-btn:active{transform:scale(0.97);}
   .live-dot{width:6px; height:6px; border-radius:50%; background:var(--zone-4); display:inline-block; margin-right:6px; box-shadow:0 0 6px var(--zone-4);}
 
+  /* ---------- Tabs ---------- */
+  .tabs{display:flex; gap:8px; margin:0 0 16px; padding:8px 0; position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--border-soft);}
+  .tab-btn{flex:1 1 0; font-family:var(--display); font-size:15px; padding:12px 10px; border-radius:8px; border:1px solid var(--border-soft); background:var(--panel-2); color:var(--text-dim); cursor:pointer; transition:border-color .15s, color .15s;}
+  .tab-btn:hover{border-color:var(--zone-1); color:var(--text);}
+  .tab-btn[aria-selected="true"]{color:var(--text); border-color:var(--zone-4); background:var(--panel); font-weight:600;}
+  .tab-btn:focus-visible{outline:2px solid var(--zone-1); outline-offset:2px;}
+  .tab-pane[hidden]{display:none;}
+  @media (max-width:560px){ .tab-btn{font-size:14px; padding:11px 4px;} }
+
   /* ---------- Panel base ---------- */
   .panel{
     background:linear-gradient(180deg, var(--panel-2), var(--panel));
@@ -129,11 +138,15 @@
   svg.spark{width:100%; height:90px; display:block; margin-top:8px;}
 
   /* ---------- Macro strip ---------- */
-  .macro-strip{display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:16px;}
-  @media (max-width:860px){ .macro-strip{grid-template-columns:repeat(3,1fr);} }
-  .macro-chip{background:var(--panel-2); border:1px solid var(--border-soft); border-radius:10px; padding:12px; text-align:center;}
-  .macro-chip .lbl{font-family:var(--mono); font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.06em;}
-  .macro-chip .val{font-family:var(--mono); font-size:16px; font-weight:600; margin-top:4px;}
+  .macro-strip{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:4px;}
+  @media (max-width:860px){ .macro-strip{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .macro-strip{grid-template-columns:1fr;} }
+  .macro-chip{background:var(--panel-2); border:1px solid var(--border-soft); border-radius:10px; padding:14px; text-align:left;}
+  .macro-chip .lbl{font-family:var(--mono); font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em;}
+  .macro-chip .chg{font-family:var(--mono); font-size:12px; color:var(--text-dim); margin-top:4px;}
+  .macro-chip svg.spark{height:56px; margin-top:8px;}
+  .macro-chip .note{font-size:12.5px; line-height:1.7; color:var(--text-dim); margin-top:8px; padding-top:8px; border-top:1px solid var(--border-soft); white-space:pre-line;}
+  .macro-chip .val{font-family:var(--mono); font-size:17px; font-weight:600; margin-top:4px; word-break:keep-all;}
 
   /* ---------- Risk banner ---------- */
   #risk-banner{display:none; border:1px solid var(--danger); background:rgba(225,86,86,0.08); border-radius:12px; padding:16px 18px; margin-bottom:16px;}
@@ -160,6 +173,18 @@
     </div>
   </header>
 
+  <div id="risk-banner">
+    <div class="title">⚠ 리스크 경고</div>
+    <ul id="risk-list"></ul>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="화면 구분">
+    <button class="tab-btn" role="tab" id="tab-score" aria-controls="pane-score" aria-selected="true" onclick="showTab('score')">① 점수 분석</button>
+    <button class="tab-btn" role="tab" id="tab-index" aria-controls="pane-index" aria-selected="false" onclick="showTab('index')">② 지수 추이</button>
+    <button class="tab-btn" role="tab" id="tab-macro" aria-controls="pane-macro" aria-selected="false" onclick="showTab('macro')">③ 매크로</button>
+  </nav>
+
+  <section class="tab-pane" id="pane-score" role="tabpanel" aria-labelledby="tab-score">
   <div class="hero-grid">
     <div class="panel gauge-panel">
       <div class="panel-label">Composite Score</div>
@@ -242,11 +267,9 @@
     </div>
   </div>
 
-  <div id="risk-banner">
-    <div class="title">⚠ 리스크 경고</div>
-    <ul id="risk-list"></ul>
-  </div>
+  </section>
 
+  <section class="tab-pane" id="pane-index" role="tabpanel" aria-labelledby="tab-index" hidden>
   <div class="idx-grid">
     <div class="panel">
       <div class="idx-head">
@@ -266,17 +289,52 @@
     </div>
   </div>
 
+  </section>
+
+  <section class="tab-pane" id="pane-macro" role="tabpanel" aria-labelledby="tab-macro" hidden>
   <div class="panel" style="margin-bottom:16px;">
     <div class="panel-label">Macro Snapshot</div>
     <div class="macro-strip">
-      <div class="macro-chip"><div class="lbl">US 2Y</div><div class="val" id="us2y-val">—</div></div>
-      <div class="macro-chip"><div class="lbl">US 10Y</div><div class="val" id="us10y-val">—</div></div>
-      <div class="macro-chip"><div class="lbl">DXY</div><div class="val" id="dxy-val">—</div></div>
-      <div class="macro-chip"><div class="lbl">USD/KRW</div><div class="val" id="usdkrw-val">—</div></div>
-      <div class="macro-chip"><div class="lbl">VIX</div><div class="val" id="vix-val">—</div></div>
-      <div class="macro-chip"><div class="lbl">HY OAS</div><div class="val" id="hy-val">—</div></div>
+      <div class="macro-chip">
+        <div class="lbl">미국 국채 2년 금리 (US 2Y)</div><div class="val" id="us2y-val">—</div><div class="chg" id="us2y-chg"></div>
+        <svg class="spark" id="us2y-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+        <div class="spark-cap" id="us2y-cap"></div>
+        <div class="note" id="us2y-note"></div>
+      </div>
+      <div class="macro-chip">
+        <div class="lbl">미국 국채 10년 금리 (US 10Y)</div><div class="val" id="us10y-val">—</div><div class="chg" id="us10y-chg"></div>
+        <svg class="spark" id="us10y-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+        <div class="spark-cap" id="us10y-cap"></div>
+        <div class="note" id="us10y-note"></div>
+      </div>
+      <div class="macro-chip">
+        <div class="lbl">달러지수 (DXY)</div><div class="val" id="dxy-val">—</div><div class="chg" id="dxy-chg"></div>
+        <svg class="spark" id="dxy-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+        <div class="spark-cap" id="dxy-cap"></div>
+        <div class="note" id="dxy-note"></div>
+      </div>
+      <div class="macro-chip">
+        <div class="lbl">원/달러 환율 (USD/KRW)</div><div class="val" id="usdkrw-val">—</div><div class="chg" id="usdkrw-chg"></div>
+        <svg class="spark" id="usdkrw-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+        <div class="spark-cap" id="usdkrw-cap"></div>
+        <div class="note" id="usdkrw-note"></div>
+      </div>
+      <div class="macro-chip">
+        <div class="lbl">변동성지수 (VIX)</div><div class="val" id="vix-val">—</div><div class="chg" id="vix-chg"></div>
+        <svg class="spark" id="vix-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+        <div class="spark-cap" id="vix-cap"></div>
+        <div class="note" id="vix-note"></div>
+      </div>
+      <div class="macro-chip">
+        <div class="lbl">하이일드 가산금리 (HY OAS)</div><div class="val" id="hy-val">—</div><div class="chg" id="hy-chg"></div>
+        <svg class="spark" id="hy-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+        <div class="spark-cap" id="hy-cap"></div>
+        <div class="note" id="hy-note"></div>
+      </div>
     </div>
   </div>
+
+  </section>
 
   <footer>
     시장 데이터는 Yahoo Finance 및 FRED에서 가져옵니다. 조회에 실패한 항목은 임의의 현재값으로 대체하지 않고 ‘조회 실패’로 표시합니다. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
@@ -394,13 +452,13 @@ function renderGauge(score){
 
 /* ---------------- Sparkline (실제 가격 시계열만 표시) ---------------- */
 // 그래프 아래에 기간과 구간 최고/최저를 글자로 표시한다(기간을 알 수 없는 그래프는 오해를 부른다).
-function setSparkCaption(id, pts, startDate, endDate){
+function setSparkCaption(id, pts, startDate, endDate, digits=0){
   const el = document.getElementById(id);
   if (!el) return;
   if (!Array.isArray(pts) || pts.length < 2) { el.textContent = ''; return; }
-  const fmt = v => v.toLocaleString('ko-KR', {maximumFractionDigits: 0});
+  const fmt = v => v.toLocaleString('ko-KR', {minimumFractionDigits: digits, maximumFractionDigits: digits});
   const range = (startDate && endDate) ? `${startDate} ~ ${endDate}` : '기간 정보 없음(다음 자동 갱신 후 표시)';
-  el.textContent = `최근 ${pts.length}거래일 · ${range} · 점선=구간 최고 ${fmt(Math.max(...pts))} · 최저 ${fmt(Math.min(...pts))}`;
+  el.textContent = `최근 ${pts.length}개 관측 · ${range} · 점선=구간 최고 ${fmt(Math.max(...pts))} · 최저 ${fmt(Math.min(...pts))}`;
 }
 function drawSpark(svgId, pts, color){
   const svg=document.getElementById(svgId);
@@ -473,6 +531,72 @@ function renderMacroSnapshot(payload){
     vixEl.style.color = q === 'live' ? '' : getCss('--warn');
   } else { vixEl.textContent = '조회 실패'; vixEl.title = 'VIX 실데이터 및 점수 입력값 조회 실패'; }
 }
+
+/* ---------------- Macro snapshot: 추이 + 변화 + 해석 ---------------- */
+const MACRO_CARDS = [
+  {id:'us2y',   key:'us_2y',   digits:2, unit:'%',  kind:'diff'},
+  {id:'us10y',  key:'us_10y',  digits:2, unit:'%',  kind:'diff'},
+  {id:'dxy',    key:'dxy',     digits:2, unit:'',   kind:'pct'},
+  {id:'usdkrw', key:'usd_krw', digits:0, unit:'',   kind:'pct'},
+  {id:'vix',    key:'vix',     digits:2, unit:'',   kind:'pct'},
+  {id:'hy',     key:'hy_oas',  digits:2, unit:'%',  kind:'diff'},
+];
+function macroChangeText(item, card){
+  const ser = item && Array.isArray(item.series) ? item.series.filter(Number.isFinite) : [];
+  if (ser.length < 2) return '';
+  const k = Math.min(21, ser.length - 1), prev = ser[ser.length - 1 - k], cur = ser[ser.length - 1];
+  const label = k >= 20 ? '약 1개월 전' : `${k}개 관측 전`;
+  // 반올림한 값 기준으로 부호를 정한다(−0.00 방지)
+  const fmt = (x, d, unit) => { const t = Math.abs(x).toFixed(d); return Number(t) === 0 ? `${t}${unit} (변화 거의 없음)` : `${x > 0 ? '+' : '−'}${t}${unit}`; };
+  if (card.kind === 'diff') return `${label} 대비 ${fmt(cur - prev, 2, '%p')}`;
+  return `${label} 대비 ${fmt((cur / prev - 1) * 100, 1, '%')}`;
+}
+function macroNote(card, macro, payload){
+  const item = macro && macro[card.key];
+  const v = item && Number.isFinite(item.value) ? item.value : null;
+  switch (card.key) {
+    case 'us_2y':
+      return '미국 정부가 2년 동안 빌릴 때 주는 금리예요. 연준(Fed)의 기준금리 전망에 가장 민감하게 움직여요. 오르면 단기 자금 비용이 커져 성장주에 부담이 될 수 있어요.\n점수 계산에는 쓰이지 않는 참고 지표예요.';
+    case 'us_10y': {
+      const two = macro && macro.us_2y && Number.isFinite(macro.us_2y.value) ? macro.us_2y.value : null;
+      const spread = (v !== null && two !== null) ? v - two : null;
+      const inv = spread === null ? '' : spread < 0
+        ? `\n10년물−2년물 차이는 ${spread.toFixed(2)}%p로 마이너스(장단기 금리 역전)예요. 경기 둔화 신호로 자주 해석되지만 시점을 맞추진 못해요.`
+        : `\n10년물−2년물 차이는 +${spread.toFixed(2)}%p로 정상(장기 금리가 더 높은) 상태예요.`;
+      return '장기 시장금리의 기준이에요. 오르면 주식의 상대 매력이 떨어지고, 특히 성장주의 가치평가에 부담이 돼요.' + inv + '\n점수 계산에는 쓰이지 않는 참고 지표예요.';
+    }
+    case 'dxy':
+      return '달러가 유로, 엔 등 주요 통화 대비 얼마나 강한지 보여줘요. 오르면 달러 강세로, 신흥국 자금 유출과 원화 약세로 이어지는 경향이 있어요.\n점수 계산에는 쓰이지 않는 참고 지표예요.';
+    case 'usd_krw':
+      return '1달러가 몇 원인지예요. 오르면 원화 약세라서, 같은 미국 주식을 사려면 더 많은 원화가 필요해요. 해외 자산의 원화 환산 수익률에 환율 변동이 그대로 반영돼요.\n점수 계산에는 쓰이지 않는 참고 지표예요.';
+    case 'vix': {
+      const cur = v !== null ? v : (Number.isFinite(currentVix) ? currentVix : null);  // 카드에 보이는 값과 같은 값을 쓴다
+      const st = cur === null ? '' : cur < 15 ? '안정' : cur < 20 ? '보통' : cur < 28 ? '불안' : '과열 경고 기준(28) 이상';
+      return 'S&P 500 옵션이 반영하는 향후 한 달 변동성 기대치예요. 15 미만 안정, 15~20 보통, 20~28 불안, 28 이상이면 이 대시보드가 "VIX 과열" 경고를 띄워요.' +
+        (cur === null ? '' : `\n지금은 ${cur.toFixed(1)}로 "${st}" 구간이에요.`) +
+        '\n점수에는 직접 쓰이지 않고, 경고 판정과 심리 지수 대체 추정에만 쓰여요.';
+    }
+    case 'hy_oas':
+      return '위험이 큰 회사채(하이일드)가 미국 국채보다 더 얹어 주는 금리예요. 넓어질수록 신용시장이 불안하다는 뜻이고, 보통 위기 때 급격히 넓어져요.\n점수에는 이 값 자체가 아니라 1996년 이후 기록 대비 백분위를 써요(신용 항목).';
+  }
+  return '';
+}
+function renderMacroExtras(payload){
+  const macro = (payload && payload.price_snapshot && payload.price_snapshot.macro) || null;
+  MACRO_CARDS.forEach(card => {
+    const item = macro && macro[card.key];
+    const chg = document.getElementById(`${card.id}-chg`);
+    if (chg) chg.textContent = macroChangeText(item, card);
+    const ser = item && Array.isArray(item.series) ? item.series.filter(Number.isFinite) : [];
+    drawSpark(`${card.id}-spark`, ser, getCss('--text-dim'));
+    const cap = document.getElementById(`${card.id}-cap`);
+    if (ser.length >= 2) setSparkCaption(`${card.id}-cap`, ser, item.series_start, item.date, card.digits === 0 ? 0 : 2);
+    else if (cap) cap.textContent = item && Number.isFinite(item.value) ? '추이 정보 없음(다음 자동 갱신 후 표시)' : '';
+    const note = document.getElementById(`${card.id}-note`);
+    if (note) note.textContent = macroNote(card, macro, payload);
+  });
+}
+
 function setUpdatedBadge(payload){
   const dot = document.getElementById('conn-dot');
   const label = document.getElementById('conn-label');
@@ -517,6 +641,7 @@ async function loadTodayData(){
   }
   setUpdatedBadge(todayData);
   renderMacroSnapshot(todayData);
+  renderMacroExtras(todayData);
   if(todayData){
     document.getElementById('in-drawdown').value = todayData.inputs.drawdown_pct;
     document.getElementById('in-per').value = todayData.inputs.cape_percentile;
@@ -667,6 +792,34 @@ async function recalc(){
 
   applyResult(localCompute(inputs), dd);
 }
+
+
+/* ---------------- Tabs ---------------- */
+const TAB_IDS = ['score', 'index', 'macro'];
+function showTab(id, persist = true){
+  if (!TAB_IDS.includes(id)) id = 'score';
+  TAB_IDS.forEach(t => {
+    const pane = document.getElementById(`pane-${t}`), btn = document.getElementById(`tab-${t}`);
+    pane.hidden = (t !== id);
+    btn.setAttribute('aria-selected', t === id ? 'true' : 'false');
+    btn.tabIndex = (t === id) ? 0 : -1;
+  });
+  if (persist) { try { localStorage.setItem('dca-tab', id); } catch (e) {} try { history.replaceState(null, '', '#' + id); } catch (e) {} }
+}
+document.addEventListener('keydown', e => {
+  if (!e.target.classList || !e.target.classList.contains('tab-btn')) return;
+  const i = TAB_IDS.indexOf(e.target.id.replace('tab-', ''));
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    const n = TAB_IDS[(i + (e.key === 'ArrowRight' ? 1 : TAB_IDS.length - 1)) % TAB_IDS.length];
+    showTab(n); document.getElementById(`tab-${n}`).focus();
+  }
+});
+(function initTab(){
+  let id = (location.hash || '').replace('#', '');
+  if (!TAB_IDS.includes(id)) { try { id = localStorage.getItem('dca-tab') || 'score'; } catch (e) { id = 'score'; } }
+  showTab(id, false);
+  window.addEventListener('hashchange', () => { const h = (location.hash || '').replace('#', ''); if (TAB_IDS.includes(h)) showTab(h, false); });
+})();
 
 function resetToTodayData(){
   loadTodayData().then(recalc);
