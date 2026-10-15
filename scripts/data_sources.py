@@ -353,8 +353,10 @@ def snapshot_from_series(series, points: int = 60) -> dict:
     valid = valid[valid.map(_finite_positive)]
     if valid.empty:
         return empty
+    tail = valid.tail(points)
     return {"close": float(valid.iloc[-1]), "date": valid.index[-1].date().isoformat(),
-            "series": [round(float(x), 4) for x in valid.tail(points).tolist()]}
+            "series_start": tail.index[0].date().isoformat(),  # 그래프 구간의 시작일(끝은 date)
+            "series": [round(float(x), 4) for x in tail.tolist()]}
 
 
 def fetch_net_flow_index() -> Optional[float]:

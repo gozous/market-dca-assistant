@@ -103,9 +103,11 @@ def gather_inputs():
         "sp500_close": sp_snapshot.get("close"),
         "sp500_date": sp_snapshot.get("date"),
         "sp500_series": sp_snapshot.get("series", []),
+        "sp500_series_start": sp_snapshot.get("series_start"),
         "nasdaq100_close": nd_snapshot.get("close"),
         "nasdaq100_date": nd_snapshot.get("date"),
         "nasdaq100_series": nd_snapshot.get("series", []),
+        "nasdaq100_series_start": nd_snapshot.get("series_start"),
         # 점수 입력과 같은 방식(최근 252거래일 최고가 대비)의 낙폭. 화면의 하락률 표시에 쓴다.
         "nasdaq100_drawdown_pct": ds.compute_drawdown_pct(nd_close),
         "macro": macro_snapshot,

@@ -113,3 +113,10 @@ def test_vix_snapshot_drops_unfinished_bar(monkeypatch):
                         lambda s: real(s, datetime(2026, 10, 14, 19, 0, tzinfo=timezone.utc)))
     assert ds.fetch_yfinance_snapshot("^VIX", "10d", us_close_only=True)["value"] == 17.0
     assert ds.fetch_yfinance_snapshot("USDKRW=X", "10d")["value"] == 30.0
+
+
+def test_snapshot_has_series_start_matching_first_point():
+    s = _series([100.0, 101.0, 102.0, 103.0])
+    snap = ds.snapshot_from_series(s, points=3)
+    assert snap["series"] == [101.0, 102.0, 103.0]
+    assert snap["series_start"] == s.index[1].date().isoformat()
