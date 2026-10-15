@@ -35,6 +35,32 @@ def fetch_price_series(ticker: str, period: str = "1y"):
         return None
 
 
+def drop_unfinished_last_bar(series, now_utc=None):
+    """미국 장이 아직 안 끝났는데 마지막 봉 날짜가 오늘(미 동부시간)이면 그 봉(장중 미확정 값)을 버린다.
+    마감 기준은 16:15 ET(여유 15분). 휴장일은 오늘 봉이 아예 없으므로 영향 없음.
+    자동 실행(21:30 UTC)은 항상 마감 후라 그대로 통과하고, 장중 수동 실행만 걸러진다."""
+    if series is None or len(series) == 0:
+        return series
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    et = ZoneInfo("America/New_York")
+    now_et = (now_utc or datetime.now(timezone.utc)).astimezone(et)
+    last_date = series.index[-1].date()
+    closed = (now_et.hour, now_et.minute) >= (16, 15)
+    if last_date == now_et.date() and not closed:
+        return series.iloc[:-1]
+    return series
+
+
+def _finite_positive(x) -> bool:
+    """NaN, 무한대, 0 이하 값을 걸러낸다(가격/지수류 관측값 검증용)."""
+    import math
+    try:
+        return math.isfinite(float(x)) and float(x) > 0
+    except (TypeError, ValueError):
+        return False
+
+
 def compute_drawdown_pct(close_series, window: int = 252) -> Optional[float]:
     """
     52주 최고가 대비 하락률(%). 백테스트(backtest/data.py의 rolling(252).max())와
@@ -42,7 +68,12 @@ def compute_drawdown_pct(close_series, window: int = 252) -> Optional[float]:
     "최근 window(기본 252)거래일의 최댓값"으로 명시적으로 고정한다.
     (yfinance의 period="1y"는 공휴일 등에 따라 정확히 252개가 아닐 수 있어 이 슬라이싱이 필요함)
     """
-    if close_series is None or close_series.empty:
+    if close_series is None:
+        return None
+    # 마지막 봉의 종가가 NaN이면(장중 미완성 봉 등) 그대로 점수에 들어가 조용히 틀린 값이 나오므로 먼저 제거한다.
+    close_series = close_series.dropna()
+    close_series = close_series[close_series > 0]
+    if close_series.empty:
         return None
     windowed = close_series.tail(window)
     rolling_high = windowed.max()
@@ -259,6 +290,71 @@ def _parse_cape_percentile(xls_bytes: bytes, lookback_years: int) -> Optional[fl
     except Exception as e:
         print(f"[warn] fetch_cape_percentile 실패 (Shiller 데이터 구조/접근 변경 가능성): {e}")
         return None
+
+
+
+def fetch_yfinance_snapshot(ticker: str, period: str = "10d", us_close_only: bool = False) -> Optional[dict]:
+    """최근 시계열의 마지막 관측값과 관측일을 반환한다. 실패 시 None.
+    us_close_only=True면 미국 장중에 미확정인 오늘 봉은 제외한다(VIX처럼 점수 입력에 쓰이는 지수용)."""
+    try:
+        import yfinance as yf
+        data = yf.Ticker(ticker).history(period=period, auto_adjust=False)
+        if data.empty or "Close" not in data:
+            return None
+        valid = data["Close"].dropna()
+        valid = valid[valid.map(_finite_positive)]
+        if us_close_only:
+            valid = drop_unfinished_last_bar(valid)
+        if valid.empty:
+            return None
+        idx = valid.index[-1]
+        return {"value": float(valid.iloc[-1]), "date": idx.date().isoformat()}
+    except Exception as e:
+        print(f"[warn] fetch_yfinance_snapshot({ticker}) 실패: {e}")
+        return None
+
+
+def fetch_macro_snapshot() -> dict:
+    """대시보드용 매크로 스냅샷. 모든 필드는 실제 관측값만 반환하며 실패 시 None."""
+    # Yahoo Finance: USD/KRW, 달러지수, VIX. Treasury와 HY OAS는 FRED 최신 관측값 우선.
+    out = {}
+    for key, ticker in (("usd_krw", "USDKRW=X"), ("dxy", "DX-Y.NYB")):
+        item = fetch_yfinance_snapshot(ticker, "10d")
+        out[key] = item
+    for key, series_id in (("us_2y", "DGS2"), ("us_10y", "DGS10"), ("hy_oas", "BAMLH0A0HYM2")):
+        item = None
+        # FRED API key가 있는 경우에만 FRED를 사용한다. 날짜 포함 최신 관측값.
+        if FRED_API_KEY:
+            try:
+                resp = requests.get("https://api.stlouisfed.org/fred/series/observations", params={
+                    "series_id": series_id, "api_key": FRED_API_KEY, "file_type": "json",
+                    "sort_order": "desc", "limit": 10,
+                }, timeout=15)
+                resp.raise_for_status()
+                obs = resp.json().get("observations", [])
+                found = next((o for o in obs if o.get("value") not in (None, ".")), None)
+                if found and _finite_positive(found["value"]):
+                    item = {"value": float(found["value"]), "date": found["date"]}
+            except Exception as e:
+                print(f"[warn] fetch_macro_snapshot({series_id}) FRED 실패: {e}")
+        out[key] = item
+    vix = fetch_yfinance_snapshot("^VIX", "10d", us_close_only=True)
+    out["vix"] = vix
+    return out
+
+
+def snapshot_from_series(series, points: int = 60) -> dict:
+    """이미 받아 둔 종가 시계열에서 최신 종가, 관측일, 스파크라인용 최근 구간을 만든다.
+    점수 입력(drawdown)과 같은 시계열을 쓰므로 화면 값과 점수 입력이 어긋나지 않는다."""
+    empty = {"close": None, "date": None, "series": []}
+    if series is None:
+        return empty
+    valid = series.dropna()
+    valid = valid[valid.map(_finite_positive)]
+    if valid.empty:
+        return empty
+    return {"close": float(valid.iloc[-1]), "date": valid.index[-1].date().isoformat(),
+            "series": [round(float(x), 4) for x in valid.tail(points).tolist()]}
 
 
 def fetch_net_flow_index() -> Optional[float]:

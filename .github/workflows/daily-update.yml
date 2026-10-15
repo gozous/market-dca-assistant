@@ -7,6 +7,11 @@ on:
     - cron: "30 21 * * 1-5"   # 평일만
   workflow_dispatch: {}        # 수동 실행 버튼 (즉시 갱신용)
 
+# 같은 저장소의 데이터 기록 작업이 겹치지 않도록 직렬화한다.
+concurrency:
+  group: market-dca-daily-update
+  cancel-in-progress: false
+
 permissions:
   contents: write
 

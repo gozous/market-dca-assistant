@@ -32,8 +32,8 @@ def test_same_day_rerun_replaces_row_and_runs_log_keeps_both():
     d = _setup(); _rec(T0); _rec(T0 + dt.timedelta(hours=3), dict(INP, vix=30.0), 5010.0); _rec(T0 + dt.timedelta(days=1))
     oos = _rows(d / "history_oos.csv"); runs = _rows(d / "history_oos_runs.csv")
     assert len(oos) - 1 == 2 and len(runs) - 1 == 3
-    assert oos[1][2] == "5010.0"          # 같은 날 마지막 실행 값으로 교체
-    assert runs[1][3] == "5000.0" and runs[2][3] == "5010.0"   # 이력에는 이전 값이 남음
+    assert oos[1][3] == "5010.0"          # 같은 날 마지막 실행 값으로 교체
+    assert runs[1][4] == "5000.0" and runs[2][4] == "5010.0"   # 이력에는 이전 값이 남음
 
 
 def test_interrupted_write_keeps_old_file_intact():

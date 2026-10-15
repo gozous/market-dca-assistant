@@ -76,7 +76,8 @@
   }
   .hero-stats{display:flex; gap:10px; margin-top:18px; width:100%;}
   .hero-stat{flex:1; background:var(--bg); border:1px solid var(--border-soft); border-radius:10px; padding:12px; text-align:left;}
-  .hero-stat .lbl{font-family:var(--mono); font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px;}
+  .hero-stat .notice{font-size:13px; line-height:1.7; color:var(--text-dim);}
+  .hero-stat .lbl{font-family:var(--mono); font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px;}
   .hero-stat .val{font-family:var(--mono); font-size:20px; font-weight:600;}
   .hero-stat .val.accent{color:var(--zone-4);}
 
@@ -110,7 +111,7 @@
   input[type=range].dir-asc::-moz-range-track{background:linear-gradient(90deg, var(--zone-0) 0%, var(--zone-0) 15%, var(--zone-4) 85%, var(--zone-4) 100%);}
   input[type=range].dir-desc::-webkit-slider-runnable-track{background:linear-gradient(90deg, var(--zone-4) 0%, var(--zone-4) 15%, var(--zone-0) 85%, var(--zone-0) 100%);}
   input[type=range].dir-desc::-moz-range-track{background:linear-gradient(90deg, var(--zone-4) 0%, var(--zone-4) 15%, var(--zone-0) 85%, var(--zone-0) 100%);}
-  .dir-labels{display:flex; justify-content:space-between; font-family:var(--mono); font-size:9px; color:var(--text-faint); margin-top:4px; grid-column:1/4;}
+  .dir-labels{display:flex; justify-content:space-between; gap:8px; font-family:var(--mono); font-size:12px; color:var(--text-dim); margin-top:6px; grid-column:1/4; line-height:1.4;}
 
   .explain{font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:8px; padding-top:8px; border-top:1px solid var(--border); grid-column:1/4;}
 
@@ -172,7 +173,7 @@
       </div>
       <div class="hero-stats">
         <div class="hero-stat" style="flex:1 1 100%;">
-          <div class="lbl" style="line-height:1.6;">이 신호는 과거 데이터에서 투자 성과 개선 효과가 충분히 검증되지 않았습니다. 실제 매수 비율을 정하는 용도가 아니며, 정기적인 고정 DCA 원칙을 대체하지 않습니다. 신호 기반 배분은 앞으로 쌓이는 기록으로 검증하기 위한 참고 지표로만 씁니다.</div>
+          <div class="notice">이 신호는 과거 데이터에서 투자 성과 개선 효과가 충분히 검증되지 않았습니다. 실제 매수 비율을 정하는 용도가 아니며, 정기적인 고정 DCA 원칙을 대체하지 않습니다. 신호 기반 배분은 앞으로 쌓이는 기록으로 검증하기 위한 참고 지표로만 씁니다.</div>
         </div>
       </div>
       <div class="hero-stats">
@@ -226,7 +227,7 @@
         <div class="name">경기<span class="sub">MACRO · 10</span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-macro" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-macro">0</b>/10</div>
-        <input type="range" class="dir-desc" id="in-ism" min="-40" max="60" value="8" oninput="recalc()">
+        <input type="range" class="dir-desc" id="in-ism" min="-15" max="15" value="8" oninput="recalc()">
         <div class="dir-labels"><span>위축 (신호 강함)</span><span>확장 (신호 약함)</span></div>
         <div class="explain" id="exp-macro">제조업 경기는 지금 확장 국면이에요</div>
       </div>
@@ -265,18 +266,18 @@
   <div class="panel" style="margin-bottom:16px;">
     <div class="panel-label">Macro Snapshot</div>
     <div class="macro-strip">
-      <div class="macro-chip"><div class="lbl">US 2Y</div><div class="val">4.32%</div></div>
-      <div class="macro-chip"><div class="lbl">US 10Y</div><div class="val">4.18%</div></div>
-      <div class="macro-chip"><div class="lbl">DXY</div><div class="val">102.4</div></div>
-      <div class="macro-chip"><div class="lbl">USD/KRW</div><div class="val">1,362</div></div>
-      <div class="macro-chip"><div class="lbl">VIX</div><div class="val" id="vix-val">16.8</div></div>
-      <div class="macro-chip"><div class="lbl">HY Spread</div><div class="val" id="hy-val">3.1%</div></div>
+      <div class="macro-chip"><div class="lbl">US 2Y</div><div class="val" id="us2y-val">—</div></div>
+      <div class="macro-chip"><div class="lbl">US 10Y</div><div class="val" id="us10y-val">—</div></div>
+      <div class="macro-chip"><div class="lbl">DXY</div><div class="val" id="dxy-val">—</div></div>
+      <div class="macro-chip"><div class="lbl">USD/KRW</div><div class="val" id="usdkrw-val">—</div></div>
+      <div class="macro-chip"><div class="lbl">VIX</div><div class="val" id="vix-val">—</div></div>
+      <div class="macro-chip"><div class="lbl">HY OAS</div><div class="val" id="hy-val">—</div></div>
     </div>
   </div>
 
   <footer>
-    이 화면은 명세서 기반 프로토타입이며, 표시된 지수·매크로 수치는 임의의 샘플 데이터입니다. 슬라이더를 움직이면 Score Engine 로직에 따라 점수·매수 비중이 즉시 재계산됩니다.<br>
-    투자 조언이 아니며, 실데이터 연동(FRED·Yahoo Finance 등) 및 백테스트 엔진은 다음 단계에서 구현합니다.
+    시장 데이터는 Yahoo Finance 및 FRED에서 가져옵니다. 조회에 실패한 항목은 임의의 현재값으로 대체하지 않고 ‘조회 실패’로 표시합니다. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
+    슬라이더를 움직이면 Score Engine 로직에 따라 점수·매수 비중이 재계산됩니다. 매크로 스냅샷은 참고용이며 투자 조언이 아닙니다.
   </footer>
 </div>
 
@@ -388,22 +389,10 @@ function renderGauge(score){
   svg.innerHTML = paths + ticks + needle;
 }
 
-/* ---------------- Sparkline (mock series) ---------------- */
-function seededRandom(seed){ let x=Math.sin(seed)*10000; return x-Math.floor(x); }
-function genSeries(seedBase, ddPct){
-  const pts=[]; let v=100;
-  for(let i=0;i<60;i++){
-    v += (seededRandom(seedBase+i*7.3)-0.48)*2.6;
-    pts.push(v);
-  }
-  // force last value to reflect current drawdown from the running max
-  const max = Math.max(...pts);
-  const target = max*(1-ddPct/100);
-  pts[pts.length-1] = target;
-  return pts;
-}
+/* ---------------- Sparkline (실제 가격 시계열만 표시) ---------------- */
 function drawSpark(svgId, pts, color){
   const svg=document.getElementById(svgId);
+  if (!Array.isArray(pts) || pts.length < 2) { svg.innerHTML = ''; return; }
   const w=600,h=90, min=Math.min(...pts), max=Math.max(...pts);
   const norm = pts.map((v,i)=>{
     const x = (i/(pts.length-1))*w;
@@ -422,23 +411,88 @@ function drawSpark(svgId, pts, color){
 
 /* ---------------- Static daily data (GitHub Actions writes docs/data/latest.json) ---------------- */
 let todayData = null;
+let currentVix = null;  // 숫자 그대로 보관(화면 문자열을 다시 파싱하지 않는다)
 
+function daysOld(isoDate){
+  if (!isoDate) return null;
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  if (!Number.isFinite(d.getTime())) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+const PRICE_MAX_AGE_DAYS = 4;  // 금요일 종가를 월요일에 보는 경우(3일)까지는 정상, 그 이상이면 갱신 누락 의심
+const MACRO_MAX_AGE_DAYS = {usd_krw:3, dxy:3, us_2y:7, us_10y:7, hy_oas:10, vix:4};  // vix는 가격과 같은 미국 장 달력이라 4일(연휴 직후 오탐 방지)
+function macroItemText(item, suffix, digits, maxAge){
+  if (!item || !Number.isFinite(item.value)) return {text:'조회 실패', stale:true, title:'실제 관측값을 받지 못했습니다.'};
+  const age = daysOld(item.date);
+  const stale = age === null || age < 0 || age > maxAge;
+  const dateText = item.date || '날짜 미상';
+  return {
+    text:`${item.value.toLocaleString('ko-KR',{minimumFractionDigits:digits,maximumFractionDigits:digits})}${suffix} · ${dateText}${stale?' · 오래된 데이터':''}`,
+    stale,
+    title: age === null ? '관측 날짜를 확인할 수 없습니다.' : age < 0 ? `관측일 ${dateText}이 미래 날짜입니다.` : `관측일 ${dateText} · ${age}일 경과 · 허용 기준 ${maxAge}일`
+  };
+}
+function renderMacroSnapshot(payload){
+  const macro = payload && payload.price_snapshot && payload.price_snapshot.macro;
+  const defs = [
+    ['us2y-val','us_2y','%',2], ['us10y-val','us_10y','%',2], ['dxy-val','dxy','',2],
+    ['usdkrw-val','usd_krw','',0], ['hy-val','hy_oas','%',2]
+  ];
+  defs.forEach(([id,key,suffix,digits])=>{
+    const el = document.getElementById(id); if (!el) return;
+    const result = macroItemText(macro && macro[key], suffix, digits, MACRO_MAX_AGE_DAYS[key]);
+    el.textContent = result.text; el.title = result.title;
+    el.style.color = result.stale ? getCss('--warn') : '';
+  });
+  const vixEl = document.getElementById('vix-val');
+  const vixItem = macro && macro.vix;
+  const result = macroItemText(vixItem, '', 2, MACRO_MAX_AGE_DAYS.vix);
+  // 점수 입력으로 쓰인 값이 있으면 그것을, 없으면 화면용 관측값을 경고 판정에 쓴다.
+  currentVix = (payload && payload.inputs && Number.isFinite(payload.inputs.vix)) ? payload.inputs.vix
+             : (vixItem && Number.isFinite(vixItem.value)) ? vixItem.value : null;
+  if (vixItem && Number.isFinite(vixItem.value)) {
+    vixEl.textContent = result.text; vixEl.title = result.title;
+    vixEl.style.color = result.stale ? getCss('--warn') : '';
+  } else if (payload && payload.inputs && Number.isFinite(payload.inputs.vix)) {
+    const q = payload.data_quality && payload.data_quality.vix;
+    const label = q === 'live' ? '점수 입력값' : '대체값';
+    vixEl.textContent = `${payload.inputs.vix.toFixed(2)} (${label})`;
+    vixEl.title = '화면용 VIX 관측값은 없으며, 괄호는 점수 계산 입력의 상태입니다.';
+    vixEl.style.color = q === 'live' ? '' : getCss('--warn');
+  } else { vixEl.textContent = '조회 실패'; vixEl.title = 'VIX 실데이터 및 점수 입력값 조회 실패'; }
+}
 function setUpdatedBadge(payload){
   const dot = document.getElementById('conn-dot');
   const label = document.getElementById('conn-label');
-  if(payload){
-    const fallbacks = Object.entries(payload.data_quality || {}).filter(([,v])=>v!=='live').map(([k])=>k);
-    dot.style.background = fallbacks.length ? getCss('--warn') : getCss('--zone-4');
-    dot.style.boxShadow = `0 0 6px ${dot.style.background}`;
-    const ts = new Date(payload.generated_at_utc).toLocaleString('ko-KR');
-    label.textContent = fallbacks.length
-      ? `마지막 갱신 ${ts} · 일부 지표 미확보(${fallbacks.length}개, 중립값 대체)`
-      : `마지막 갱신 ${ts} · 전 지표 실데이터`;
-  } else {
-    dot.style.background = getCss('--warn');
-    dot.style.boxShadow = `0 0 6px ${getCss('--warn')}`;
-    label.textContent = '오늘 자동 갱신 데이터 없음 — 샘플 값으로 표시 중';
+  if (!payload) {
+    dot.style.background = getCss('--warn'); dot.style.boxShadow = `0 0 6px ${getCss('--warn')}`;
+    label.textContent = '자동 갱신 데이터 없음'; return;
   }
+  const dq = payload.data_quality || {};
+  const scoreFallback = Object.entries(dq).filter(([k,v]) => k !== 'net_flow_index' && v === 'fallback_neutral').map(([k])=>k);
+  const scoreDerived = Object.entries(dq).filter(([,v]) => v === 'derived_from_vix').map(([k])=>k);
+  const macro = payload.price_snapshot && payload.price_snapshot.macro || {};
+  const macroKeys = Object.keys(MACRO_MAX_AGE_DAYS);
+  const macroIssues = macroKeys.filter(k => {
+    const item = macro[k];
+    if (!item || !Number.isFinite(item.value)) return true;
+    const age = daysOld(item.date); return age === null || age < 0 || age > MACRO_MAX_AGE_DAYS[k];
+  });
+  const snapP = payload.price_snapshot || {};
+  const priceIssues = [['sp500_close','sp500_date'],['nasdaq100_close','nasdaq100_date']].filter(([v,d]) => {
+    if (!Number.isFinite(snapP[v])) return true;
+    const age = daysOld(snapP[d]); return age === null || age < 0 || age > PRICE_MAX_AGE_DAYS;
+  });
+  const issueCount = scoreFallback.length + scoreDerived.length + macroIssues.length + priceIssues.length;
+  dot.style.background = issueCount ? getCss('--warn') : getCss('--zone-4');
+  dot.style.boxShadow = `0 0 6px ${dot.style.background}`;
+  const ts = payload.generated_at_utc ? new Date(payload.generated_at_utc).toLocaleString('ko-KR') : '시각 미상';
+  const parts = [];
+  if (scoreFallback.length) parts.push(`점수 중립 대체 ${scoreFallback.length}개`);
+  if (scoreDerived.length) parts.push(`점수 추정 입력 ${scoreDerived.length}개`);
+  if (macroIssues.length) parts.push(`매크로 조회 실패/오래됨 ${macroIssues.length}개`);
+  if (priceIssues.length) parts.push(`지수 가격 조회 실패/오래됨 ${priceIssues.length}개`);
+  label.textContent = `수집 실행 ${ts} · ${parts.length ? parts.join(' · ') : '점수·매크로 상태 정상'}`;
 }
 
 async function loadTodayData(){
@@ -450,13 +504,13 @@ async function loadTodayData(){
     todayData = null;
   }
   setUpdatedBadge(todayData);
+  renderMacroSnapshot(todayData);
   if(todayData){
     document.getElementById('in-drawdown').value = todayData.inputs.drawdown_pct;
     document.getElementById('in-per').value = todayData.inputs.cape_percentile;
     document.getElementById('in-feargreed').value = todayData.inputs.fear_greed;
     document.getElementById('in-spread').value = todayData.inputs.hy_spread_percentile;
     document.getElementById('in-ism').value = todayData.inputs.ism;
-    if(document.getElementById('vix-val')) document.getElementById('vix-val').textContent = todayData.inputs.vix.toFixed(1);
   }
 }
 
@@ -472,7 +526,7 @@ function localCompute(inputs){
   const fgLabelKr = fg<=20?'극단적 공포':fg<=40?'공포':fg<=60?'보통':fg<=80?'탐욕':'극단적 탐욕';
   const risks=[];
   if(cape>=90) risks.push('CAPE 역사 고평가권');
-  if(inputs.vix>=28) risks.push('VIX 과열');
+  if(Number.isFinite(inputs.vix) && inputs.vix>=28) risks.push('VIX 과열');
   if(fg>=80) risks.push('Extreme Greed 국면');
   if(spread>=90) risks.push('신용 스프레드 역사적 확대');
   const valDesc = cape>=50 ? `비싼 편이에요(최근 30년 중 상위 ${(100-cape).toFixed(0)}%)` : `저렴한 편이에요(최근 30년 중 하위 ${cape.toFixed(0)}%)`;
@@ -526,23 +580,34 @@ function applyResult(data, dd){
   }
 
   // index cards — 실제 종가(price_snapshot)가 있으면 그 값을 쓰고, 없으면 "샘플" 라벨을 붙인다
-  const realSp = todayData && todayData.price_snapshot && todayData.price_snapshot.sp500_close;
-  const realNd = todayData && todayData.price_snapshot && todayData.price_snapshot.nasdaq100_close;
-  document.getElementById('sp-price').textContent = realSp
-    ? realSp.toLocaleString('ko-KR', {maximumFractionDigits: 0})
-    : '샘플 (실데이터 미확보)';
-  document.getElementById('nd-price').textContent = realNd
-    ? realNd.toLocaleString('ko-KR', {maximumFractionDigits: 0})
-    : '샘플 (실데이터 미확보)';
+  const snap = todayData && todayData.price_snapshot;
+  const realSp = snap && snap.sp500_close;
+  const realNd = snap && snap.nasdaq100_close;
+  document.getElementById('sp-price').textContent = Number.isFinite(realSp)
+    ? `${realSp.toLocaleString('ko-KR', {maximumFractionDigits: 2})} · ${snap.sp500_date || '날짜 미상'}` : '조회 실패';
+  document.getElementById('nd-price').textContent = Number.isFinite(realNd)
+    ? `${realNd.toLocaleString('ko-KR', {maximumFractionDigits: 2})} · ${snap.nasdaq100_date || '날짜 미상'}` : '조회 실패';
+  [['sp-price', snap && snap.sp500_date, realSp], ['nd-price', snap && snap.nasdaq100_date, realNd]].forEach(([id, d, v]) => {
+    const age = daysOld(d); const bad = !Number.isFinite(v) || age === null || age < 0 || age > PRICE_MAX_AGE_DAYS;
+    const el = document.getElementById(id); el.style.color = bad ? getCss('--warn') : '';
+    if (Number.isFinite(v) && bad) el.textContent += ' · 오래된 데이터';
+  });
+  const spSeries = snap && Array.isArray(snap.sp500_series) ? snap.sp500_series : [];
+  const ndSeries = snap && Array.isArray(snap.nasdaq100_series) ? snap.nasdaq100_series : [];
   const ddEl = document.getElementById('sp-dd');
-  ddEl.textContent = `52주 고점 대비 -${dd.toFixed(1)}%`;
-  ddEl.className = 'idx-drawdown ' + (dd>=20?'dd-danger':dd>=10?'dd-warn':'dd-ok');
+  const spDd = (todayData && todayData.data_quality && todayData.data_quality.drawdown_pct === 'live' && todayData.inputs) ? todayData.inputs.drawdown_pct : null;
+  if (Number.isFinite(spDd)) {
+    ddEl.textContent = `최근 1년 고점 대비 -${spDd.toFixed(1)}%`;
+    ddEl.className = 'idx-drawdown ' + (spDd>=20?'dd-danger':spDd>=10?'dd-warn':'dd-ok');
+  } else { ddEl.textContent = '하락률 조회 실패'; ddEl.className = 'idx-drawdown'; }
   const ddEl2 = document.getElementById('nd-dd');
-  ddEl2.textContent = `52주 고점 대비 -${(dd*1.1).toFixed(1)}%`;
-  ddEl2.className = 'idx-drawdown ' + (dd*1.1>=20?'dd-danger':dd*1.1>=10?'dd-warn':'dd-ok');
-
-  drawSpark('sp-spark', genSeries(11, dd), getCss('--zone-1'));
-  drawSpark('nd-spark', genSeries(37, dd*1.1), getCss('--zone-4'));
+  const ndDd = snap && snap.nasdaq100_drawdown_pct;
+  if (Number.isFinite(ndDd)) {
+    ddEl2.textContent = `최근 1년 고점 대비 -${ndDd.toFixed(1)}%`;
+    ddEl2.className = 'idx-drawdown ' + (ndDd>=20?'dd-danger':ndDd>=10?'dd-warn':'dd-ok');
+  } else { ddEl2.textContent = '하락률 조회 실패'; ddEl2.className = 'idx-drawdown'; }
+  drawSpark('sp-spark', spSeries, getCss('--zone-1'));
+  drawSpark('nd-spark', ndSeries, getCss('--zone-4'));
 }
 
 /* ---------------- Main recalc ---------------- */
@@ -552,7 +617,7 @@ async function recalc(){
   const fg = parseFloat(document.getElementById('in-feargreed').value);
   const spread = parseFloat(document.getElementById('in-spread').value);
   const ism = parseFloat(document.getElementById('in-ism').value);
-  const vix = parseFloat(document.getElementById('vix-val').textContent);
+  const vix = currentVix;  // null이면 VIX 경고는 판정하지 않는다
 
   const inputs = {
     drawdown_pct: dd, cape_percentile: cape, fear_greed: fg,

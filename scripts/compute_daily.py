@@ -11,6 +11,8 @@
 """
 
 import json
+import os
+import tempfile
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,7 +41,17 @@ NEUTRAL_DEFAULTS = {
 def gather_inputs():
     sp_close = ds.fetch_price_series("^GSPC", period="2y")
     nd_close = ds.fetch_price_series("^NDX", period="2y")
+    # 장중 수동 실행 시 미확정인 오늘 봉을 제외한다(확정 종가만 점수/기록에 사용).
+    sp_close = ds.drop_unfinished_last_bar(sp_close)
+    nd_close = ds.drop_unfinished_last_bar(nd_close)
     cfg = default_config()
+
+    # 같은 VIX 관측값을 화면과 점수 입력에서 공유해 상태/값 불일치를 줄인다.
+    macro_snapshot = ds.fetch_macro_snapshot()
+    macro_vix = macro_snapshot.get("vix") or {}
+    # VIX는 스냅샷에서 한 번만 조회한다. 별도 재조회하면 화면 스냅샷과
+    # 점수 입력이 서로 다른 시각/성공 상태를 가질 수 있으므로 실패 시 중립 대체 처리한다.
+    vix_for_score = macro_vix.get("value")
 
     raw = {
         "drawdown_pct": ds.compute_drawdown_pct(sp_close),
@@ -48,8 +60,14 @@ def gather_inputs():
         "hy_spread_percentile": ds.fetch_hy_spread_percentile(),
         "ism": ds.fetch_ism(),
         "net_flow_index": ds.fetch_net_flow_index(),
-        "vix": ds.fetch_vix(),
+        "vix": vix_for_score,
     }
+
+    import math
+    for key, value in list(raw.items()):
+        if value is not None and not math.isfinite(float(value)):
+            print(f"[warn] {key} 값이 유한하지 않아({value}) 조회 실패로 처리")
+            raw[key] = None
 
     inputs = {}
     data_quality = {}
@@ -78,11 +96,41 @@ def gather_inputs():
         ds.derive_fear_greed_from_vix(raw["vix"]) if raw.get("vix") is not None else None
     )
 
+    # 점수 입력(drawdown)에 쓴 것과 같은 시계열에서 화면용 값을 만든다(추가 조회 없음).
+    sp_snapshot = ds.snapshot_from_series(sp_close)
+    nd_snapshot = ds.snapshot_from_series(nd_close)
     price_snapshot = {
-        "sp500_close": float(sp_close.iloc[-1]) if sp_close is not None and not sp_close.empty else None,
-        "nasdaq100_close": float(nd_close.iloc[-1]) if nd_close is not None and not nd_close.empty else None,
+        "sp500_close": sp_snapshot.get("close"),
+        "sp500_date": sp_snapshot.get("date"),
+        "sp500_series": sp_snapshot.get("series", []),
+        "nasdaq100_close": nd_snapshot.get("close"),
+        "nasdaq100_date": nd_snapshot.get("date"),
+        "nasdaq100_series": nd_snapshot.get("series", []),
+        # 점수 입력과 같은 방식(최근 252거래일 최고가 대비)의 낙폭. 화면의 하락률 표시에 쓴다.
+        "nasdaq100_drawdown_pct": ds.compute_drawdown_pct(nd_close),
+        "macro": macro_snapshot,
     }
     return inputs, data_quality, price_snapshot, fear_greed_vix_shadow
+
+
+
+def _atomic_write_json(path: Path, payload: dict):
+    """Write JSON to a sibling temp file, then atomically replace the destination."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temp_name, path)
+    except Exception:
+        try:
+            os.unlink(temp_name)
+        except FileNotFoundError:
+            pass
+        raise
 
 
 def main():
@@ -104,7 +152,7 @@ def main():
     }
 
     latest_path = DATA_DIR / "latest.json"
-    latest_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    _atomic_write_json(latest_path, payload)
 
     _append_history_row(now, inputs, result, fear_greed_vix_shadow)
     _record_oos_row(now, inputs, data_quality, price_snapshot, result)
@@ -149,13 +197,28 @@ def _read_rows(path):
 
 
 def _atomic_write_csv(path, header, rows):
-    """임시 파일에 끝까지 쓴 뒤 한 번에 교체한다. 쓰는 도중 중단돼도 기존 파일은 그대로 남는다."""
-    import csv, os
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f); w.writerow(header); w.writerows(rows)
-        f.flush(); os.fsync(f.fileno())
-    os.replace(tmp, path)
+    """고유한 sibling 임시 파일에 기록한 뒤 원자적으로 교체한다.
+
+    고정된 .tmp 이름을 사용하면 동시 실행이 임시 파일을 공유할 수 있으므로
+    tempfile.mkstemp로 실행별 파일을 만든다. 실패 시 임시 파일만 제거하고 기존 파일은 보존한다.
+    """
+    import csv, os, tempfile
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(header)
+            w.writerows(rows)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except FileNotFoundError:
+            pass
+        raise
 
 
 def _quarantine(path, now, why):
@@ -176,24 +239,14 @@ def _record_oos_row(now, inputs, data_quality, price_snapshot, result):
     참고: 기존 history.csv(_append_history_row)는 같은 날 재실행하면 행이 중복될 수 있다. 표본 외 검증에는
     쓰지 않고 history_oos.csv만 쓴다."""
     keys = list(inputs.keys())
-    header = ["date_utc", "rules_version", "sp500_close", "nasdaq100_close", "total_score", "buy_pct",
+    header = ["date_utc", "rules_version", "sp500_date", "sp500_close", "nasdaq100_close", "total_score", "buy_pct",
               *keys, *[f"dq_{k}" for k in keys], "risk_warnings"]
-    row = [now.date().isoformat(), RULES_VERSION, price_snapshot.get("sp500_close"),
+    row = [now.date().isoformat(), RULES_VERSION, price_snapshot.get("sp500_date"), price_snapshot.get("sp500_close"),
            price_snapshot.get("nasdaq100_close"), round(result.total_score, 1), result.buy_pct,
            *[inputs[k] for k in keys], *[data_quality.get(k) for k in keys], ";".join(result.risk_warnings)]
     clean = [("" if v is None else v) for v in row]
 
-    path = DATA_DIR / "history_oos.csv"
-    rows = []
-    if path.exists():
-        existing = _read_rows(path)
-        if existing is None or not existing or existing[0] != header:
-            _quarantine(path, now, "읽을 수 없거나 헤더가 달라서")
-        else:
-            rows = [r for r in existing[1:] if r and r[0] != clean[0]]
-    rows.append(clean)
-    _atomic_write_csv(path, header, rows)
-
+    # 감사용 실행 이력을 먼저 쓴다. 두 번째 쓰기가 실패해도 "이력 ⊇ 일별 기록"이 유지된다(반대면 이력에 없는 일별 행이 생김).
     runs = DATA_DIR / "history_oos_runs.csv"
     run_header = ["run_utc", *header]
     run_rows = []
@@ -205,6 +258,17 @@ def _record_oos_row(now, inputs, data_quality, price_snapshot, result):
             run_rows = existing[1:]
     run_rows.append([now.isoformat(), *clean])
     _atomic_write_csv(runs, run_header, run_rows)
+
+    path = DATA_DIR / "history_oos.csv"
+    rows = []
+    if path.exists():
+        existing = _read_rows(path)
+        if existing is None or not existing or existing[0] != header:
+            _quarantine(path, now, "읽을 수 없거나 헤더가 달라서")
+        else:
+            rows = [r for r in existing[1:] if r and r[0] != clean[0]]
+    rows.append(clean)
+    _atomic_write_csv(path, header, rows)
 
 
 if __name__ == "__main__":
