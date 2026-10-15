@@ -1,2 +1,2 @@
 date_utc,rules_version,sp500_date,sp500_close,nasdaq100_close,total_score,buy_pct,drawdown_pct,cape_percentile,fear_greed,hy_spread_percentile,ism,net_flow_index,vix,dq_drawdown_pct,dq_cape_percentile,dq_fear_greed,dq_hy_spread_percentile,dq_ism,dq_net_flow_index,dq_vix,risk_warnings
-2026-10-15,v1-frozen-2026-10-12,2026-10-14,7718.93994140625,29950.8203125,32.0,50,1.2788224491979028,75.83333333333333,32.3345622119816,65.3061224489796,37.8,0.0,16.8700008392334,live,live,live,live,live,excluded_from_scoring,live,
+2026-10-15,v1-frozen-2026-10-12,2026-10-15,7744.06005859375,29935.59375,33.4,50,0.9575493770158761,75.83333333333333,31.5428571428571,77.32484076433121,20.9,0.0,16.459999084472656,live,live,live,live,live,excluded_from_scoring,live,
