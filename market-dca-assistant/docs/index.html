@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market DCA Assistant — 시장 온도계</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0E17;
+    --panel:#111827;
+    --panel-2:#141C2E;
+    --border:#232D45;
+    --border-soft:#1B2438;
+    --text:#E8ECF6;
+    --text-dim:#7C89A8;
+    --text-faint:#4C5875;
+    --mono:'IBM Plex Mono', monospace;
+    --display:'Space Grotesk', sans-serif;
+    --zone-0:#515C74;
+    --zone-1:#3B7FC4;
+    --zone-2:#2CA88A;
+    --zone-3:#4CAF50;
+    --zone-4:#22D06B;
+    --danger:#E15656;
+    --warn:#E0A526;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(59,127,196,0.08), transparent),
+      radial-gradient(ellipse 700px 500px at 100% 0%, rgba(34,208,107,0.05), transparent),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--display);
+    padding:28px 20px 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px; margin:0 auto;}
+
+  /* ---------- Header ---------- */
+  header{display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:26px; flex-wrap:wrap;}
+  .brand-eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:0.18em; color:var(--text-faint); text-transform:uppercase; margin-bottom:6px;}
+  h1{font-size:26px; font-weight:700; letter-spacing:-0.01em;}
+  h1 span{color:var(--zone-4);}
+  .header-right{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:12px; color:var(--text-dim);}
+  .refresh-btn{
+    background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    font-family:var(--mono); font-size:11px; padding:8px 14px; border-radius:6px; cursor:pointer;
+    letter-spacing:0.03em; transition:border-color .15s, transform .1s;
+  }
+  .refresh-btn:hover{border-color:var(--zone-1);}
+  .refresh-btn:active{transform:scale(0.97);}
+  .live-dot{width:6px; height:6px; border-radius:50%; background:var(--zone-4); display:inline-block; margin-right:6px; box-shadow:0 0 6px var(--zone-4);}
+
+  /* ---------- Tabs ---------- */
+  .tabs{display:flex; gap:8px; margin:0 0 16px; padding:8px 0; position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--border-soft);}
+  .tab-btn{flex:1 1 0; font-family:var(--display); font-size:15px; padding:12px 10px; border-radius:8px; border:1px solid var(--border-soft); background:var(--panel-2); color:var(--text-dim); cursor:pointer; transition:border-color .15s, color .15s;}
+  .tab-btn:hover{border-color:var(--zone-1); color:var(--text);}
+  .tab-btn[aria-selected="true"]{color:var(--text); border-color:var(--zone-4); background:var(--panel); font-weight:600;}
+  .tab-btn:focus-visible{outline:2px solid var(--zone-1); outline-offset:2px;}
+  .tab-pane[hidden]{display:none;}
+  @media (max-width:560px){ .tab-btn{font-size:14px; padding:11px 4px;} }
+
+  /* ---------- Panel base ---------- */
+  .panel{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border-soft);
+    border-radius:14px;
+    padding:22px;
+  }
+  .panel-label{font-family:var(--mono); font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-faint); margin-bottom:14px;}
+
+  /* ---------- Hero grid ---------- */
+  .hero-grid{display:grid; grid-template-columns:380px 1fr; gap:16px; margin-bottom:16px;}
+  @media (max-width:860px){ .hero-grid{grid-template-columns:1fr;} }
+
+  .gauge-panel{display:flex; flex-direction:column; align-items:center; text-align:center;}
+  .gauge-readout{font-family:var(--mono); font-size:60px; font-weight:600; line-height:1; margin-top:-18px;}
+  .gauge-readout small{font-size:20px; color:var(--text-dim); font-weight:400;}
+  .gauge-zone-tag{
+    font-family:var(--mono); font-size:12px; padding:5px 12px; border-radius:20px;
+    border:1px solid var(--border); margin-top:10px; letter-spacing:0.03em;
+  }
+  .hero-stats{display:flex; gap:10px; margin-top:18px; width:100%;}
+  .hero-stat{flex:1; background:var(--bg); border:1px solid var(--border-soft); border-radius:10px; padding:12px; text-align:left;}
+  .hero-stat .notice{font-size:13px; line-height:1.7; color:var(--text-dim);}
+  .hero-stat .lbl{font-family:var(--mono); font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px;}
+  .hero-stat .val{font-family:var(--mono); font-size:20px; font-weight:600;}
+  .hero-stat .val.accent{color:var(--zone-4);}
+
+  /* ---------- Breakdown ---------- */
+  .breakdown-panel{display:flex; flex-direction:column; gap:10px;}
+  .score-row{
+    display:grid; grid-template-columns:120px 1fr 60px; align-items:center; gap:12px;
+    background:var(--panel-2); border:1px solid var(--border-soft); border-left:4px solid var(--border-soft);
+    border-radius:10px; padding:14px 16px 14px 14px;
+  }
+  .score-row.cat-technical{border-left-color:#3B7FC4; background:var(--panel-2); background:color-mix(in srgb, #3B7FC4 7%, var(--panel-2));}
+  .score-row.cat-valuation{border-left-color:#9F7AEA; background:var(--panel-2); background:color-mix(in srgb, #9F7AEA 7%, var(--panel-2));}
+  .score-row.cat-feargreed{border-left-color:#F0A93A; background:var(--panel-2); background:color-mix(in srgb, #F0A93A 7%, var(--panel-2));}
+  .score-row.cat-rate{border-left-color:#F0677D; background:var(--panel-2); background:color-mix(in srgb, #F0677D 7%, var(--panel-2));}
+  .score-row.cat-macro{border-left-color:#2FBFAE; background:var(--panel-2); background:color-mix(in srgb, #2FBFAE 7%, var(--panel-2));}
+  .score-row .name{font-size:13px; font-weight:500;}
+  .score-row .sub{display:block; font-family:var(--mono); font-size:10px; color:var(--text-faint); margin-top:2px;}
+  .bar-track{position:relative; height:8px; background:var(--bg); border-radius:5px; overflow:hidden; border:1px solid var(--border-soft);}
+  .bar-fill{height:100%; border-radius:5px; transition:width .25s ease;}
+  .score-row .points{font-family:var(--mono); font-size:13px; text-align:right; color:var(--text-dim);}
+  .score-row .points b{color:var(--text); font-size:14px;}
+  .score-row input[type=range]{
+    -webkit-appearance:none; width:100%; height:8px; background:transparent; margin-top:6px; grid-column:1/4;
+  }
+  input[type=range]{-webkit-appearance:none; background:transparent;}
+  input[type=range]::-webkit-slider-runnable-track{height:4px; background:var(--border); border-radius:2px;}
+  input[type=range]::-moz-range-track{height:4px; background:var(--border); border-radius:2px;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--text); margin-top:-5px; cursor:pointer; border:2px solid var(--bg);}
+  /* 방향성 그라데이션: dir-asc = 값이 클수록 매수신호 강함(초록이 오른쪽), dir-desc = 값이 작을수록 강함(초록이 왼쪽) */
+  input[type=range].dir-asc::-webkit-slider-runnable-track{background:linear-gradient(90deg, var(--zone-0) 0%, var(--zone-0) 15%, var(--zone-4) 85%, var(--zone-4) 100%);}
+  input[type=range].dir-asc::-moz-range-track{background:linear-gradient(90deg, var(--zone-0) 0%, var(--zone-0) 15%, var(--zone-4) 85%, var(--zone-4) 100%);}
+  input[type=range].dir-desc::-webkit-slider-runnable-track{background:linear-gradient(90deg, var(--zone-4) 0%, var(--zone-4) 15%, var(--zone-0) 85%, var(--zone-0) 100%);}
+  input[type=range].dir-desc::-moz-range-track{background:linear-gradient(90deg, var(--zone-4) 0%, var(--zone-4) 15%, var(--zone-0) 85%, var(--zone-0) 100%);}
+  .dir-labels{display:flex; justify-content:space-between; gap:8px; font-family:var(--mono); font-size:12px; color:var(--text-dim); margin-top:6px; grid-column:1/4; line-height:1.4;}
+
+  .explain{font-family:var(--mono); font-size:12.5px; line-height:1.75; white-space:pre-line; color:var(--text-dim); margin-top:8px; padding-top:8px; border-top:1px solid var(--border); grid-column:1/4;}
+
+  /* ---------- Index cards ---------- */
+  .idx-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;}
+  @media (max-width:860px){ .idx-grid{grid-template-columns:1fr;} }
+  .idx-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;}
+  .idx-name{font-weight:600; font-size:15px;}
+  .idx-price{font-family:var(--mono); font-size:15px;}
+  .idx-drawdown{font-family:var(--mono); font-size:12px; margin-top:2px;}
+  .idx-drawdown.dd-warn{color:var(--warn);}
+  .idx-drawdown.dd-danger{color:var(--danger);}
+  .idx-drawdown.dd-ok{color:var(--text-dim);}
+  .spark-cap{font-family:var(--mono); font-size:12px; color:var(--text-dim); margin-top:6px; line-height:1.5;}
+  svg.spark{width:100%; height:90px; display:block; margin-top:8px;}
+
+  /* ---------- Macro strip ---------- */
+  .macro-strip{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:4px;}
+  @media (max-width:860px){ .macro-strip{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .macro-strip{grid-template-columns:1fr;} }
+  .macro-chip{background:var(--panel-2); border:1px solid var(--border-soft); border-radius:10px; padding:14px; text-align:left;}
+  .macro-chip .lbl{font-family:var(--mono); font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em;}
+  .macro-chip .chg{font-family:var(--mono); font-size:12px; color:var(--text-dim); margin-top:4px;}
+  .macro-chip svg.spark{height:56px; margin-top:8px;}
+  .macro-chip .note{font-size:12.5px; line-height:1.7; color:var(--text-dim); margin-top:8px; padding-top:8px; border-top:1px solid var(--border-soft); white-space:pre-line;}
+  .macro-chip .val{font-family:var(--mono); font-size:17px; font-weight:600; margin-top:4px; word-break:keep-all;}
+
+  /* ---------- Risk banner ---------- */
+  #risk-banner{display:none; border:1px solid var(--danger); background:rgba(225,86,86,0.08); border-radius:12px; padding:16px 18px; margin-bottom:16px;}
+  #risk-banner.show{display:block;}
+  #risk-banner .title{font-family:var(--mono); font-size:12px; letter-spacing:0.08em; color:var(--danger); text-transform:uppercase; margin-bottom:8px; font-weight:600;}
+  #risk-banner ul{list-style:none; display:flex; flex-wrap:wrap; gap:8px;}
+  #risk-banner li{font-family:var(--mono); font-size:12px; background:rgba(225,86,86,0.12); border:1px solid rgba(225,86,86,0.35); padding:5px 10px; border-radius:20px;}
+
+  /* ---------- Footer / disclaimer ---------- */
+  footer{margin-top:20px; font-family:var(--mono); font-size:11px; color:var(--text-faint); line-height:1.7; border-top:1px solid var(--border-soft); padding-top:16px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand-eyebrow">Market DCA Assistant</div>
+      <h1>시장 온도계 — 오늘 <span id="today-tag">얼마나</span> 담아야 할까</h1>
+    </div>
+    <div class="header-right">
+      <span id="conn-status"><span class="live-dot" id="conn-dot"></span><span id="conn-label">데이터 확인 중…</span></span>
+      <button class="refresh-btn" onclick="resetToTodayData()">↻ 오늘 데이터로 리셋</button>
+    </div>
+  </header>
+
+  <div id="risk-banner">
+    <div class="title">⚠ 리스크 경고</div>
+    <ul id="risk-list"></ul>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="화면 구분">
+    <button class="tab-btn" role="tab" id="tab-score" aria-controls="pane-score" aria-selected="true" onclick="showTab('score')">① 점수 분석</button>
+    <button class="tab-btn" role="tab" id="tab-index" aria-controls="pane-index" aria-selected="false" onclick="showTab('index')">② 지수 추이</button>
+    <button class="tab-btn" role="tab" id="tab-macro" aria-controls="pane-macro" aria-selected="false" onclick="showTab('macro')">③ 매크로</button>
+  </nav>
+
+  <section class="tab-pane" id="pane-score" role="tabpanel" aria-labelledby="tab-score">
+  <div class="hero-grid">
+    <div class="panel gauge-panel">
+      <div class="panel-label">Composite Score</div>
+      <svg id="gauge" viewBox="0 0 300 175" width="100%" height="175"></svg>
+      <div class="gauge-readout"><span id="score-num">0</span><small>/100</small></div>
+      <div class="gauge-zone-tag" id="zone-tag">—</div>
+      <div class="hero-stats">
+        <div class="hero-stat" style="flex:1 1 100%;">
+          <div class="lbl">참고 신호 · 매수 비중 (검증 미완료)</div>
+          <div class="val accent" id="buy-pct">0%</div>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat" style="flex:1 1 100%;">
+          <div class="notice">이 신호는 과거 데이터에서 투자 성과 개선 효과가 충분히 검증되지 않았습니다. 실제 매수 비율을 정하는 용도가 아니며, 정기적인 고정 DCA 원칙을 대체하지 않습니다. 신호 기반 배분은 앞으로 쌓이는 기록으로 검증하기 위한 참고 지표로만 씁니다.</div>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat" style="flex:1 1 100%;">
+          <div class="lbl">역사적 위치</div>
+          <div class="val" id="percentile-txt" style="font-size:14px;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel breakdown-panel">
+      <div class="panel-label">Score Breakdown — 왜 이 점수인가</div>
+
+      <div class="score-row cat-technical">
+        <div class="name">기술적<span class="sub">TECHNICAL · 30</span></div>
+        <div class="bar-track"><div class="bar-fill" id="bar-tech" style="background:var(--zone-1)"></div></div>
+        <div class="points"><b id="pts-tech">0</b>/30</div>
+        <input type="range" class="dir-asc" id="in-drawdown" min="0" max="45" value="8" oninput="recalc()">
+        <div class="dir-labels"><span>낮은 하락 (신호 약함)</span><span>깊은 하락 (신호 강함)</span></div>
+        <div class="explain" id="exp-tech">최근 1년 최고가보다 8% 낮은 가격이에요</div>
+      </div>
+
+      <div class="score-row cat-valuation">
+        <div class="name">밸류에이션<span class="sub">VALUATION · 20</span></div>
+        <div class="bar-track"><div class="bar-fill" id="bar-val" style="background:var(--zone-1)"></div></div>
+        <div class="points"><b id="pts-val">0</b>/20</div>
+        <input type="range" class="dir-desc" id="in-per" min="0" max="100" value="55" oninput="recalc()">
+        <div class="dir-labels"><span>저평가 (신호 강함)</span><span>고평가 (신호 약함)</span></div>
+        <div class="explain" id="exp-val">최근 30년 주가 수준과 비교하면 지금은 비싼 편이에요(상위 45%)</div>
+      </div>
+
+      <div class="score-row cat-feargreed">
+        <div class="name">공포·탐욕<span class="sub">FEAR & GREED · 20</span></div>
+        <div class="bar-track"><div class="bar-fill" id="bar-fear" style="background:var(--zone-1)"></div></div>
+        <div class="points"><b id="pts-fear">0</b>/20</div>
+        <input type="range" class="dir-desc" id="in-feargreed" min="0" max="100" value="55" oninput="recalc()">
+        <div class="dir-labels"><span>공포 (신호 강함)</span><span>탐욕 (신호 약함)</span></div>
+        <div class="explain" id="exp-fear">지금 투자 심리는 '보통' 상태예요</div>
+      </div>
+
+      <div class="score-row cat-rate">
+        <div class="name">금리·신용<span class="sub">RATES & CREDIT · 10</span></div>
+        <div class="bar-track"><div class="bar-fill" id="bar-rate" style="background:var(--zone-1)"></div></div>
+        <div class="points"><b id="pts-rate">0</b>/10</div>
+        <input type="range" class="dir-asc" id="in-spread" min="0" max="100" value="30" oninput="recalc()">
+        <div class="dir-labels"><span>안정 (신호 약함)</span><span>스트레스 확대 (신호 강함)</span></div>
+        <div class="explain" id="exp-rate">회사채 시장 분위기는 안정적인 편이에요(하위 30%)</div>
+      </div>
+
+      <div class="score-row cat-macro">
+        <div class="name">경기<span class="sub">MACRO · 10</span></div>
+        <div class="bar-track"><div class="bar-fill" id="bar-macro" style="background:var(--zone-1)"></div></div>
+        <div class="points"><b id="pts-macro">0</b>/10</div>
+        <input type="range" class="dir-desc" id="in-ism" min="-15" max="15" value="8" oninput="recalc()">
+        <div class="dir-labels"><span>위축 (신호 강함)</span><span>확장 (신호 약함)</span></div>
+        <div class="explain" id="exp-macro">제조업 경기는 지금 확장 국면이에요</div>
+      </div>
+
+      <div class="score-row" style="opacity:0.5;">
+        <div class="name">수급<span class="sub">FLOWS · 비활성화</span></div>
+        <div class="bar-track"><div class="bar-fill" style="background:var(--text-faint); width:0%;"></div></div>
+        <div class="points">제외</div>
+        <div class="explain">안정적인 무료 소스가 없어 점수 계산에서 제외 — 나머지 90점 기준으로 재배분됨</div>
+      </div>
+    </div>
+  </div>
+
+  </section>
+
+  <section class="tab-pane" id="pane-index" role="tabpanel" aria-labelledby="tab-index" hidden>
+  <div class="idx-grid">
+    <div class="panel">
+      <div class="idx-head">
+        <div class="idx-name">S&P 500</div>
+        <div><div class="idx-price" id="sp-price">—</div><div class="idx-drawdown" id="sp-dd">—</div></div>
+      </div>
+      <svg class="spark" id="sp-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+      <div class="spark-cap" id="sp-cap"></div>
+    </div>
+    <div class="panel">
+      <div class="idx-head">
+        <div class="idx-name">Nasdaq 100</div>
+        <div><div class="idx-price" id="nd-price">—</div><div class="idx-drawdown" id="nd-dd">—</div></div>
+      </div>
+      <svg class="spark" id="nd-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+      <div class="spark-cap" id="nd-cap"></div>
+    </div>
+  </div>
+
+  </section>
+
+  <section class="tab-pane" id="pane-macro" role="tabpanel" aria-labelledby="tab-macro" hidden>
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="panel-label">Macro Snapshot</div>
+    <div class="macro-strip">
+      <div class="macro-chip">
+        <div class="lbl">미국 국채 2년 금리 (US 2Y)</div><div class="val" id="us2y-val">—</div><div class="chg" id="us2y-chg"></div>
+        <svg class="spark" id="us2y-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+        <div class="spark-cap" id="us2y-cap"></div>
+        <div class="note" id="us2y-note"></div>
+      </div>
+      <div class="macro-chip">
+        <div class="lbl">미국 국채 10년 금리 (US 10Y)</div><div class="val" id="us10y-val">—</div><div class="chg" id="us10y-chg"></div>
+        <svg class="spark" id="us10y-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+        <div class="spark-cap" id="us10y-cap"></div>
+        <div class="note" id="us10y-note"></div>
+      </div>
+      <div class="macro-chip">
+        <div class="lbl">달러지수 (DXY)</div><div class="val" id="dxy-val">—</div><div class="chg" id="dxy-chg"></div>
+        <svg class="spark" id="dxy-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+        <div class="spark-cap" id="dxy-cap"></div>
+        <div class="note" id="dxy-note"></div>
+      </div>
+      <div class="macro-chip">
+        <div class="lbl">원/달러 환율 (USD/KRW)</div><div class="val" id="usdkrw-val">—</div><div class="chg" id="usdkrw-chg"></div>
+        <svg class="spark" id="usdkrw-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+        <div class="spark-cap" id="usdkrw-cap"></div>
+        <div class="note" id="usdkrw-note"></div>
+      </div>
+      <div class="macro-chip">
+        <div class="lbl">변동성지수 (VIX)</div><div class="val" id="vix-val">—</div><div class="chg" id="vix-chg"></div>
+        <svg class="spark" id="vix-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+        <div class="spark-cap" id="vix-cap"></div>
+        <div class="note" id="vix-note"></div>
+      </div>
+      <div class="macro-chip">
+        <div class="lbl">하이일드 가산금리 (HY OAS)</div><div class="val" id="hy-val">—</div><div class="chg" id="hy-chg"></div>
+        <svg class="spark" id="hy-spark" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+        <div class="spark-cap" id="hy-cap"></div>
+        <div class="note" id="hy-note"></div>
+      </div>
+    </div>
+  </div>
+
+  </section>
+
+  <footer>
+    시장 데이터는 Yahoo Finance 및 FRED에서 가져옵니다. 조회에 실패한 항목은 임의의 현재값으로 대체하지 않고 ‘조회 실패’로 표시합니다. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
+    슬라이더를 움직이면 Score Engine 로직에 따라 점수·매수 비중이 재계산됩니다. 매크로 스냅샷은 참고용이며 투자 조언이 아닙니다.
+  </footer>
+</div>
+
+<script>
+/* ---------------- Score Engine (per spec) ---------------- */
+function techScore(dd){
+  // dd = % below 52w high (positive number)
+  const table=[[0,0],[5,2],[10,5],[15,8],[20,12],[30,20],[40,30]];
+  if(dd<=0) return 0;
+  for(let i=table.length-1;i>=0;i--){ if(dd>=table[i][0]) {
+    // interpolate to next bracket for smoothness
+    const next = table[i+1];
+    if(!next) return table[i][1];
+    const ratio=(dd-table[i][0])/(next[0]-table[i][0]);
+    return Math.min(30, table[i][1] + ratio*(next[1]-table[i][1]));
+  }}
+  return 0;
+}
+function valScore(capePercentile){
+  // CAPE 역사 백분위(0~100). 높을수록 고평가 -> 점수 낮음.
+  return Math.max(0, Math.min(20, (100-capePercentile)/100*20));
+}
+function fearScore(fg){
+  // engine.py(indicators.fear_greed_score)와 동일: 버킷 경계 사이는 선형 보간.
+  const b=[[20,20],[40,15],[60,10],[80,5],[100,0]];
+  if(fg<=b[0][0]) return b[0][1];
+  if(fg>=b[b.length-1][0]) return b[b.length-1][1];
+  for(let i=0;i<b.length-1;i++){
+    if(fg>=b[i][0] && fg<=b[i+1][0]){
+      return b[i][1] + (fg-b[i][0])/(b[i+1][0]-b[i][0])*(b[i+1][1]-b[i][1]);
+    }
+  }
+  return b[b.length-1][1];
+}
+function rateScore(spreadPercentile){
+  // 하이일드 OAS 역사 백분위(0~100). 높을수록 신용시장 스트레스 -> 점수 높음(매수 기회).
+  return Math.max(0, Math.min(10, spreadPercentile/100*10));
+}
+function macroScore(ism){ // 필라델피아 연은 지수(ISM 프록시): 0 아래로 갈수록 위축 -> 매수 기회 점수 상승
+  const s = (0-ism)/25*10 + 5;
+  return Math.max(0, Math.min(10, s));
+}
+// flow는 비활성화되어 더 이상 클라이언트에서 계산하지 않음 (engine.py와 동일 정책)
+
+function zoneColor(score){
+  if(score<=20) return getCss('--zone-0');
+  if(score<=40) return getCss('--zone-1');
+  if(score<=60) return getCss('--zone-2');
+  if(score<=80) return getCss('--zone-3');
+  return getCss('--zone-4');
+}
+function zoneLabel(score){
+  if(score<=20) return '신호 낮음';
+  if(score<=40) return '신호 약함';
+  if(score<=60) return '신호 보통';
+  if(score<=80) return '신호 강함';
+  return '신호 매우 강함';
+}
+function buyPct(score, dd){
+  let base;
+  if(score<=20) base=0;
+  else if(score<=40) base=50;
+  else if(score<=60) base=100;
+  else if(score<=80) base=150;
+  else base=200;
+  // additional buy overlay based on drawdown from 52w high
+  let extra=0;
+  if(dd>=30) extra=100;
+  else if(dd>=20) extra=50;
+  else if(dd>=10) extra=20;
+  return base+extra;
+}
+function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+/* ---------------- Gauge rendering ---------------- */
+function polarToCartesian(cx,cy,r,angleDeg){
+  const a=(angleDeg)*Math.PI/180;
+  return {x: cx + r*Math.cos(a), y: cy - r*Math.sin(a)};
+}
+function describeArc(cx,cy,r,startAngle,endAngle){
+  const s=polarToCartesian(cx,cy,r,startAngle);
+  const e=polarToCartesian(cx,cy,r,endAngle);
+  const largeArc = (startAngle-endAngle)<=180 ? 0 : 1;
+  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${largeArc} 0 ${e.x} ${e.y}`;
+}
+function renderGauge(score){
+  const svg=document.getElementById('gauge');
+  const cx=150, cy=155, r=120;
+  const zones=[[0,20,'--zone-0'],[20,40,'--zone-1'],[40,60,'--zone-2'],[60,80,'--zone-3'],[80,100,'--zone-4']];
+  let paths='';
+  zones.forEach(([a,b,color])=>{
+    const startAngle = 180 - (a/100)*180;
+    const endAngle = 180 - (b/100)*180;
+    paths += `<path d="${describeArc(cx,cy,r,startAngle,endAngle)}" stroke="${getCss(color)}" stroke-width="16" fill="none" stroke-linecap="butt" opacity="0.9"/>`;
+  });
+  const needleAngle = 180 - (score/100)*180;
+  const tip = polarToCartesian(cx,cy,r-26,needleAngle);
+  const base1 = polarToCartesian(cx,cy,10,needleAngle+90);
+  const base2 = polarToCartesian(cx,cy,10,needleAngle-90);
+  const needle = `<polygon points="${tip.x},${tip.y} ${base1.x},${base1.y} ${base2.x},${base2.y}" fill="${getCss('--text')}"/>
+                   <circle cx="${cx}" cy="${cy}" r="7" fill="${getCss('--text')}"/>`;
+  let ticks='';
+  for(let t=0;t<=100;t+=10){
+    const ang = 180 - (t/100)*180;
+    const p1=polarToCartesian(cx,cy,r+10,ang);
+    const p2=polarToCartesian(cx,cy,r+18,ang);
+    ticks += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${getCss('--text-faint')}" stroke-width="1.5"/>`;
+  }
+  svg.innerHTML = paths + ticks + needle;
+}
+
+/* ---------------- Sparkline (실제 가격 시계열만 표시) ---------------- */
+// 그래프 아래에 기간과 구간 최고/최저를 글자로 표시한다(기간을 알 수 없는 그래프는 오해를 부른다).
+function setSparkCaption(id, pts, startDate, endDate, digits=0){
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!Array.isArray(pts) || pts.length < 2) { el.textContent = ''; return; }
+  const fmt = v => v.toLocaleString('ko-KR', {minimumFractionDigits: digits, maximumFractionDigits: digits});
+  const range = (startDate && endDate) ? `${startDate} ~ ${endDate}` : '기간 정보 없음(다음 자동 갱신 후 표시)';
+  el.textContent = `최근 ${pts.length}개 관측 · ${range} · 점선=구간 최고 ${fmt(Math.max(...pts))} · 최저 ${fmt(Math.min(...pts))}`;
+}
+function drawSpark(svgId, pts, color){
+  const svg=document.getElementById(svgId);
+  if (!Array.isArray(pts) || pts.length < 2) { svg.innerHTML = ''; return; }
+  const w=600,h=90, min=Math.min(...pts), max=Math.max(...pts);
+  const norm = pts.map((v,i)=>{
+    const x = (i/(pts.length-1))*w;
+    const y = h - ((v-min)/(max-min||1))*h*0.85 - 5;
+    return `${x},${y}`;
+  });
+  const maxIdx = pts.indexOf(max);
+  const maxX = (maxIdx/(pts.length-1))*w;
+  const maxY = h - ((max-min)/(max-min||1))*h*0.85 - 5;
+  svg.innerHTML = `
+    <polyline points="${norm.join(' ')}" fill="none" stroke="${color}" stroke-width="2"/>
+    <line x1="0" y1="${maxY}" x2="${w}" y2="${maxY}" stroke="${getCss('--text-faint')}" stroke-width="1" stroke-dasharray="4 4"/>
+    <circle cx="${maxX}" cy="${maxY}" r="3" fill="${getCss('--text-dim')}"/>
+  `;
+}
+
+/* ---------------- Static daily data (GitHub Actions writes docs/data/latest.json) ---------------- */
+let todayData = null;
+let currentVix = null;  // 숫자 그대로 보관(화면 문자열을 다시 파싱하지 않는다)
+
+function daysOld(isoDate){
+  if (!isoDate) return null;
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  if (!Number.isFinite(d.getTime())) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+const PRICE_MAX_AGE_DAYS = 4;  // 금요일 종가를 월요일에 보는 경우(3일)까지는 정상, 그 이상이면 갱신 누락 의심
+const MACRO_MAX_AGE_DAYS = {usd_krw:3, dxy:3, us_2y:7, us_10y:7, hy_oas:10, vix:4};  // vix는 가격과 같은 미국 장 달력이라 4일(연휴 직후 오탐 방지)
+function macroItemText(item, suffix, digits, maxAge){
+  if (!item || !Number.isFinite(item.value)) return {text:'조회 실패', stale:true, title:'실제 관측값을 받지 못했습니다.'};
+  const age = daysOld(item.date);
+  const stale = age === null || age < 0 || age > maxAge;
+  const dateText = item.date || '날짜 미상';
+  return {
+    text:`${item.value.toLocaleString('ko-KR',{minimumFractionDigits:digits,maximumFractionDigits:digits})}${suffix} · ${dateText}${stale?' · 오래된 데이터':''}`,
+    stale,
+    title: age === null ? '관측 날짜를 확인할 수 없습니다.' : age < 0 ? `관측일 ${dateText}이 미래 날짜입니다.` : `관측일 ${dateText} · ${age}일 경과 · 허용 기준 ${maxAge}일`
+  };
+}
+function renderMacroSnapshot(payload){
+  const macro = payload && payload.price_snapshot && payload.price_snapshot.macro;
+  const defs = [
+    ['us2y-val','us_2y','%',2], ['us10y-val','us_10y','%',2], ['dxy-val','dxy','',2],
+    ['usdkrw-val','usd_krw','',0], ['hy-val','hy_oas','%',2]
+  ];
+  defs.forEach(([id,key,suffix,digits])=>{
+    const el = document.getElementById(id); if (!el) return;
+    const result = macroItemText(macro && macro[key], suffix, digits, MACRO_MAX_AGE_DAYS[key]);
+    el.textContent = result.text; el.title = result.title;
+    el.style.color = result.stale ? getCss('--warn') : '';
+  });
+  const vixEl = document.getElementById('vix-val');
+  const vixItem = macro && macro.vix;
+  const result = macroItemText(vixItem, '', 2, MACRO_MAX_AGE_DAYS.vix);
+  // 점수 입력으로 쓰인 값이 있으면 그것을, 없으면 화면용 관측값을 경고 판정에 쓴다.
+  currentVix = (payload && payload.inputs && Number.isFinite(payload.inputs.vix)) ? payload.inputs.vix
+             : (vixItem && Number.isFinite(vixItem.value)) ? vixItem.value : null;
+  if (vixItem && Number.isFinite(vixItem.value)) {
+    vixEl.textContent = result.text; vixEl.title = result.title;
+    vixEl.style.color = result.stale ? getCss('--warn') : '';
+  } else if (payload && payload.inputs && Number.isFinite(payload.inputs.vix)) {
+    const q = payload.data_quality && payload.data_quality.vix;
+    const label = q === 'live' ? '점수 입력값' : '대체값';
+    vixEl.textContent = `${payload.inputs.vix.toFixed(2)} (${label})`;
+    vixEl.title = '화면용 VIX 관측값은 없으며, 괄호는 점수 계산 입력의 상태입니다.';
+    vixEl.style.color = q === 'live' ? '' : getCss('--warn');
+  } else { vixEl.textContent = '조회 실패'; vixEl.title = 'VIX 실데이터 및 점수 입력값 조회 실패'; }
+}
+
+/* ---------------- Macro snapshot: 추이 + 변화 + 해석 ---------------- */
+const MACRO_CARDS = [
+  {id:'us2y',   key:'us_2y',   digits:2, unit:'%',  kind:'diff'},
+  {id:'us10y',  key:'us_10y',  digits:2, unit:'%',  kind:'diff'},
+  {id:'dxy',    key:'dxy',     digits:2, unit:'',   kind:'pct'},
+  {id:'usdkrw', key:'usd_krw', digits:0, unit:'',   kind:'pct'},
+  {id:'vix',    key:'vix',     digits:2, unit:'',   kind:'pct'},
+  {id:'hy',     key:'hy_oas',  digits:2, unit:'%',  kind:'diff'},
+];
+function macroChangeText(item, card){
+  const ser = item && Array.isArray(item.series) ? item.series.filter(Number.isFinite) : [];
+  if (ser.length < 2) return '';
+  const k = Math.min(21, ser.length - 1), prev = ser[ser.length - 1 - k], cur = ser[ser.length - 1];
+  const label = k >= 20 ? '약 1개월 전' : `${k}개 관측 전`;
+  // 반올림한 값 기준으로 부호를 정한다(−0.00 방지)
+  const fmt = (x, d, unit) => { const t = Math.abs(x).toFixed(d); return Number(t) === 0 ? `${t}${unit} (변화 거의 없음)` : `${x > 0 ? '+' : '−'}${t}${unit}`; };
+  if (card.kind === 'diff') return `${label} 대비 ${fmt(cur - prev, 2, '%p')}`;
+  return `${label} 대비 ${fmt((cur / prev - 1) * 100, 1, '%')}`;
+}
+function macroNote(card, macro, payload){
+  const item = macro && macro[card.key];
+  const v = item && Number.isFinite(item.value) ? item.value : null;
+  switch (card.key) {
+    case 'us_2y':
+      return '미국 정부가 2년 동안 빌릴 때 주는 금리예요. 연준(Fed)의 기준금리 전망에 가장 민감하게 움직여요. 오르면 단기 자금 비용이 커져 성장주에 부담이 될 수 있어요.\n점수 계산에는 쓰이지 않는 참고 지표예요.';
+    case 'us_10y': {
+      const two = macro && macro.us_2y && Number.isFinite(macro.us_2y.value) ? macro.us_2y.value : null;
+      const spread = (v !== null && two !== null) ? v - two : null;
+      const inv = spread === null ? '' : spread < 0
+        ? `\n10년물−2년물 차이는 ${spread.toFixed(2)}%p로 마이너스(장단기 금리 역전)예요. 경기 둔화 신호로 자주 해석되지만 시점을 맞추진 못해요.`
+        : `\n10년물−2년물 차이는 +${spread.toFixed(2)}%p로 정상(장기 금리가 더 높은) 상태예요.`;
+      return '장기 시장금리의 기준이에요. 오르면 주식의 상대 매력이 떨어지고, 특히 성장주의 가치평가에 부담이 돼요.' + inv + '\n점수 계산에는 쓰이지 않는 참고 지표예요.';
+    }
+    case 'dxy':
+      return '달러가 유로, 엔 등 주요 통화 대비 얼마나 강한지 보여줘요. 오르면 달러 강세로, 신흥국 자금 유출과 원화 약세로 이어지는 경향이 있어요.\n점수 계산에는 쓰이지 않는 참고 지표예요.';
+    case 'usd_krw':
+      return '1달러가 몇 원인지예요. 오르면 원화 약세라서, 같은 미국 주식을 사려면 더 많은 원화가 필요해요. 해외 자산의 원화 환산 수익률에 환율 변동이 그대로 반영돼요.\n점수 계산에는 쓰이지 않는 참고 지표예요.';
+    case 'vix': {
+      const cur = v !== null ? v : (Number.isFinite(currentVix) ? currentVix : null);  // 카드에 보이는 값과 같은 값을 쓴다
+      const st = cur === null ? '' : cur < 15 ? '안정' : cur < 20 ? '보통' : cur < 28 ? '불안' : '과열 경고 기준(28) 이상';
+      return 'S&P 500 옵션이 반영하는 향후 한 달 변동성 기대치예요. 15 미만 안정, 15~20 보통, 20~28 불안, 28 이상이면 이 대시보드가 "VIX 과열" 경고를 띄워요.' +
+        (cur === null ? '' : `\n지금은 ${cur.toFixed(1)}로 "${st}" 구간이에요.`) +
+        '\n점수에는 직접 쓰이지 않고, 경고 판정과 심리 지수 대체 추정에만 쓰여요.';
+    }
+    case 'hy_oas':
+      return '위험이 큰 회사채(하이일드)가 미국 국채보다 더 얹어 주는 금리예요. 넓어질수록 신용시장이 불안하다는 뜻이고, 보통 위기 때 급격히 넓어져요.\n점수에는 이 값 자체가 아니라 1996년 이후 기록 대비 백분위를 써요(신용 항목).';
+  }
+  return '';
+}
+function renderMacroExtras(payload){
+  const macro = (payload && payload.price_snapshot && payload.price_snapshot.macro) || null;
+  MACRO_CARDS.forEach(card => {
+    const item = macro && macro[card.key];
+    const chg = document.getElementById(`${card.id}-chg`);
+    if (chg) chg.textContent = macroChangeText(item, card);
+    const ser = item && Array.isArray(item.series) ? item.series.filter(Number.isFinite) : [];
+    drawSpark(`${card.id}-spark`, ser, getCss('--text-dim'));
+    const cap = document.getElementById(`${card.id}-cap`);
+    if (ser.length >= 2) setSparkCaption(`${card.id}-cap`, ser, item.series_start, item.date, card.digits === 0 ? 0 : 2);
+    else if (cap) cap.textContent = item && Number.isFinite(item.value) ? '추이 정보 없음(다음 자동 갱신 후 표시)' : '';
+    const note = document.getElementById(`${card.id}-note`);
+    if (note) note.textContent = macroNote(card, macro, payload);
+  });
+}
+
+function setUpdatedBadge(payload){
+  const dot = document.getElementById('conn-dot');
+  const label = document.getElementById('conn-label');
+  if (!payload) {
+    dot.style.background = getCss('--warn'); dot.style.boxShadow = `0 0 6px ${getCss('--warn')}`;
+    label.textContent = '자동 갱신 데이터 없음'; return;
+  }
+  const dq = payload.data_quality || {};
+  const scoreFallback = Object.entries(dq).filter(([k,v]) => k !== 'net_flow_index' && v === 'fallback_neutral').map(([k])=>k);
+  const scoreDerived = Object.entries(dq).filter(([,v]) => v === 'derived_from_vix').map(([k])=>k);
+  const macro = payload.price_snapshot && payload.price_snapshot.macro || {};
+  const macroKeys = Object.keys(MACRO_MAX_AGE_DAYS);
+  const macroIssues = macroKeys.filter(k => {
+    const item = macro[k];
+    if (!item || !Number.isFinite(item.value)) return true;
+    const age = daysOld(item.date); return age === null || age < 0 || age > MACRO_MAX_AGE_DAYS[k];
+  });
+  const snapP = payload.price_snapshot || {};
+  const priceIssues = [['sp500_close','sp500_date'],['nasdaq100_close','nasdaq100_date']].filter(([v,d]) => {
+    if (!Number.isFinite(snapP[v])) return true;
+    const age = daysOld(snapP[d]); return age === null || age < 0 || age > PRICE_MAX_AGE_DAYS;
+  });
+  const issueCount = scoreFallback.length + scoreDerived.length + macroIssues.length + priceIssues.length;
+  dot.style.background = issueCount ? getCss('--warn') : getCss('--zone-4');
+  dot.style.boxShadow = `0 0 6px ${dot.style.background}`;
+  const ts = payload.generated_at_utc ? new Date(payload.generated_at_utc).toLocaleString('ko-KR') : '시각 미상';
+  const parts = [];
+  if (scoreFallback.length) parts.push(`점수 중립 대체 ${scoreFallback.length}개`);
+  if (scoreDerived.length) parts.push(`점수 추정 입력 ${scoreDerived.length}개`);
+  if (macroIssues.length) parts.push(`매크로 조회 실패/오래됨 ${macroIssues.length}개`);
+  if (priceIssues.length) parts.push(`지수 가격 조회 실패/오래됨 ${priceIssues.length}개`);
+  label.textContent = `수집 실행 ${ts} · ${parts.length ? parts.join(' · ') : '점수·매크로 상태 정상'}`;
+}
+
+async function loadTodayData(){
+  try{
+    const res = await fetch('./data/latest.json', {cache:'no-store'});
+    if(!res.ok) throw new Error('no data yet');
+    todayData = await res.json();
+  } catch(e){
+    todayData = null;
+  }
+  setUpdatedBadge(todayData);
+  renderMacroSnapshot(todayData);
+  renderMacroExtras(todayData);
+  if(todayData){
+    document.getElementById('in-drawdown').value = todayData.inputs.drawdown_pct;
+    document.getElementById('in-per').value = todayData.inputs.cape_percentile;
+    document.getElementById('in-feargreed').value = todayData.inputs.fear_greed;
+    document.getElementById('in-spread').value = todayData.inputs.hy_spread_percentile;
+    document.getElementById('in-ism').value = todayData.inputs.ism;
+  }
+}
+
+// score_engine과 동일한 규칙의 클라이언트 계산 (정적 배포라 서버 없이 슬라이더 조작 시 여기서 계산)
+// 수급(flow)은 서버와 동일하게 계산에서 제외하고 90점 만점 기준으로 100점 재배분한다.
+function localCompute(inputs){
+  const {drawdown_pct:dd, cape_percentile:cape, fear_greed:fg, hy_spread_percentile:spread, ism} = inputs;
+  const pTech = techScore(dd), pVal = valScore(cape), pFear = fearScore(fg),
+        pRate = rateScore(spread), pMacro = macroScore(ism);
+  const rawTotal = pTech+pVal+pFear+pRate+pMacro;
+  const maxPossible = 90; // flow(10점) 제외
+  const total = rawTotal / maxPossible * 100;
+  const fgLabelKr = fg<=20?'극단적 공포':fg<=40?'공포':fg<=60?'보통':fg<=80?'탐욕':'극단적 탐욕';
+  const risks=[];
+  if(cape>=90) risks.push('CAPE 역사 고평가권');
+  if(Number.isFinite(inputs.vix) && inputs.vix>=28) risks.push('VIX 과열');
+  if(fg>=80) risks.push('Extreme Greed 국면');
+  if(spread>=90) risks.push('신용 스프레드 역사적 확대');
+  const f1 = v => Number(v).toFixed(1);
+  // ---- 항목별 보조 설명(점수식은 그대로, 설명 문구만 상세화) ----
+  const ddState = dd<=0 ? '최고가 부근이에요' : dd<5 ? '고점 부근이라 아직 할인된 구간은 아니에요' : dd<10 ? '가벼운 조정이에요'
+                : dd<20 ? '보통 수준의 조정이에요' : dd<30 ? '큰 하락(약세장 문턱)이에요' : '깊은 하락 구간이에요';
+  const extra = dd>=30 ? 100 : dd>=20 ? 50 : dd>=10 ? 20 : 0;
+  const techText =
+    `최근 1년(약 252거래일) 최고가보다 ${f1(Math.max(0,dd))}% 낮은 가격이에요. ${ddState}\n` +
+    `점수 ${f1(pTech)}/30 · 하락이 깊을수록 높아지고 40%에서 만점이에요. 지금보다 5%p 더 빠지면 약 ${f1(techScore(dd+5))}점이 돼요.\n` +
+    `낙폭 가산: 10% 이상 +20%p, 20% 이상 +50%p, 30% 이상 +100%p. 지금은 ${extra ? `+${extra}%p 가산 중이에요` : '가산 없음(10% 이상부터 적용)'}.`;
+  const valLabel = cape<20 ? '꽤 저렴한 편' : cape<40 ? '다소 저렴한 편' : cape<60 ? '평균 근처' : cape<80 ? '다소 비싼 편' : '비싼 편';
+  const valText =
+    `CAPE(물가 반영 10년 평균 이익 대비 주가배수)를 최근 30년 월별 값과 비교한 백분위가 ${Math.round(cape)}예요. 30년 중 ${Math.round(cape)}%의 시기가 지금 값 이하였다는 뜻이고, ${valLabel}이에요.\n` +
+    `점수 ${f1(pVal)}/20 · 비쌀수록(백분위가 높을수록) 낮아져요. 0이면 20점, 100이면 0점이에요.\n` +
+    `${cape>=90 ? '고평가권 경고 기준(90) 이상이에요. ' : ''}비싸다고 곧 하락한다는 뜻은 아니고, 장기 기대수익을 가늠하는 참고 지표예요.`;
+  const fgState = fg<=20?'극단적 공포':fg<=40?'공포':fg<=60?'보통':fg<=80?'탐욕':'극단적 탐욕';
+  const fearText =
+    `투자 심리 지수가 ${Math.round(fg)}점(0=극단적 공포, 100=극단적 탐욕)으로 '${fgState}' 상태예요. 구간: 0~20 극단적 공포 · 20~40 공포 · 40~60 보통 · 60~80 탐욕 · 80~100 극단적 탐욕.\n` +
+    `점수 ${f1(pFear)}/20 · 공포일수록 높게 매겨요(20 이하 20점 ~ 100 0점, 사이는 직선으로 계산).\n` +
+    `${fg>=80 ? '과열(탐욕 80 이상) 경고 기준에 해당해요. ' : ''}값을 CNN에서 못 받으면 VIX로 추정하고, 그 경우 상단 상태 표시에 "점수 추정 입력"으로 나와요.`;
+  const rateLabel = spread<30 ? '안정적인 편' : spread<60 ? '보통 수준' : spread<80 ? '다소 불안한 편' : '불안한 편';
+  const rateText =
+    `하이일드(투기등급) 회사채 가산금리를 1996년 이후 기록과 비교한 백분위가 ${Math.round(spread)}예요. 역사 중 ${Math.round(spread)}%가 지금 값 이하였다는 뜻이고, 신용시장은 ${rateLabel}이에요.\n` +
+    `점수 ${f1(pRate)}/10 · 가산금리가 넓을수록(불안할수록) 매수 기회로 보고 높게 매겨요. 0이면 0점, 100이면 10점이에요.\n` +
+    `${spread>=90 ? '신용 스트레스 경고 기준(90) 이상이에요. ' : ''}불안이 더 커질 수도 있어서, 점수가 높다고 바닥이라는 뜻은 아니에요.`;
+  const macroState = ism<=-12.5 ? '뚜렷한 위축' : ism<0 ? '위축' : ism<12.5 ? '확장' : '뚜렷한 확장';
+  const macroText =
+    `필라델피아 연은 제조업지수(ISM 대체 지표)가 ${f1(ism)}예요. 0보다 크면 확장, 작으면 위축이고, 지금은 '${macroState}' 국면이에요.\n` +
+    `점수 ${f1(pMacro)}/10 · 위축일수록 높게 매겨요(−12.5 이하 10점, 0이면 5점, +12.5 이상 0점).\n` +
+    `발표 시점이 월 단위라 최신 경기 흐름보다 늦을 수 있어요.`;
+  return {
+    total_score: total,
+    sub_scores: {
+      technical:{score:pTech, max_score:30, reason:techText},
+      valuation:{score:pVal, max_score:20, reason:valText},
+      fear_greed:{score:pFear, max_score:20, reason:fearText},
+      rate_credit:{score:pRate, max_score:10, reason:rateText},
+      macro:{score:pMacro, max_score:10, reason:macroText},
+    },
+    buy_pct: buyPct(total, dd),  // engine.py처럼 반올림 전 점수로 버킷 판정
+    percentile_estimate: Math.max(1, Math.min(99, Math.round(100-total))),
+    risk_warnings: risks,
+  };
+}
+
+/* ---------------- Apply result (shared by API + local paths) ---------------- */
+function applyResult(data, dd){
+  const s = data.sub_scores;
+  const rows = [
+    ['tech', s.technical, 30], ['val', s.valuation, 20], ['fear', s.fear_greed, 20],
+    ['rate', s.rate_credit, 10], ['macro', s.macro, 10],
+  ];
+  rows.forEach(([key, r, max])=>{
+    document.getElementById(`pts-${key}`).textContent = r.score.toFixed(1);
+    document.getElementById(`bar-${key}`).style.width = (r.score/max*100)+'%';
+    document.getElementById(`exp-${key}`).textContent = r.reason;
+  });
+
+  const total = Math.round(data.total_score);
+  document.getElementById('score-num').textContent = total;
+  document.getElementById('score-num').style.color = zoneColor(total);
+  const tag = document.getElementById('zone-tag');
+  tag.textContent = zoneLabel(total);
+  tag.style.color = zoneColor(total);
+  tag.style.borderColor = zoneColor(total);
+  renderGauge(total);
+
+  document.getElementById('buy-pct').textContent = data.buy_pct+'%';
+  document.getElementById('percentile-txt').textContent = `역사적으로 상위 약 ${data.percentile_estimate}% 구간 (점수 ${total}점 기준 추정)`;
+
+  const banner=document.getElementById('risk-banner');
+  if(data.risk_warnings.length){
+    banner.classList.add('show');
+    document.getElementById('risk-list').innerHTML = data.risk_warnings.map(r=>`<li>${r}</li>`).join('');
+  } else {
+    banner.classList.remove('show');
+  }
+
+  // index cards — 실제 종가(price_snapshot)가 있으면 그 값을 쓰고, 없으면 "샘플" 라벨을 붙인다
+  const snap = todayData && todayData.price_snapshot;
+  const realSp = snap && snap.sp500_close;
+  const realNd = snap && snap.nasdaq100_close;
+  document.getElementById('sp-price').textContent = Number.isFinite(realSp)
+    ? `${realSp.toLocaleString('ko-KR', {maximumFractionDigits: 2})} · ${snap.sp500_date || '날짜 미상'}` : '조회 실패';
+  document.getElementById('nd-price').textContent = Number.isFinite(realNd)
+    ? `${realNd.toLocaleString('ko-KR', {maximumFractionDigits: 2})} · ${snap.nasdaq100_date || '날짜 미상'}` : '조회 실패';
+  [['sp-price', snap && snap.sp500_date, realSp], ['nd-price', snap && snap.nasdaq100_date, realNd]].forEach(([id, d, v]) => {
+    const age = daysOld(d); const bad = !Number.isFinite(v) || age === null || age < 0 || age > PRICE_MAX_AGE_DAYS;
+    const el = document.getElementById(id); el.style.color = bad ? getCss('--warn') : '';
+    if (Number.isFinite(v) && bad) el.textContent += ' · 오래된 데이터';
+  });
+  const spSeries = snap && Array.isArray(snap.sp500_series) ? snap.sp500_series : [];
+  const ndSeries = snap && Array.isArray(snap.nasdaq100_series) ? snap.nasdaq100_series : [];
+  const ddEl = document.getElementById('sp-dd');
+  const spDd = (todayData && todayData.data_quality && todayData.data_quality.drawdown_pct === 'live' && todayData.inputs) ? todayData.inputs.drawdown_pct : null;
+  if (Number.isFinite(spDd)) {
+    ddEl.textContent = `최근 1년 고점 대비 -${spDd.toFixed(1)}%`;
+    ddEl.className = 'idx-drawdown ' + (spDd>=20?'dd-danger':spDd>=10?'dd-warn':'dd-ok');
+  } else { ddEl.textContent = '하락률 조회 실패'; ddEl.className = 'idx-drawdown'; }
+  const ddEl2 = document.getElementById('nd-dd');
+  const ndDd = snap && snap.nasdaq100_drawdown_pct;
+  if (Number.isFinite(ndDd)) {
+    ddEl2.textContent = `최근 1년 고점 대비 -${ndDd.toFixed(1)}%`;
+    ddEl2.className = 'idx-drawdown ' + (ndDd>=20?'dd-danger':ndDd>=10?'dd-warn':'dd-ok');
+  } else { ddEl2.textContent = '하락률 조회 실패'; ddEl2.className = 'idx-drawdown'; }
+  drawSpark('sp-spark', spSeries, getCss('--zone-1'));
+  drawSpark('nd-spark', ndSeries, getCss('--zone-4'));
+  setSparkCaption('sp-cap', spSeries, snap && snap.sp500_series_start, snap && snap.sp500_date);
+  setSparkCaption('nd-cap', ndSeries, snap && snap.nasdaq100_series_start, snap && snap.nasdaq100_date);
+}
+
+/* ---------------- Main recalc ---------------- */
+async function recalc(){
+  const dd = parseFloat(document.getElementById('in-drawdown').value);
+  const cape = parseFloat(document.getElementById('in-per').value);
+  const fg = parseFloat(document.getElementById('in-feargreed').value);
+  const spread = parseFloat(document.getElementById('in-spread').value);
+  const ism = parseFloat(document.getElementById('in-ism').value);
+  const vix = currentVix;  // null이면 VIX 경고는 판정하지 않는다
+
+  const inputs = {
+    drawdown_pct: dd, cape_percentile: cape, fear_greed: fg,
+    hy_spread_percentile: spread, ism: ism, vix: vix,
+  };
+
+  applyResult(localCompute(inputs), dd);
+}
+
+
+/* ---------------- Tabs ---------------- */
+const TAB_IDS = ['score', 'index', 'macro'];
+function showTab(id, persist = true){
+  if (!TAB_IDS.includes(id)) id = 'score';
+  TAB_IDS.forEach(t => {
+    const pane = document.getElementById(`pane-${t}`), btn = document.getElementById(`tab-${t}`);
+    pane.hidden = (t !== id);
+    btn.setAttribute('aria-selected', t === id ? 'true' : 'false');
+    btn.tabIndex = (t === id) ? 0 : -1;
+  });
+  if (persist) { try { localStorage.setItem('dca-tab', id); } catch (e) {} try { history.replaceState(null, '', '#' + id); } catch (e) {} }
+}
+document.addEventListener('keydown', e => {
+  if (!e.target.classList || !e.target.classList.contains('tab-btn')) return;
+  const i = TAB_IDS.indexOf(e.target.id.replace('tab-', ''));
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    const n = TAB_IDS[(i + (e.key === 'ArrowRight' ? 1 : TAB_IDS.length - 1)) % TAB_IDS.length];
+    showTab(n); document.getElementById(`tab-${n}`).focus();
+  }
+});
+(function initTab(){
+  let id = (location.hash || '').replace('#', '');
+  if (!TAB_IDS.includes(id)) { try { id = localStorage.getItem('dca-tab') || 'score'; } catch (e) { id = 'score'; } }
+  showTab(id, false);
+  window.addEventListener('hashchange', () => { const h = (location.hash || '').replace('#', ''); if (TAB_IDS.includes(h)) showTab(h, false); });
+})();
+
+function resetToTodayData(){
+  loadTodayData().then(recalc);
+}
+
+document.getElementById('today-tag').textContent = new Date().toLocaleDateString('ko-KR');
+(async function init(){
+  await loadTodayData();   // 오늘자 자동 갱신 값으로 슬라이더를 먼저 채운다
+  recalc();                 // 그 값으로 첫 렌더
+})();
+</script>
+</body>
+</html>
+
