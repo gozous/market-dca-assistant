@@ -105,3 +105,109 @@ if __name__ == "__main__":
         t()
         print(f"PASS: {t.__name__}")
     print(f"\n{len(tests)} tests passed.")
+
+
+# ---- 입력 계약 검증 (점수 규칙 불변, 비정상 입력만 명시적 오류) ----
+import math as _math
+import pytest as _pytest
+
+_OK = dict(drawdown_pct=10.0, cape_percentile=50.0, fear_greed=50.0,
+           hy_spread_percentile=50.0, ism=0.0)
+_REQUIRED = list(_OK)
+
+
+@_pytest.mark.parametrize("key", _REQUIRED)
+@_pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_required_nonfinite_raises(key, bad):
+    with _pytest.raises(ValueError):
+        compute_score({**_OK, key: bad})
+
+
+@_pytest.mark.parametrize("key", _REQUIRED)
+@_pytest.mark.parametrize("bad", [None, "x", True])
+def test_required_none_or_nonnumeric_raises(key, bad):
+    with _pytest.raises(TypeError):
+        compute_score({**_OK, key: bad})
+
+
+@_pytest.mark.parametrize("key", _REQUIRED)
+def test_required_missing_key_raises(key):
+    d = dict(_OK); d.pop(key)
+    with _pytest.raises(KeyError):
+        compute_score(d)
+
+
+@_pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_vix_nonfinite_raises(bad):
+    with _pytest.raises(ValueError):
+        compute_score({**_OK, "vix": bad})
+
+
+def test_vix_none_or_absent_keeps_behavior():
+    a = compute_score({**_OK, "vix": None}); b = compute_score(dict(_OK))
+    assert a.total_score == b.total_score and a.buy_pct == b.buy_pct
+    assert a.risk_warnings == b.risk_warnings == []
+
+
+def test_valid_inputs_unchanged_known_values():
+    r = compute_score({**_OK, "vix": 30.0})
+    assert _math.isclose(r.total_score, 41.66666666666667) and r.buy_pct == 120
+    assert any("VIX" in w for w in r.risk_warnings)
+
+
+def test_numpy_scalars_accepted():
+    import numpy as np
+    r = compute_score({k: np.float64(v) for k, v in _OK.items()})
+    assert _math.isclose(r.total_score, 41.66666666666667)
+
+
+def _cfg_technical_off():
+    from score_engine.config import default_config
+    c = default_config(); c["technical"]["enabled"] = False
+    return c
+
+
+@_pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_drawdown_validated_even_if_technical_disabled(bad):
+    with _pytest.raises(ValueError):
+        compute_score({**_OK, "drawdown_pct": bad}, _cfg_technical_off())
+
+
+def test_drawdown_missing_or_none_raises_even_if_technical_disabled():
+    d = dict(_OK); d.pop("drawdown_pct")
+    with _pytest.raises(KeyError):
+        compute_score(d, _cfg_technical_off())
+    with _pytest.raises(TypeError):
+        compute_score({**_OK, "drawdown_pct": None}, _cfg_technical_off())
+
+
+def test_disabled_category_key_not_required_but_checked_if_given():
+    from score_engine.config import default_config
+    c = default_config(); c["valuation"]["enabled"] = False
+    d = dict(_OK); d.pop("cape_percentile")
+    assert "valuation" in compute_score(d, c).excluded_categories
+    with _pytest.raises(ValueError):
+        compute_score({**d, "cape_percentile": float("nan")}, c)
+
+
+def test_technical_disabled_output_matches_pre_validation_baseline():
+    # 검증 추가 전 엔진에서 얻은 기준값(고정)과 비교
+    r = compute_score(dict(_OK), _cfg_technical_off())
+    assert _math.isclose(r.total_score, 54.166666666666664)
+    assert r.buy_pct == 120 and r.risk_warnings == []
+    assert r.excluded_categories == ["technical", "flow"]
+    assert {k: v.score for k, v in r.sub_scores.items()} == {
+        "valuation": 10.0, "fear_greed": 12.5, "rate_credit": 5.0, "macro": 5.0}
+
+
+def test_default_config_required_inputs_include_ism():
+    # 기본 설정: macro(입력 키 ism)는 활성, flow(net_flow_index)만 비활성
+    from score_engine.config import default_config
+    c = default_config()
+    assert c["macro"]["enabled"] and not c["flow"]["enabled"]
+
+
+def test_numpy_supported_types_float_and_int():
+    import numpy as np
+    for t in (np.float32, np.float64, np.int32, np.int64):
+        compute_score({k: t(v) for k, v in _OK.items()})

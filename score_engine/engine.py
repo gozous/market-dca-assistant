@@ -8,6 +8,8 @@ compute_score()는 UI, API, 백테스트 어디서 호출하든 동일한 결과
 을 지킨다.
 """
 
+import math
+import numbers
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -81,6 +83,7 @@ def compute_score(inputs: Dict[str, float], config: Optional[Dict[str, Any]] = N
     이렇게 하면 "측정 안 된 지표"가 점수를 절반 고정시키는 왜곡이 생기지 않는다.
     """
     cfg = config or default_config()
+    _validate_inputs(inputs, cfg)
 
     sub_scores = {}
     excluded = []
@@ -112,6 +115,41 @@ def compute_score(inputs: Dict[str, float], config: Optional[Dict[str, Any]] = N
         excluded_categories=excluded,
         max_possible_raw=max_possible,
     )
+
+
+_OPTIONAL_KEYS = ("vix",)
+_WARNING_KEYS = ("cape_percentile", "fear_greed", "hy_spread_percentile")
+
+
+def _validate_inputs(inputs: Dict[str, Any], cfg: Dict[str, Any]) -> None:
+    """입력 계약 검사(점수 규칙과 무관). 계산 시작 전에 실행한다.
+
+    - 활성 카테고리의 필수 키: 누락(KeyError), None/비수치(TypeError), NaN/inf(ValueError)는 오류.
+    - 선택 키(vix): None이면 기존처럼 경고만 생략. 값이 있으면 수치여야 하고 NaN/inf는 오류.
+    - drawdown_pct는 technical 비활성이어도 필수(buy_pct 오버레이에 사용).
+    - 비활성 카테고리의 키는 필수가 아니며, 경고에 쓰이는 키가 주어졌다면 유한한 수인지만 검사.
+    """
+    def _check(key: str, value: Any) -> None:
+        if isinstance(value, bool) or not isinstance(value, numbers.Real):
+            raise TypeError(f"입력 '{key}'는 수치여야 합니다(받은 값: {value!r}).")
+        if not math.isfinite(value):
+            raise ValueError(f"입력 '{key}'가 유한한 수가 아닙니다(받은 값: {value!r}).")
+
+    required = []
+    for name, (_fn, key) in _INDICATOR_FUNCS.items():
+        if cfg[name].get("enabled", True):
+            required.append(key)
+    # drawdown_pct는 buy_pct 오버레이에도 쓰이므로 technical 활성 여부와 무관하게 필수.
+    if "drawdown_pct" not in required:
+        required.append("drawdown_pct")
+    for key in required:
+        if key not in inputs:
+            raise KeyError(key)
+        _check(key, inputs[key])
+    # 리스크 경고에만 쓰이는 키는 값이 주어졌을 때만 검사(비활성 카테고리의 키 포함).
+    for key in _OPTIONAL_KEYS + _WARNING_KEYS:
+        if key not in required and inputs.get(key) is not None:
+            _check(key, inputs[key])
 
 
 def _resolve_buy_pct(total_score: float, drawdown_pct: float, buy_rules: Dict[str, Any]) -> float:
