@@ -19,21 +19,25 @@ def _setup():
     d = Path(tempfile.mkdtemp()); cd.DATA_DIR = d; return d
 
 
-def _rec(t, inp=None, close=5000.0):
+def _rec(t, inp=None, close=5000.0, mdate=None, dq=None):
     inp = inp or INP
-    cd._record_oos_row(t, inp, DQ, {"sp500_close": close, "nasdaq100_close": None}, compute_score(inp))
+    mdate = mdate or t.date().isoformat()   # 기본: 실행일 = 시장일
+    return cd._record_oos_row(t, inp, dq or DQ, {"sp500_close": close, "sp500_date": mdate, "nasdaq100_close": None},
+                              compute_score(inp))
 
 
 def _rows(p):
     return list(csv.reader(open(p, newline="", encoding="utf-8")))
 
 
-def test_same_day_rerun_replaces_row_and_runs_log_keeps_both():
-    d = _setup(); _rec(T0); _rec(T0 + dt.timedelta(hours=3), dict(INP, vix=30.0), 5010.0); _rec(T0 + dt.timedelta(days=1))
+def test_same_market_day_rerun_keeps_existing_row_and_runs_log_keeps_both():
+    d = _setup(); _rec(T0); st = _rec(T0 + dt.timedelta(hours=3), dict(INP, vix=30.0), 5010.0); _rec(T0 + dt.timedelta(days=1))
     oos = _rows(d / "history_oos.csv"); runs = _rows(d / "history_oos_runs.csv")
+    assert st == "kept_existing"
     assert len(oos) - 1 == 2 and len(runs) - 1 == 3
-    assert oos[1][3] == "5010.0"          # 같은 날 마지막 실행 값으로 교체
-    assert runs[1][4] == "5000.0" and runs[2][4] == "5010.0"   # 이력에는 이전 값이 남음
+    assert oos[1][3] == "5000.0"          # 같은 시장일은 기존 정상 행 보존(점수/가격이 달라도 교체 안 함)
+    assert runs[1][4] == "5000.0" and runs[2][4] == "5010.0"   # 이력에는 재실행 값이 남음
+    assert [r[-2] for r in runs[1:]] == ["recorded", "kept_existing", "recorded"]
 
 
 def test_interrupted_write_keeps_old_file_intact():

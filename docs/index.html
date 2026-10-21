@@ -149,8 +149,29 @@
   .macro-chip .val{font-family:var(--mono); font-size:17px; font-weight:600; margin-top:4px; word-break:keep-all;}
 
   /* ---------- Risk banner ---------- */
-  #risk-banner{display:none; border:1px solid var(--danger); background:rgba(225,86,86,0.08); border-radius:12px; padding:16px 18px; margin-bottom:16px;}
-  #risk-banner.show{display:block;}
+  #data-banner{display:none; border:1px solid var(--warn); background:rgba(240,180,60,0.10); border-radius:12px; padding:14px 18px; margin-bottom:16px; font-size:14px; line-height:1.7;}
+  #data-banner.show{display:block;}
+  #data-banner.nodata{border-color:var(--danger); background:rgba(225,86,86,0.10);}
+  #data-banner b{font-weight:700;}
+  .dq-badge{display:none; margin-left:8px; font-family:var(--mono); font-size:11px; padding:2px 8px; border-radius:20px; border:1px solid var(--warn); color:var(--warn); background:rgba(240,180,60,0.10); vertical-align:middle;}
+  .dq-badge.show{display:inline-block;}
+  .oos-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:16px;}
+  .oos-card{background:var(--panel-2); border:1px solid var(--border-soft); border-radius:10px; padding:14px;}
+  .oos-card .lbl{font-size:12px; color:var(--text-dim); margin-bottom:6px;}
+  .oos-card .val{font-size:20px; font-weight:600;}
+  .oos-card .sub{font-size:12px; color:var(--text-dim); margin-top:6px; line-height:1.6;}
+  .oos-bar{height:8px; background:var(--border-soft); border-radius:6px; overflow:hidden; margin-top:8px;}
+  .oos-bar>i{display:block; height:100%; background:var(--zone-4);}
+  .oos-table{width:100%; border-collapse:collapse; font-size:13px; margin-top:8px;}
+  .oos-table th,.oos-table td{padding:6px 8px; border-bottom:1px solid var(--border-soft); text-align:right; white-space:nowrap;}
+  .oos-table th:first-child,.oos-table td:first-child{text-align:left;}
+  .oos-scroll{overflow-x:auto;}
+  .oos-msg{padding:18px; border:1px dashed var(--border); border-radius:10px; color:var(--text-dim); line-height:1.7;}
+  .oos-fail{color:var(--danger);}
+  #risk-banner{display:block; min-height:92px; border:1px solid var(--danger); background:rgba(225,86,86,0.08); border-radius:12px; padding:16px 18px; margin-bottom:16px;}
+  #risk-banner.none{border-color:var(--border,#2a3350); background:rgba(255,255,255,0.03);}
+  #risk-banner.none .title{color:var(--muted,#8a94b0);}
+  #risk-banner li.none-msg{background:transparent; border-color:rgba(255,255,255,0.15); color:var(--muted,#8a94b0);}
   #risk-banner .title{font-family:var(--mono); font-size:12px; letter-spacing:0.08em; color:var(--danger); text-transform:uppercase; margin-bottom:8px; font-weight:600;}
   #risk-banner ul{list-style:none; display:flex; flex-wrap:wrap; gap:8px;}
   #risk-banner li{font-family:var(--mono); font-size:12px; background:rgba(225,86,86,0.12); border:1px solid rgba(225,86,86,0.35); padding:5px 10px; border-radius:20px;}
@@ -173,15 +194,18 @@
     </div>
   </header>
 
+  <div id="data-banner" role="status"></div>
+
   <div id="risk-banner">
     <div class="title">⚠ 리스크 경고</div>
-    <ul id="risk-list"></ul>
+    <ul id="risk-list"><li class="none-msg">확인 중…</li></ul>
   </div>
 
   <nav class="tabs" role="tablist" aria-label="화면 구분">
     <button class="tab-btn" role="tab" id="tab-score" aria-controls="pane-score" aria-selected="true" onclick="showTab('score')">① 점수 분석</button>
     <button class="tab-btn" role="tab" id="tab-index" aria-controls="pane-index" aria-selected="false" onclick="showTab('index')">② 지수 추이</button>
     <button class="tab-btn" role="tab" id="tab-macro" aria-controls="pane-macro" aria-selected="false" onclick="showTab('macro')">③ 매크로</button>
+    <button class="tab-btn" role="tab" id="tab-oos" aria-controls="pane-oos" aria-selected="false" onclick="showTab('oos')">④ 표본 외 기록</button>
   </nav>
 
   <section class="tab-pane" id="pane-score" role="tabpanel" aria-labelledby="tab-score">
@@ -204,7 +228,7 @@
       </div>
       <div class="hero-stats">
         <div class="hero-stat" style="flex:1 1 100%;">
-          <div class="lbl">역사적 위치</div>
+          <div class="lbl">점수 환산값 (참고)</div>
           <div class="val" id="percentile-txt" style="font-size:14px;">—</div>
         </div>
       </div>
@@ -214,7 +238,7 @@
       <div class="panel-label">Score Breakdown — 왜 이 점수인가</div>
 
       <div class="score-row cat-technical">
-        <div class="name">기술적<span class="sub">TECHNICAL · 30</span></div>
+        <div class="name">기술적<span class="sub">TECHNICAL · 30</span><span class="dq-badge" id="dq-tech"></span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-tech" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-tech">0</b>/30</div>
         <input type="range" class="dir-asc" id="in-drawdown" min="0" max="45" value="8" oninput="recalc()">
@@ -223,7 +247,7 @@
       </div>
 
       <div class="score-row cat-valuation">
-        <div class="name">밸류에이션<span class="sub">VALUATION · 20</span></div>
+        <div class="name">밸류에이션<span class="sub">VALUATION · 20</span><span class="dq-badge" id="dq-val"></span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-val" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-val">0</b>/20</div>
         <input type="range" class="dir-desc" id="in-per" min="0" max="100" value="55" oninput="recalc()">
@@ -232,7 +256,7 @@
       </div>
 
       <div class="score-row cat-feargreed">
-        <div class="name">공포·탐욕<span class="sub">FEAR & GREED · 20</span></div>
+        <div class="name">공포·탐욕<span class="sub">FEAR & GREED · 20</span><span class="dq-badge" id="dq-fear"></span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-fear" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-fear">0</b>/20</div>
         <input type="range" class="dir-desc" id="in-feargreed" min="0" max="100" value="55" oninput="recalc()">
@@ -241,7 +265,7 @@
       </div>
 
       <div class="score-row cat-rate">
-        <div class="name">금리·신용<span class="sub">RATES & CREDIT · 10</span></div>
+        <div class="name">금리·신용<span class="sub">RATES & CREDIT · 10</span><span class="dq-badge" id="dq-rate"></span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-rate" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-rate">0</b>/10</div>
         <input type="range" class="dir-asc" id="in-spread" min="0" max="100" value="30" oninput="recalc()">
@@ -250,7 +274,7 @@
       </div>
 
       <div class="score-row cat-macro">
-        <div class="name">경기<span class="sub">MACRO · 10</span></div>
+        <div class="name">경기<span class="sub">MACRO · 10</span><span class="dq-badge" id="dq-macro"></span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-macro" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-macro">0</b>/10</div>
         <input type="range" class="dir-desc" id="in-ism" min="-15" max="15" value="8" oninput="recalc()">
@@ -336,8 +360,16 @@
 
   </section>
 
+  <section class="tab-pane" id="pane-oos" role="tabpanel" aria-labelledby="tab-oos" hidden>
+    <div class="panel">
+      <div class="panel-label">Out-of-sample Record — 규칙 동결(2026-10-12) 이후 쌓이는 기록</div>
+      <div class="notice" style="font-size:13px; line-height:1.7; color:var(--text-dim); margin-bottom:14px;">공식 기록은 시장일(S&amp;P500 종가 날짜) 하나당 한 행입니다. 같은 시장일에 다시 실행해도 기존 정상 행을 보존하고, 조회 실패한 날은 공식 기록을 만들지 않습니다(실행 이력에만 ‘실패’로 남아요). 기록이 쌓였다고 신호가 검증된 것은 아니에요.</div>
+      <div id="oos-body"><div class="oos-msg">기록을 불러오는 중…</div></div>
+    </div>
+  </section>
+
   <footer>
-    시장 데이터는 Yahoo Finance 및 FRED에서 가져옵니다. 조회에 실패한 항목은 임의의 현재값으로 대체하지 않고 ‘조회 실패’로 표시합니다. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
+    시장 데이터는 Yahoo Finance 및 FRED에서 가져옵니다. 가격·매크로 카드는 조회에 실패하면 ‘조회 실패’로 표시합니다. 점수 계산에 쓰는 지표(CAPE, 공포탐욕, HY 스프레드, 필라델피아 연은 지수 등)가 조회에 실패하면 중립값(예: 백분위 50)으로 대체하며, 이때는 화면 위 경고와 해당 카드에 ‘조회 실패 · 중립값 사용’ 표시가 붙습니다. 대체값으로 계산한 점수는 실제 시장 상태를 반영하지 않아요. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
     슬라이더를 움직이면 Score Engine 로직에 따라 점수·매수 비중이 재계산됩니다. 매크로 스냅샷은 참고용이며 투자 조언이 아닙니다.
   </footer>
 </div>
@@ -481,6 +513,7 @@ function drawSpark(svgId, pts, color){
 
 /* ---------------- Static daily data (GitHub Actions writes docs/data/latest.json) ---------------- */
 let todayData = null;
+let loadProblem = null;   // latest.json을 못 쓰는 이유(없음/형식 오류). 있으면 점수를 표시하지 않는다.
 let currentVix = null;  // 숫자 그대로 보관(화면 문자열을 다시 파싱하지 않는다)
 
 function daysOld(isoDate){
@@ -597,12 +630,82 @@ function renderMacroExtras(payload){
   });
 }
 
+const SCORE_INPUT_KEYS = ['drawdown_pct','cape_percentile','fear_greed','hy_spread_percentile','ism'];
+const KEY_LABEL = {drawdown_pct:'최고가 대비 하락률', cape_percentile:'CAPE(밸류에이션)', fear_greed:'공포·탐욕 지수',
+                   hy_spread_percentile:'HY 신용 스프레드', ism:'필라델피아 연은 제조업지수', vix:'VIX'};
+const NEUTRAL_TEXT = {drawdown_pct:'0%', cape_percentile:'백분위 50', fear_greed:'50', hy_spread_percentile:'백분위 50', ism:'0'};
+const CARD_KEYS = {tech:['drawdown_pct','in-drawdown'], val:['cape_percentile','in-per'], fear:['fear_greed','in-feargreed'],
+                   rate:['hy_spread_percentile','in-spread'], macro:['ism','in-ism']};
+const GENERATED_MAX_AGE_DAYS = 5;
+
+// latest.json이 점수 표시에 쓸 수 있는 형태인지 검사한다. 쓸 수 없으면 이유(문자열), 괜찮으면 null.
+function payloadProblem(p){
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return '데이터 형식 오류';
+  if (!p.inputs || typeof p.inputs !== 'object') return '입력값(inputs) 없음 또는 옛 형식';
+  const missing = SCORE_INPUT_KEYS.filter(k => typeof p.inputs[k] !== 'number' || !Number.isFinite(p.inputs[k]));
+  if (missing.length) return `숫자가 아닌 입력값: ${missing.join(', ')}`;
+  return null;
+}
+function dqState(payload, key){
+  return payload && payload.data_quality && payload.data_quality[key];
+}
+
+function renderDataBanner(payload){
+  const el = document.getElementById('data-banner');
+  const msgs = [];
+  let nodata = false;
+  if (!payload) {
+    nodata = true;
+    msgs.push(`<b>데이터 없음</b> — 자동 갱신 데이터(latest.json)를 쓸 수 없어 점수와 매수 비중을 표시하지 않습니다. (${loadProblem || '파일 없음'}) 다음 자동 실행 후 다시 확인하세요.`);
+  } else {
+    const subs = SCORE_INPUT_KEYS.concat(['vix']).filter(k => dqState(payload,k) === 'fallback_neutral');
+    const derived = SCORE_INPUT_KEYS.filter(k => dqState(payload,k) === 'derived_from_vix');
+    if (subs.length) msgs.push(`<b>일부 데이터 조회 실패</b> — 점수에 쓰인 지표 ${subs.length}개가 중립값으로 대체됐어요: ${subs.map(k=>KEY_LABEL[k]).join(', ')}. 이 점수는 실제 시장 상태를 완전히 반영하지 않아요(해당 카드에 ‘조회 실패 · 중립값 사용’ 표시).`);
+    if (derived.length) msgs.push(`직접 조회에 실패해 VIX로 추정한 값을 쓴 지표: ${derived.map(k=>KEY_LABEL[k]).join(', ')}`);
+    const snap = payload.price_snapshot || {};
+    const pAge = daysOld(snap.sp500_date);
+    if (!Number.isFinite(snap.sp500_close) || pAge === null) msgs.push('<b>데이터 기준일 불명</b> — S&P500 종가/날짜가 없어요.');
+    else if (pAge < 0 || pAge > PRICE_MAX_AGE_DAYS) msgs.push(`<b>오래된 데이터</b> — 데이터 기준일은 ${snap.sp500_date}(시장일)로 ${pAge}일 전이에요. 자동 갱신이 멈췄는지 확인하세요.`);
+    const g = payload.generated_at_utc ? new Date(payload.generated_at_utc) : null;
+    if (!g || isNaN(g)) msgs.push('<b>수집 시각 불명</b> — 데이터가 언제 수집됐는지 알 수 없어요.');
+    else {
+      const ageDays = (Date.now() - g.getTime()) / 86400000;
+      if (ageDays < -0.1) msgs.push('<b>수집 시각 이상</b> — 수집 시각이 현재보다 미래예요.');
+      else if (ageDays > GENERATED_MAX_AGE_DAYS) msgs.push(`<b>오래된 수집</b> — 마지막 수집이 ${Math.floor(ageDays)}일 전이에요. 자동 갱신이 멈췄는지 확인하세요.`);
+    }
+  }
+  el.className = msgs.length ? ('show' + (nodata ? ' nodata' : '')) : '';
+  el.innerHTML = msgs.map(m => `<div>${m}</div>`).join('');
+}
+
+// 카드별 대체값 표시. 사용자가 슬라이더를 움직여 값이 오늘 입력과 달라지면(시나리오) 표시를 숨긴다.
+function renderCardQuality(){
+  Object.entries(CARD_KEYS).forEach(([card,[key,sliderId]]) => {
+    const badge = document.getElementById(`dq-${card}`);
+    if (!badge) return;
+    badge.className = 'dq-badge'; badge.textContent = '';
+    if (!todayData) return;
+    const slider = document.getElementById(sliderId);
+    const same = slider && Math.abs(parseFloat(slider.value) - todayData.inputs[key]) < 1e-9;
+    const st = dqState(todayData, key);
+    if (!same) return;
+    const exp = document.getElementById(`exp-${card}`);
+    if (st === 'fallback_neutral') {
+      badge.textContent = '조회 실패 · 중립값 사용'; badge.className = 'dq-badge show';
+      if (exp) exp.textContent = `이 항목은 조회에 실패해 중립값(${NEUTRAL_TEXT[key]})으로 대체했어요. 실제 시장 상태가 아니라서 이 카드의 점수는 참고하지 마세요.`;
+    } else if (st === 'derived_from_vix') {
+      badge.textContent = 'VIX로 추정한 값'; badge.className = 'dq-badge show';
+      if (exp) exp.textContent += '\n(직접 조회에 실패해 VIX로 추정한 값이에요.)';
+    }
+  });
+}
+
 function setUpdatedBadge(payload){
   const dot = document.getElementById('conn-dot');
   const label = document.getElementById('conn-label');
   if (!payload) {
     dot.style.background = getCss('--warn'); dot.style.boxShadow = `0 0 6px ${getCss('--warn')}`;
-    label.textContent = '자동 갱신 데이터 없음'; return;
+    label.textContent = '데이터 없음 · 자동 갱신 데이터를 쓸 수 없어요'; return;
   }
   const dq = payload.data_quality || {};
   const scoreFallback = Object.entries(dq).filter(([k,v]) => k !== 'net_flow_index' && v === 'fallback_neutral').map(([k])=>k);
@@ -628,18 +731,24 @@ function setUpdatedBadge(payload){
   if (scoreDerived.length) parts.push(`점수 추정 입력 ${scoreDerived.length}개`);
   if (macroIssues.length) parts.push(`매크로 조회 실패/오래됨 ${macroIssues.length}개`);
   if (priceIssues.length) parts.push(`지수 가격 조회 실패/오래됨 ${priceIssues.length}개`);
-  label.textContent = `수집 실행 ${ts} · ${parts.length ? parts.join(' · ') : '점수·매크로 상태 정상'}`;
+  const basis = (payload.price_snapshot && payload.price_snapshot.sp500_date) ? `데이터 기준일 ${payload.price_snapshot.sp500_date}(시장일) · ` : '데이터 기준일 불명 · ';
+  label.textContent = `${basis}수집 실행 ${ts} · ${parts.length ? parts.join(' · ') : '점수·매크로 상태 정상'}`;
 }
 
 async function loadTodayData(){
+  loadProblem = null;
   try{
     const res = await fetch('./data/latest.json', {cache:'no-store'});
     if(!res.ok) throw new Error('no data yet');
     todayData = await res.json();
+    const bad = payloadProblem(todayData);
+    if (bad) { loadProblem = bad; todayData = null; }
   } catch(e){
     todayData = null;
+    if (!loadProblem) loadProblem = '파일을 불러오지 못함';
   }
   setUpdatedBadge(todayData);
+  renderDataBanner(todayData);
   renderMacroSnapshot(todayData);
   renderMacroExtras(todayData);
   if(todayData){
@@ -733,14 +842,15 @@ function applyResult(data, dd){
   renderGauge(total);
 
   document.getElementById('buy-pct').textContent = data.buy_pct+'%';
-  document.getElementById('percentile-txt').textContent = `역사적으로 상위 약 ${data.percentile_estimate}% 구간 (점수 ${total}점 기준 추정)`;
+  document.getElementById('percentile-txt').textContent = `${data.percentile_estimate} (100 − 점수 ${total}) · 과거 점수 분포와 비교한 순위가 아니라 단순 환산값이에요`;
 
   const banner=document.getElementById('risk-banner');
   if(data.risk_warnings.length){
-    banner.classList.add('show');
+    banner.classList.remove('none');
     document.getElementById('risk-list').innerHTML = data.risk_warnings.map(r=>`<li>${r}</li>`).join('');
   } else {
-    banner.classList.remove('show');
+    banner.classList.add('none');
+    document.getElementById('risk-list').innerHTML = '<li class="none-msg">현재 해당되는 리스크 경고가 없습니다</li>';
   }
 
   // index cards — 실제 종가(price_snapshot)가 있으면 그 값을 쓰고, 없으면 "샘플" 라벨을 붙인다
@@ -791,11 +901,154 @@ async function recalc(){
   };
 
   applyResult(localCompute(inputs), dd);
+  renderCardQuality();
+}
+
+// latest.json이 없으면 샘플 값을 실제 점수처럼 보여주지 않고 '데이터 없음'을 표시한다.
+function renderNoData(){
+  ['score-num'].forEach(id => { const e = document.getElementById(id); e.textContent = '—'; e.style.color = ''; });
+  document.getElementById('zone-tag').textContent = '데이터 없음';
+  document.getElementById('buy-pct').textContent = '—';
+  document.getElementById('percentile-txt').textContent = '—';
+  ['tech','val','fear','rate','macro'].forEach(k => {
+    document.getElementById(`pts-${k}`).textContent = '—';
+    document.getElementById(`bar-${k}`).style.width = '0%';
+    document.getElementById(`exp-${k}`).textContent = '데이터 없음 — 자동 갱신 데이터를 불러오지 못했어요.';
+    const b = document.getElementById(`dq-${k}`); if (b) { b.className = 'dq-badge'; b.textContent = ''; }
+  });
+  Object.values(CARD_KEYS).forEach(([,id]) => { document.getElementById(id).disabled = true; });
+  const banner = document.getElementById('risk-banner');
+  banner.classList.add('none');
+  document.getElementById('risk-list').innerHTML = '<li class="none-msg">데이터 없음 — 리스크 경고를 판단할 수 없어요</li>';
+  document.getElementById('gauge').innerHTML = '';
 }
 
 
+
+/* ---------------- ④ 표본 외 기록 ---------------- */
+const OOS_TARGET_DAYS = 730;      // 최소 2년
+const OOS_SUBST = ['fallback_neutral', 'derived_from_vix'];
+function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// 따옴표/BOM/CRLF를 처리하는 작은 CSV 파서
+function parseCsv(text){
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i+1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i+1] === '\n') i++; row.push(cur); cur = ''; if (row.some(x => x !== '')) rows.push(row); row = []; }
+    else cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); if (row.some(x => x !== '')) rows.push(row); }
+  return rows;
+}
+function csvToObjects(text){
+  const rows = parseCsv(text);
+  if (!rows.length) return {header: [], items: []};
+  const header = rows[0].map(h => h.trim());
+  return {header, items: rows.slice(1).map(r => Object.fromEntries(header.map((h, i) => [h, (r[i] == null ? '' : r[i])])))};
+}
+async function fetchCsv(url){
+  try {
+    const res = await fetch(url, {cache: 'no-store'});
+    if (!res.ok) return {missing: true};
+    const text = await res.text();
+    if (/^\s*<(!doctype|html)/i.test(text)) return {broken: 'CSV가 아닌 응답(HTML)'};
+    return csvToObjects(text);
+  } catch (e) { return {missing: true}; }
+}
+const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+
+function oosLineChart(pts){
+  // pts: [{d, score, close}] 시장일 오름차순. 점수(0~100)와 S&P500(구간 정규화)을 한 그림에 그린다.
+  if (pts.length < 2) return '<div class="oos-msg">그래프는 기록이 2일 이상 쌓이면 표시돼요.</div>';
+  const w = 600, h = 140, closes = pts.map(p => p.close).filter(v => v != null);
+  const cmin = Math.min(...closes), cmax = Math.max(...closes), span = (cmax - cmin) || 1;
+  const x = i => (i / (pts.length - 1)) * w;
+  const ys = v => h - (v / 100) * h;
+  const yc = v => h - ((v - cmin) / span) * (h - 8) - 4;
+  const sPath = pts.map((p, i) => p.score == null ? null : `${i ? 'L' : 'M'}${x(i).toFixed(1)},${ys(p.score).toFixed(1)}`).filter(Boolean).join(' ');
+  const cPath = pts.map((p, i) => p.close == null ? null : `${i ? 'L' : 'M'}${x(i).toFixed(1)},${yc(p.close).toFixed(1)}`).filter(Boolean).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:140px;">
+    <path d="${cPath}" fill="none" stroke="${getCss('--text-faint')}" stroke-width="1.5"/>
+    <path d="${sPath}" fill="none" stroke="${getCss('--zone-4')}" stroke-width="2"/></svg>
+    <div class="spark-cap">${esc(pts[0].d)} ~ ${esc(pts[pts.length-1].d)} · 초록=종합 점수(0~100) · 회색=S&amp;P500(구간 안에서 정규화, 가격 눈금 아님)</div>`;
+}
+
+async function loadOos(){
+  const box = document.getElementById('oos-body');
+  const [oos, runs] = await Promise.all([fetchCsv('./data/history_oos.csv'), fetchCsv('./data/history_oos_runs.csv')]);
+  if (oos.broken) { box.innerHTML = `<div class="oos-msg oos-fail">기록 파일 형식 오류: ${esc(oos.broken)}</div>`; return; }
+  if (oos.missing) { box.innerHTML = '<div class="oos-msg">아직 기록 파일이 없어요. 자동 실행(평일 21:30 UTC)이 성공하면 첫 기록이 생기고 이 탭에 표시돼요.</div>'; return; }
+  const need = ['sp500_date', 'total_score'];
+  if (need.some(k => !oos.header.includes(k))) { box.innerHTML = `<div class="oos-msg oos-fail">기록 파일 형식 오류: 필요한 열(${need.join(', ')})이 없어요.</div>`; return; }
+  if (!oos.items.length) { box.innerHTML = '<div class="oos-msg">기록 파일은 있지만 아직 기록이 없어요. 자동 실행이 성공하면 쌓이기 시작해요.</div>'; return; }
+
+  // 시장일 기준으로 중복을 제거(먼저 나온 행 유지)하고, 날짜 오름차순 정렬
+  const seen = new Set(), days = [];
+  let skippedNoDate = 0;
+  oos.items.forEach(r => {
+    const d = (r.sp500_date || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { skippedNoDate++; return; }
+    if (seen.has(d)) return; seen.add(d); days.push(r);
+  });
+  const dupes = oos.items.length - skippedNoDate - days.length;
+  days.sort((a, b) => a.sp500_date < b.sp500_date ? -1 : a.sp500_date > b.sp500_date ? 1 : 0);
+  if (!days.length) { box.innerHTML = '<div class="oos-msg oos-fail">시장일(sp500_date)이 있는 기록이 없어요.</div>'; return; }
+
+  const first = days[0].sp500_date, last = days[days.length - 1].sp500_date;
+  const spanDays = Math.round((new Date(last) - new Date(first)) / 86400000);
+  const pct = Math.max(0, Math.min(100, spanDays / OOS_TARGET_DAYS * 100));
+  const dqCols = oos.header.filter(h => h.startsWith('dq_'));
+  const substCount = r => dqCols.filter(c => OOS_SUBST.includes((r[c] || '').trim())).length;
+  const subDays = days.filter(r => substCount(r) > 0).length;
+  const warnDays = days.filter(r => (r.risk_warnings || '').trim() !== '').length;
+  const maxDd = Math.max(...days.map(r => num(r.drawdown_pct)).filter(v => v != null), 0);
+  const ddOk = maxDd >= 10;
+
+  let r_ok = 0, r_fail = 0, r_kept = 0, r_rep = 0, recent = [];
+  if (!runs.missing && !runs.broken && runs.items) {
+    runs.items.forEach(r => {
+      const st = (r.status || 'legacy').trim();
+      if (st === 'failed') r_fail++; else { r_ok++; if (st === 'kept_existing') r_kept++; if (st === 'replaced_incomplete') r_rep++; }
+    });
+    recent = runs.items.slice(-8).reverse();
+  }
+  const runsInfo = runs.missing || runs.broken
+    ? '<div class="oos-msg">실행 이력 파일(history_oos_runs.csv)을 읽지 못했어요.</div>'
+    : `<div class="oos-scroll"><table class="oos-table"><thead><tr><th>실행 시각(UTC)</th><th>상태</th><th>메모</th></tr></thead><tbody>${
+        recent.map(r => { const st = (r.status || 'legacy').trim(); const lab = ({recorded:'기록', kept_existing:'기존 행 보존(재실행)', replaced_incomplete:'불완전 행 교체', failed:'실패', legacy:'이전 형식'})[st] || st;
+          return `<tr><td>${esc((r.run_utc || '').replace('T',' ').slice(0,19))}</td><td class="${st === 'failed' ? 'oos-fail' : ''}">${esc(lab)}</td><td style="white-space:normal;text-align:left;">${esc(r.note || '')}</td></tr>`; }).join('')
+      }</tbody></table></div>`;
+
+  const pts = days.map(r => ({d: r.sp500_date, score: num(r.total_score), close: num(r.sp500_close)}));
+  const tableRows = days.slice().reverse().slice(0, 12).map(r => {
+    const n = substCount(r);
+    return `<tr><td>${esc(r.sp500_date)}</td><td>${esc(num(r.total_score) == null ? '—' : Math.round(num(r.total_score)))}</td><td>${esc(r.buy_pct || '—')}%</td><td>${esc(num(r.sp500_close) == null ? '—' : num(r.sp500_close).toLocaleString('ko-KR'))}</td><td class="${n ? 'oos-fail' : ''}">${n ? n + '개 대체' : '없음'}</td><td style="white-space:normal;text-align:left;">${esc((r.risk_warnings || '').replace(/;/g, ', ') || '—')}</td></tr>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="oos-grid">
+      <div class="oos-card"><div class="lbl">공식 기록 (시장일 기준)</div><div class="val">${days.length}일</div><div class="sub">${esc(first)} ~ ${esc(last)}${dupes ? `<br>같은 시장일 중복 ${dupes}행은 제외(첫 행 유지)` : ''}${skippedNoDate ? `<br>시장일 없는 ${skippedNoDate}행 제외` : ''}</div></div>
+      <div class="oos-card"><div class="lbl">최소 2년 기준 진행</div><div class="val">${spanDays}일 / ${OOS_TARGET_DAYS}일</div><div class="oos-bar"><i style="width:${pct.toFixed(1)}%"></i></div><div class="sub">기간만 채운다고 검증이 끝나는 건 아니에요.</div></div>
+      <div class="oos-card"><div class="lbl">하락 10% 이상 구간 포함?</div><div class="val">${ddOk ? '포함됨' : '아직 없음'}</div><div class="sub">기록 중 최대 낙폭 ${maxDd.toFixed(1)}% (S&amp;P500, 최근 252거래일 최고가 대비)</div></div>
+      <div class="oos-card"><div class="lbl">중립 대체값을 쓴 날</div><div class="val">${subDays}일</div><div class="sub">전체 ${days.length}일 중. 대체값이 있는 날은 신호 해석에 주의하세요.</div></div>
+      <div class="oos-card"><div class="lbl">리스크 경고가 있던 날</div><div class="val">${warnDays}일</div><div class="sub">CAPE·VIX·탐욕·신용 경고 중 하나라도 있던 날</div></div>
+      <div class="oos-card"><div class="lbl">실행 이력</div><div class="val">${r_ok + r_fail}회</div><div class="sub">성공 ${r_ok}회 · <span class="${r_fail ? 'oos-fail' : ''}">실패 ${r_fail}회</span><br>같은 날 재실행(기존 행 보존) ${r_kept}회${r_rep ? ` · 불완전 행 교체 ${r_rep}회` : ''}</div></div>
+    </div>
+    <div class="panel-label" style="margin-top:8px;">점수와 S&amp;P500</div>
+    ${oosLineChart(pts)}
+    <div class="panel-label" style="margin-top:18px;">최근 공식 기록 (최신 시장일이 위)</div>
+    <div class="oos-scroll"><table class="oos-table"><thead><tr><th>시장일</th><th>점수</th><th>매수 비중</th><th>S&amp;P500</th><th>대체값</th><th>경고</th></tr></thead><tbody>${tableRows}</tbody></table></div>
+    <div class="panel-label" style="margin-top:18px;">최근 실행 이력</div>
+    ${runsInfo}`;
+}
+
 /* ---------------- Tabs ---------------- */
-const TAB_IDS = ['score', 'index', 'macro'];
+const TAB_IDS = ['score', 'index', 'macro', 'oos'];
 function showTab(id, persist = true){
   if (!TAB_IDS.includes(id)) id = 'score';
   TAB_IDS.forEach(t => {
@@ -822,13 +1075,19 @@ document.addEventListener('keydown', e => {
 })();
 
 function resetToTodayData(){
-  loadTodayData().then(recalc);
+  loadTodayData().then(afterLoad);
+}
+function afterLoad(){
+  if (!todayData) { renderNoData(); return; }
+  Object.values(CARD_KEYS).forEach(([,id]) => { document.getElementById(id).disabled = false; });
+  recalc();
 }
 
 document.getElementById('today-tag').textContent = new Date().toLocaleDateString('ko-KR');
 (async function init(){
   await loadTodayData();   // 오늘자 자동 갱신 값으로 슬라이더를 먼저 채운다
-  recalc();                 // 그 값으로 첫 렌더
+  afterLoad();              // 그 값으로 첫 렌더(데이터가 없으면 '데이터 없음')
+  loadOos();                // 표본 외 기록(④ 탭)
 })();
 </script>
 </body>

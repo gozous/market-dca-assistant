@@ -28,15 +28,37 @@ jobs:
       - name: Install dependencies
         run: pip install -r scripts/requirements.txt
 
+      # 필수 데이터(S&P500 가격) 실패 시 이 스텝은 실패로 끝나지만, 아래 커밋 스텝이 항상 실행되어
+      # 실패 이력(history_oos_runs.csv의 status=failed)을 남긴다. 실패한 실행은 latest.json /
+      # history_oos.csv를 바꾸지 않는다(스크립트 테스트로 보장). 마지막 스텝에서 잡을 빨간불로 끝낸다.
       - name: Run daily score computation
+        id: compute
+        continue-on-error: true
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: python3 scripts/compute_daily.py
 
       - name: Commit updated data
+        if: always()
         run: |
           git config user.name "market-dca-bot"
           git config user.email "actions@users.noreply.github.com"
           git add -A docs/data
-          git diff --cached --quiet || git commit -m "chore: daily score update $(date -u +%Y-%m-%d)"
-          git push
+          if git diff --cached --quiet; then
+            echo "변경 없음 - 커밋하지 않음"
+            exit 0
+          fi
+          git commit -m "chore: daily score update $(date -u +%Y-%m-%d) (compute=${{ steps.compute.outcome }})"
+          # 원격에 새 커밋이 있으면 먼저 반영한다. 충돌하면 강제 푸시하지 않고 실패 처리한다(데이터 보호).
+          if ! git pull --rebase origin "${{ github.ref_name }}"; then
+            git rebase --abort || true
+            echo "::error::원격과 충돌해 푸시하지 못했습니다. 강제 푸시하지 않습니다. 저장소를 확인하세요."
+            exit 1
+          fi
+          git push origin "HEAD:${{ github.ref_name }}"
+
+      - name: Fail job if computation failed
+        if: steps.compute.outcome == 'failure'
+        run: |
+          echo "::error::데이터 수집/계산 실패 - 공식 기록은 갱신되지 않았습니다. 위 'Run daily score computation' 로그를 확인하세요."
+          exit 1
