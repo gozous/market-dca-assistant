@@ -18,20 +18,70 @@ import requests
 
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
 
+# ── 실패 사유 기록 ─────────────────────────────────────────────────────────
+# 조회가 실패하면 "왜 실패했는지"를 사람이 읽을 수 있는 한 줄로 남긴다(화면과 실행 이력에 표시).
+# 키: price:sp500, price:nasdaq100, cape_percentile, fear_greed, hy_spread_percentile, ism, macro:<항목>.
+# 같은 항목을 재시도하다 성공하면 사유를 지운다(마지막 시도의 결과만 남는다).
+# 비밀값(API 키)이 사유 문구에 섞여 공개 저장소의 latest.json으로 새지 않도록 반드시 가린다.
+FAILURE_REASONS = {}
+_PRICE_KEYS = {"^GSPC": "price:sp500", "^NDX": "price:nasdaq100"}
+_YF_KEYS = {"USDKRW=X": "macro:usd_krw", "DX-Y.NYB": "macro:dxy", "^VIX": "macro:vix"}
+_FRED_LATEST_KEYS = {"GACDFSA066MSFRBPHI": "ism"}
+_FRED_HISTORY_KEYS = {"BAMLH0A0HYM2": "hy_spread_percentile"}
+
+
+def reset_failure_reasons():
+    FAILURE_REASONS.clear()
+
+
+def _redact(text):
+    text = re.sub(r"(api_key=)[^&\s'\")]+", r"\1***", str(text), flags=re.I)
+    return re.sub(r"[0-9a-f]{32}", "***", text)  # FRED 키 형태(32자리 16진수)도 가린다
+
+
+def describe_error(e) -> str:
+    """예외를 사람이 이해하는 한 줄 사유로 바꾼다. 요청 주소/키가 들어갈 수 있는 원문은 쓰지 않는다."""
+    name = type(e).__name__
+    msg = _redact(str(e)).replace("\n", " ").strip()
+    if isinstance(e, requests.exceptions.HTTPError):
+        code = getattr(getattr(e, "response", None), "status_code", None)
+        hint = {400: "요청 형식 오류(API 키 오류 가능성)", 401: "인증 실패", 403: "접근 거부(차단 가능성)", 404: "주소를 찾을 수 없음(주소 변경 가능성)",
+                429: "요청 한도 초과"}.get(code) or ("서버 오류" if code and code >= 500 else "")
+        return f"HTTP {code} {hint}".strip()
+    if isinstance(e, requests.exceptions.Timeout):
+        return "응답 시간 초과"
+    if isinstance(e, requests.exceptions.ConnectionError):
+        return "연결 실패(네트워크 문제 또는 차단)"
+    if "ratelimit" in name.lower() or "too many requests" in msg.lower():
+        return "요청 한도 초과(상대 서버가 일시 차단)"
+    return (f"{name}: {msg[:80]}" if msg else name)
+
+
+def _note_fail(key, reason, tag=None):
+    FAILURE_REASONS[key] = reason
+    print(f"[warn] {tag or key} 실패: {reason}")
+
+
+def _clear_fail(key):
+    FAILURE_REASONS.pop(key, None)
+
 
 def fetch_price_series(ticker: str, period: str = "1y"):
     """
     yfinance로 종가 시계열을 가져온다. 52주 최고가/현재가/하락률 계산에 쓴다.
     실패 시 None.
     """
+    key = _PRICE_KEYS.get(ticker, f"price:{ticker}")
     try:
         import yfinance as yf
         data = yf.Ticker(ticker).history(period=period)
         if data.empty:
+            _note_fail(key, "응답은 왔지만 시세 데이터가 비어 있음(상대 서버 차단 또는 일시 장애 가능성)", f"fetch_price_series({ticker})")
             return None
+        _clear_fail(key)
         return data["Close"]
     except Exception as e:
-        print(f"[warn] fetch_price_series({ticker}) 실패: {e}")
+        _note_fail(key, describe_error(e), f"fetch_price_series({ticker})")
         return None
 
 
@@ -94,8 +144,9 @@ def fetch_fred_series_history(series_id: str, limit: int = 100000):
     percentile 계산처럼 "지금 값이 역사적으로 어디쯤인지"를 봐야 할 때 쓴다.
     실패 시 None.
     """
+    key = _FRED_HISTORY_KEYS.get(series_id, f"fred:{series_id}")
     if not FRED_API_KEY:
-        print("[warn] FRED_API_KEY 미설정 — FRED 지표 스킵")
+        _note_fail(key, "FRED_API_KEY가 설정되지 않음(GitHub Secrets 확인 필요)", f"fetch_fred_series_history({series_id})")
         return None
     try:
         url = "https://api.stlouisfed.org/fred/series/observations"
@@ -110,9 +161,13 @@ def fetch_fred_series_history(series_id: str, limit: int = 100000):
         resp.raise_for_status()
         obs = resp.json().get("observations", [])
         values = [float(o["value"]) for o in obs if o["value"] != "."]
-        return values if values else None
+        if not values:
+            _note_fail(key, "FRED가 응답했지만 유효한 관측값이 없음", f"fetch_fred_series_history({series_id})")
+            return None
+        _clear_fail(key)
+        return values
     except Exception as e:
-        print(f"[warn] fetch_fred_series_history({series_id}) 실패: {e}")
+        _note_fail(key, describe_error(e), f"fetch_fred_series_history({series_id})")
         return None
 
 
@@ -127,8 +182,9 @@ def fetch_fred_series_latest(series_id: str) -> Optional[float]:
     FRED(세인트루이스 연은) API. 무료 API 키 필요 (https://fred.stlouisfed.org/docs/api/api_key.html)
     GitHub Actions secret으로 FRED_API_KEY를 넣어야 동작한다. 키가 없으면 None.
     """
+    key = _FRED_LATEST_KEYS.get(series_id, f"fred:{series_id}")
     if not FRED_API_KEY:
-        print("[warn] FRED_API_KEY 미설정 — FRED 지표 스킵")
+        _note_fail(key, "FRED_API_KEY가 설정되지 않음(GitHub Secrets 확인 필요)", f"fetch_fred_series_latest({series_id})")
         return None
     try:
         url = "https://api.stlouisfed.org/fred/series/observations"
@@ -143,10 +199,12 @@ def fetch_fred_series_latest(series_id: str) -> Optional[float]:
         resp.raise_for_status()
         obs = resp.json().get("observations", [])
         if not obs or obs[0]["value"] == ".":
+            _note_fail(key, "FRED가 응답했지만 최신 관측값이 비어 있음(미발표 또는 결측)", f"fetch_fred_series_latest({series_id})")
             return None
+        _clear_fail(key)
         return float(obs[0]["value"])
     except Exception as e:
-        print(f"[warn] fetch_fred_series_latest({series_id}) 실패: {e}")
+        _note_fail(key, describe_error(e), f"fetch_fred_series_latest({series_id})")
         return None
 
 
@@ -196,14 +254,17 @@ def fetch_fear_greed() -> Optional[float]:
         resp.raise_for_status()
         data = resp.json()
         if "fear_and_greed" in data:
+            _clear_fail("fear_greed")
             return float(data["fear_and_greed"]["score"])
         # 응답 형태가 다르면(히스토리 배열만 오는 경우) 가장 최근 값을 쓴다
         hist = data.get("fear_and_greed_historical", {}).get("data", [])
         if hist:
+            _clear_fail("fear_greed")
             return float(hist[-1]["y"])
+        _note_fail("fear_greed", "CNN이 응답했지만 지수 값이 없음(비공식 응답 형식이 바뀌었을 가능성)", "fetch_fear_greed")
         return None
     except Exception as e:
-        print(f"[warn] fetch_fear_greed 실패 (비공식 엔드포인트 변경 가능성): {e}")
+        _note_fail("fear_greed", "CNN 조회 실패: " + describe_error(e) + " (비공식 엔드포인트라 변경·차단될 수 있음)", "fetch_fear_greed")
         return None
 
 
@@ -230,10 +291,18 @@ def fetch_cape_percentile(lookback_years: int = 30) -> Optional[float]:
     2순위: shillerdata.com 페이지에서 서명된 다운로드 링크를 긁어와서 시도.
     둘 다 실패하면 None을 반환하고 compute_daily.py가 중립값으로 대체한다.
     """
+    _CAPE_PARTS.clear()
     xls_bytes = _try_fetch_yale_direct() or _try_fetch_shillerdata_scrape()
     if xls_bytes is None:
+        _note_fail("cape_percentile", "; ".join(_CAPE_PARTS.values()) or "CAPE 파일을 받지 못함", "fetch_cape_percentile")
         return None
-    return _parse_cape_percentile(xls_bytes, lookback_years)
+    value = _parse_cape_percentile(xls_bytes, lookback_years)
+    if value is not None:
+        _clear_fail("cape_percentile")
+    return value
+
+
+_CAPE_PARTS = {}  # 경로별 실패 사유(둘 다 실패했을 때 합쳐서 보여 준다)
 
 
 def _try_fetch_yale_direct() -> Optional[bytes]:
@@ -245,7 +314,8 @@ def _try_fetch_yale_direct() -> Optional[bytes]:
         resp.raise_for_status()
         return resp.content
     except Exception as e:
-        print(f"[warn] fetch_cape_percentile: 예일대 고정 URL 실패, shillerdata.com로 재시도: {e}")
+        _CAPE_PARTS["yale"] = "예일대 파일: " + describe_error(e)
+        print(f"[warn] fetch_cape_percentile: 예일대 고정 URL 실패, shillerdata.com로 재시도: {_CAPE_PARTS['yale']}")
         return None
 
 
@@ -255,13 +325,15 @@ def _try_fetch_shillerdata_scrape() -> Optional[bytes]:
         page.raise_for_status()
         match = re.search(r'https://img1\.wsimg\.com/blobby/go/[^"]+?ie_data\.xls[^"]*', page.text)
         if not match:
+            _CAPE_PARTS["shiller"] = "shillerdata.com: 다운로드 링크를 찾지 못함(페이지 구조 변경 가능성)"
             print("[warn] fetch_cape_percentile: shillerdata.com에서도 ie_data.xls 링크를 못 찾음")
             return None
         xls_resp = requests.get(match.group(0), headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
         xls_resp.raise_for_status()
         return xls_resp.content
     except Exception as e:
-        print(f"[warn] fetch_cape_percentile: shillerdata.com 대체 경로도 실패: {e}")
+        _CAPE_PARTS["shiller"] = "shillerdata.com: " + describe_error(e)
+        print(f"[warn] fetch_cape_percentile: shillerdata.com 대체 경로도 실패: {_CAPE_PARTS['shiller']}")
         return None
 
 
@@ -273,11 +345,12 @@ def _parse_cape_percentile(xls_bytes: bytes, lookback_years: int) -> Optional[fl
 
         cape_col = next((c for c in df.columns if "cape" in str(c).lower()), None)
         if cape_col is None:
-            print("[warn] fetch_cape_percentile: CAPE 컬럼을 못 찾음 — 파일 구조 변경 가능성")
+            _note_fail("cape_percentile", "파일은 받았지만 CAPE 열을 찾지 못함(파일 구조 변경 가능성)", "fetch_cape_percentile")
             return None
 
         series = pd.to_numeric(df[cape_col], errors="coerce").dropna()
         if series.empty:
+            _note_fail("cape_percentile", "파일은 받았지만 CAPE 값이 비어 있음", "fetch_cape_percentile")
             return None
 
         current_cape = float(series.iloc[-1])
@@ -285,10 +358,11 @@ def _parse_cape_percentile(xls_bytes: bytes, lookback_years: int) -> Optional[fl
         window_size = lookback_years * 12
         history = series.iloc[:-1].tail(window_size).tolist()
         if not history:
+            _note_fail("cape_percentile", "CAPE 과거 값이 부족해 백분위를 계산하지 못함", "fetch_cape_percentile")
             return None
         return _percentile_rank(history, current_cape)
     except Exception as e:
-        print(f"[warn] fetch_cape_percentile 실패 (Shiller 데이터 구조/접근 변경 가능성): {e}")
+        _note_fail("cape_percentile", "CAPE 파일 해석 실패: " + describe_error(e) + " (Shiller 파일 구조 변경 가능성)", "fetch_cape_percentile")
         return None
 
 
@@ -299,24 +373,28 @@ MACRO_SERIES_POINTS = 60  # 매크로 칸 추이 그래프에 쓰는 최근 관�
 def fetch_yfinance_snapshot(ticker: str, period: str = "4mo", us_close_only: bool = False) -> Optional[dict]:
     """최근 시계열의 마지막 관측값과 관측일을 반환한다. 실패 시 None.
     us_close_only=True면 미국 장중에 미확정인 오늘 봉은 제외한다(VIX처럼 점수 입력에 쓰이는 지수용)."""
+    key = _YF_KEYS.get(ticker, f"macro:{ticker}")
     try:
         import yfinance as yf
         data = yf.Ticker(ticker).history(period=period, auto_adjust=False)
         if data.empty or "Close" not in data:
+            _note_fail(key, "응답은 왔지만 시세 데이터가 비어 있음(상대 서버 차단 또는 일시 장애 가능성)", f"fetch_yfinance_snapshot({ticker})")
             return None
         valid = data["Close"].dropna()
         valid = valid[valid.map(_finite_positive)]
         if us_close_only:
             valid = drop_unfinished_last_bar(valid)
         if valid.empty:
+            _note_fail(key, "유효한 종가가 없음(결측이거나 장 마감 전 봉뿐)", f"fetch_yfinance_snapshot({ticker})")
             return None
+        _clear_fail(key)
         idx = valid.index[-1]
         tail = valid.tail(MACRO_SERIES_POINTS)
         return {"value": float(valid.iloc[-1]), "date": idx.date().isoformat(),
                 "series_start": tail.index[0].date().isoformat(),
                 "series": [round(float(x), 4) for x in tail.tolist()]}
     except Exception as e:
-        print(f"[warn] fetch_yfinance_snapshot({ticker}) 실패: {e}")
+        _note_fail(key, describe_error(e), f"fetch_yfinance_snapshot({ticker})")
         return None
 
 
@@ -345,6 +423,7 @@ def fetch_macro_snapshot() -> dict:
         out[key] = item
     for key, series_id in (("us_2y", "DGS2"), ("us_10y", "DGS10"), ("hy_oas", "BAMLH0A0HYM2")):
         item = None
+        rkey = f"macro:{key}"
         # FRED API key가 있는 경우에만 FRED를 사용한다. 날짜 포함 최신 관측값.
         if FRED_API_KEY:
             try:
@@ -354,8 +433,14 @@ def fetch_macro_snapshot() -> dict:
                 }, timeout=15)
                 resp.raise_for_status()
                 item = fred_item_from_observations(resp.json().get("observations", []))
+                if item is None:
+                    _note_fail(rkey, "FRED가 응답했지만 유효한 관측값이 없음", f"fetch_macro_snapshot({series_id})")
+                else:
+                    _clear_fail(rkey)
             except Exception as e:
-                print(f"[warn] fetch_macro_snapshot({series_id}) FRED 실패: {e}")
+                _note_fail(rkey, describe_error(e), f"fetch_macro_snapshot({series_id})")
+        else:
+            _note_fail(rkey, "FRED_API_KEY가 설정되지 않음(GitHub Secrets 확인 필요)", f"fetch_macro_snapshot({series_id})")
         out[key] = item
     vix = fetch_yfinance_snapshot("^VIX", "4mo", us_close_only=True)
     out["vix"] = vix

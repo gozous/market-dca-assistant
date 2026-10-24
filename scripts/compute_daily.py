@@ -40,6 +40,19 @@ NEUTRAL_DEFAULTS = {
 }
 
 
+# 화면/로그에서 쓰는 항목 키 → 실패 사유 기록기(data_sources.FAILURE_REASONS)의 키
+_REASON_KEYS = {"drawdown_pct": "price:sp500", "cape_percentile": "cape_percentile", "fear_greed": "fear_greed",
+                "hy_spread_percentile": "hy_spread_percentile", "ism": "ism", "vix": "macro:vix"}
+
+
+def _reason_key(key):
+    return _REASON_KEYS.get(key, key)
+
+
+def reason_for(key):
+    return ds.FAILURE_REASONS.get(_reason_key(key)) or "원인이 기록되지 않음"
+
+
 class DataUnavailable(Exception):
     """필수 데이터를 확보하지 못해 이번 실행으로는 유효한 점수를 만들 수 없을 때 발생한다.
     이 경우 latest.json / history_oos.csv는 건드리지 않고 작업을 실패로 끝낸다."""
@@ -96,14 +109,21 @@ def substitute_count(quality):
     return sum(1 for v in quality if v in SUBSTITUTE_STATES)
 
 
+def failure_report():
+    """지금 실패 상태인 항목의 사유(사람이 읽는 한 줄). latest.json의 failure_reasons로 저장되어 화면에 표시된다."""
+    return {k: v for k, v in ds.FAILURE_REASONS.items()}
+
+
 def gather_inputs():
+    ds.reset_failure_reasons()
     sp_close = _with_retry(lambda: ds.fetch_price_series("^GSPC", period="2y"), "S&P500 가격")
     nd_close = _with_retry(lambda: ds.fetch_price_series("^NDX", period="2y"), "나스닥100 가격")
     # 장중 수동 실행 시 미확정인 오늘 봉을 제외한다(확정 종가만 점수/기록에 사용).
     sp_close = ds.drop_unfinished_last_bar(sp_close)
     nd_close = ds.drop_unfinished_last_bar(nd_close)
     if sp_close is None or len(sp_close) == 0:
-        raise DataUnavailable(f"S&P500 가격 조회 실패({FETCH_ATTEMPTS}회 시도) - 필수 데이터라 이번 실행을 실패 처리")
+        why = ds.FAILURE_REASONS.get("price:sp500") or "확정된 종가가 없음(장 마감 전 봉뿐이거나 시세가 비어 있음)"
+        raise DataUnavailable(f"S&P500 가격 조회 실패({FETCH_ATTEMPTS}회 시도): {why} - 필수 데이터라 이번 실행을 실패 처리")
     cfg = default_config()
 
     # 같은 VIX 관측값을 화면과 점수 입력에서 공유해 상태/값 불일치를 줄인다.
@@ -126,6 +146,7 @@ def gather_inputs():
     for key, value in list(raw.items()):
         if value is not None and not math.isfinite(float(value)):
             print(f"[warn] {key} 값이 유한하지 않아({value}) 조회 실패로 처리")
+            ds.FAILURE_REASONS[_reason_key(key)] = "값이 숫자가 아님(NaN 또는 무한대)"
             raw[key] = None
 
     inputs = {}
@@ -149,7 +170,8 @@ def gather_inputs():
             data_quality[key] = "fallback_neutral"
 
     if all(data_quality[k] == "fallback_neutral" for k in SCORING_OPTIONAL_KEYS):
-        raise DataUnavailable("선택 지표 5개(CAPE/F&G/HY/ISM/VIX)가 모두 조회 실패 - 가격만으로 만든 중립 점수는 기록하지 않음")
+        why = "; ".join(f"{k}: {reason_for(k)}" for k in SCORING_OPTIONAL_KEYS)
+        raise DataUnavailable(f"선택 지표 5개(CAPE/F&G/HY/ISM/VIX)가 모두 조회 실패 [{why}] - 가격만으로 만든 중립 점수는 기록하지 않음")
 
     # 캘리브레이션용 로깅: CNN이 성공한 날에도 "VIX로 계산했다면 얼마가 나왔을지"를
     # 항상 같이 기록해둔다. 점수 계산에는 전혀 안 쓰이고, 나중에 두 값의 실제 오차를
@@ -244,6 +266,7 @@ def main():
         "data_quality": data_quality,  # 어떤 지표가 실데이터/대체값인지 투명하게 기록
         "price_snapshot": price_snapshot,
         "result": result.to_dict(),
+        "failure_reasons": failure_report(),  # 조회 실패 항목의 사유(성공한 항목은 없음)
         "calibration": {
             # 점수 계산과 무관, VIX 대체값 신뢰도를 나중에 데이터로 검증하기 위한 기록용.
             "fear_greed_vix_shadow_estimate": fear_greed_vix_shadow,
