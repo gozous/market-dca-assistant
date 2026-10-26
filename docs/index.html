@@ -63,6 +63,12 @@
   .tab-pane[hidden]{display:none;}
   @media (max-width:560px){ .tab-btn{font-size:14px; padding:11px 4px;} }
 
+  .hist{grid-column:1 / -1; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-soft);}
+  .hist svg{display:block; width:100%; height:auto;}
+  .hist .cap{font-size:12px; line-height:1.6; color:var(--text-dim); margin-top:4px;}
+  .hist .hd{font-size:12px; color:var(--text-dim); margin-bottom:4px;}
+  .hist-total{margin-top:14px;}
+
   /* ---------- 용어 설명 말풍선 ---------- */
   .term{border-bottom:1px dotted var(--text-dim); cursor:help; text-decoration:none;}
   .term:hover,.term:focus-visible,.term.on{border-bottom-color:var(--text); outline:none; background:rgba(255,255,255,0.06); border-radius:3px;}
@@ -248,6 +254,12 @@
           <div class="notice">이 신호는 과거 데이터에서 투자 성과 개선 효과가 충분히 검증되지 않았습니다. 실제 매수 비율을 정하는 용도가 아니며, 정기적인 고정 DCA 원칙을 대체하지 않습니다. 신호 기반 배분은 앞으로 쌓이는 기록으로 검증하기 위한 참고 지표로만 씁니다.</div>
         </div>
       </div>
+      <div class="hero-stats hist-total">
+        <div class="hero-stat" style="flex:1 1 100%;">
+          <div class="lbl">종합 점수 추이 (공식 기록)</div>
+          <div class="hist" id="hist-total" style="border-top:0; padding-top:0; margin-top:6px;"></div>
+        </div>
+      </div>
       <div class="hero-stats">
         <div class="hero-stat" style="flex:1 1 100%;">
           <div class="lbl">참고 매수 비중은 이렇게 정해져요</div>
@@ -266,6 +278,7 @@
         <input type="range" class="dir-asc" id="in-drawdown" step="any" min="0" max="45" value="8" oninput="recalc()">
         <div class="dir-labels"><span>낮은 하락 (점수 낮음)</span><span>깊은 하락 (점수 높음)</span></div>
         <div class="explain" id="exp-tech">최근 1년 최고가보다 8% 낮은 가격이에요</div>
+        <div class="hist" id="hist-tech"></div>
       </div>
 
       <div class="score-row cat-valuation">
@@ -275,6 +288,7 @@
         <input type="range" class="dir-desc" id="in-per" step="any" min="0" max="100" value="55" oninput="recalc()">
         <div class="dir-labels"><span>저평가 (점수 높음)</span><span>고평가 (점수 낮음)</span></div>
         <div class="explain" id="exp-val">최근 30년 주가 수준과 비교하면 지금은 비싼 편이에요(상위 45%)</div>
+        <div class="hist" id="hist-val"></div>
       </div>
 
       <div class="score-row cat-feargreed">
@@ -284,6 +298,7 @@
         <input type="range" class="dir-desc" id="in-feargreed" step="any" min="0" max="100" value="55" oninput="recalc()">
         <div class="dir-labels"><span>공포 (점수 높음)</span><span>탐욕 (점수 낮음)</span></div>
         <div class="explain" id="exp-fear">지금 투자 심리는 '보통' 상태예요</div>
+        <div class="hist" id="hist-fear"></div>
       </div>
 
       <div class="score-row cat-rate">
@@ -293,6 +308,7 @@
         <input type="range" class="dir-asc" id="in-spread" step="any" min="0" max="100" value="30" oninput="recalc()">
         <div class="dir-labels"><span>안정 (점수 낮음)</span><span>스프레드 확대 (점수 높음)</span></div>
         <div class="explain" id="exp-rate">회사채 시장 분위기는 안정적인 편이에요(하위 30%)</div>
+        <div class="hist" id="hist-rate"></div>
       </div>
 
       <div class="score-row cat-macro">
@@ -302,6 +318,7 @@
         <input type="range" class="dir-desc" id="in-ism" step="any" min="-15" max="15" value="8" oninput="recalc()">
         <div class="dir-labels"><span>위축 (점수 높음)</span><span>확장 (점수 낮음)</span></div>
         <div class="explain" id="exp-macro">제조업 경기는 지금 확장 국면이에요</div>
+        <div class="hist" id="hist-macro"></div>
       </div>
 
       <div class="score-row" style="opacity:0.5;">
@@ -1236,7 +1253,71 @@ document.getElementById('today-tag').textContent = new Date().toLocaleDateString
   await loadTodayData();   // 오늘자 자동 갱신 값으로 슬라이더를 먼저 채운다
   afterLoad();              // 그 값으로 첫 렌더(데이터가 없으면 '데이터 없음')
   loadOos();                // 표본 외 기록(④ 탭)
+  loadScoreHistory();       // 항목별 점수 추이(① 탭, 공식 기록만 사용)
 })();
+
+
+/* ================= 점수 추이 그래프 (공식 기록만 사용) =================
+   history_oos.csv에 실제 조회값으로 기록된 날만 그린다. 중립값·VIX 추정으로 대체된 날과 항목별 대체 여부를 알 수 없는 행은
+   값으로 그리지 않고 바닥의 빈 동그라미로만 표시한다. 과거를 추정으로 채우지 않는다. 점수는 기록된 입력값을 현재 점수식에 넣어 다시 계산한다. */
+const HIST_ITEMS = [
+  {id:'tech',  field:'drawdown_pct',         score:v => techScore(v),  max:30, label:'기술적(낙폭) 점수'},
+  {id:'val',   field:'cape_percentile',      score:v => valScore(v),   max:20, label:'밸류에이션(CAPE) 점수'},
+  {id:'fear',  field:'fear_greed',           score:v => fearScore(v),  max:20, label:'공포·탐욕 점수'},
+  {id:'rate',  field:'hy_spread_percentile', score:v => rateScore(v),  max:10, label:'신용(HY 스프레드) 점수'},
+  {id:'macro', field:'ism',                  score:v => macroScore(v), max:10, label:'경기 점수'},
+];
+function histChart(pts, max, color, unit){
+  const real = pts.filter(p => p.v != null);
+  if (real.length < 2) return `<div class="cap">실제 조회된 기록이 2일 이상 쌓이면 그래프가 표시돼요(지금 ${real.length}일 / 전체 ${pts.length}일).</div>`;
+  const w = 600, h = 84, padX = 10, padY = 8, n = pts.length;
+  const x = i => n === 1 ? w / 2 : padX + i * (w - 2 * padX) / (n - 1);
+  const y = v => h - padY - (Math.max(0, Math.min(max, v)) / max) * (h - 2 * padY);
+  let path = '', prev = false;
+  pts.forEach((p, i) => { if (p.v == null) { prev = false; return; } path += `${prev ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)} `; prev = true; });
+  const dots = pts.map((p, i) => p.v == null
+    ? `<circle cx="${x(i).toFixed(1)}" cy="${h - 3}" r="2.6" fill="none" stroke="${getCss('--warn')}" stroke-width="1.2"/>`
+    : (n <= 60 ? `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="2.8" fill="${color}"/>` : '')).join('');
+  const grid = [0, 0.5, 1].map(f => `<line x1="0" x2="${w}" y1="${y(max * f).toFixed(1)}" y2="${y(max * f).toFixed(1)}" stroke="${getCss('--border-soft')}" stroke-width="1"/>`).join('');
+  const vals = real.map(p => p.v), lo = Math.min(...vals), hi = Math.max(...vals), last = real[real.length - 1];
+  const gaps = pts.length - real.length;
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="점수 추이 그래프">${grid}<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>${dots}</svg>
+    <div class="cap">${esc(pts[0].d)} ~ ${esc(pts[pts.length - 1].d)} · 눈금 0 / ${max / 2} / ${max}${unit} · 최근 ${last.v.toFixed(1)}${unit} (기간 중 ${lo.toFixed(1)} ~ ${hi.toFixed(1)})${gaps ? `<br>빈 동그라미 ${gaps}일은 조회 실패·대체값이라 값으로 그리지 않았어요.` : ''}</div>`;
+}
+async function loadScoreHistory(){
+  const setAll = html => { HIST_ITEMS.forEach(it => { const el = document.getElementById('hist-' + it.id); if (el) el.innerHTML = html; });
+                          const t = document.getElementById('hist-total'); if (t) t.innerHTML = html; };
+  const oos = await fetchCsv('./data/history_oos.csv');
+  if (oos.broken) { setAll(`<div class="cap">추이를 표시할 수 없어요: 기록 파일 형식 오류(${esc(oos.broken)})</div>`); return; }
+  if (oos.missing) { setAll('<div class="cap">추이 기록 파일을 아직 읽을 수 없어요. 자동 실행이 성공하면 기록이 쌓이기 시작해요.</div>'); return; }
+  const seen = new Set(), days = [];
+  oos.items.forEach(r => { const d = (r.sp500_date || '').trim(); if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || seen.has(d)) return; seen.add(d); days.push(r); });
+  days.sort((a, b) => a.sp500_date < b.sp500_date ? -1 : a.sp500_date > b.sp500_date ? 1 : 0);
+  if (!days.length) { setAll('<div class="cap">아직 추이를 그릴 기록이 없어요.</div>'); return; }
+  const colors = {tech:'var(--zone-4)', val:'var(--zone-4)', fear:'var(--zone-4)', rate:'var(--zone-4)', macro:'var(--zone-4)'};
+  HIST_ITEMS.forEach(it => {
+    const el = document.getElementById('hist-' + it.id); if (!el) return;
+    const dqCol = 'dq_' + it.field, hasDq = oos.header.includes(dqCol);
+    const pts = days.map(r => {
+      const raw = num(r[it.field]); const dq = (r[dqCol] || '').trim();
+      const real = hasDq && raw != null && dq !== '' && !OOS_SUBST.includes(dq);
+      return {d: r.sp500_date, v: real ? it.score(raw) : null};
+    });
+    el.innerHTML = `<div class="hd">${esc(it.label)} 추이 (공식 기록의 입력값을 현재 점수식으로 계산)</div>` + histChart(pts, it.max, getCss('--zone-4') || '#4aa3ff', '점');
+  });
+  const tEl = document.getElementById('hist-total');
+  if (tEl) {
+    // 종합 점수는 점수에 실제로 쓰이는 5개 항목이 모두 실제 조회값인 날만 그린다(수급·VIX 열은 점수와 무관).
+    const dqCols = HIST_ITEMS.map(it => 'dq_' + it.field);
+    const hasAll = dqCols.every(c => oos.header.includes(c));
+    const pts = days.map(r => {
+      const sc = num(r.total_score);
+      const ok = hasAll && dqCols.every(c => { const q = (r[c] || '').trim(); return q !== '' && !OOS_SUBST.includes(q); });
+      return {d: r.sp500_date, v: (sc != null && ok) ? sc : null};
+    });
+    tEl.innerHTML = histChart(pts, 100, getCss('--zone-4') || '#4aa3ff', '점');
+  }
+}
 
 /* ================= 용어 설명 말풍선 + 용어집 =================
    화면 문구에서 아래 용어를 찾아 점선 밑줄을 긋고, 마우스를 올리거나(모바일은 눌러서) 설명을 보여준다.
