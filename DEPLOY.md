@@ -38,7 +38,8 @@ git push -u origin main
 
 > 처음 실행 후 `docs/data/latest.json`의 `data_quality` 필드를 꼭 확인하세요.
 > CNN Fear&Greed 비공식 엔드포인트나 FRED 시리즈 ID는 언제든 바뀔 수 있어서,
-> 어떤 지표가 `fallback_neutral`로 처리됐는지 여기서 바로 보입니다.
+> 어떤 지표가 `unavailable`(조회 실패)인지 여기서 바로 보입니다. 규칙 v2부터는 조회에 실패한 지표를 중립값이나 추정값으로
+> 메우지 않고, 점수 지표가 하나라도 실패하면 `score_status`가 `incomplete`(점수 산출 불가)가 됩니다. 실패 사유는 `failure_reasons`에 있습니다.
 
 ## 4. 나만 접근하게 만들기 (선택, 권장)
 

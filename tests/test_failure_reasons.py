@@ -117,7 +117,7 @@ def test_latest_json_has_failure_reasons_and_no_secret(tmp_path, monkeypatch):
     monkeypatch.setattr(ds, "fetch_net_flow_index", lambda *a, **k: 0.0)
     macro = {"vix": {"value": 21.0, "date": "2026-10-16", "series": [21.0], "series_start": "2026-10-16"}}
     monkeypatch.setattr(ds, "fetch_macro_snapshot", lambda: macro)
-    assert cd.main() == 0
+    assert cd.main() == 1                       # 점수 항목 실패 = 산출 불가(실패 종료). 사유는 latest.json에 남는다
     latest = json.loads((tmp_path / "latest.json").read_text(encoding="utf-8"))
     assert "HTTP 404" in latest["failure_reasons"]["cape_percentile"]
     assert KEY not in json.dumps(latest)

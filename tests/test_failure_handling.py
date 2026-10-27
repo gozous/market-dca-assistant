@@ -1,5 +1,5 @@
-"""실패 처리/기록 보호 테스트(운영 정책 2026-10-21): 필수 가격 실패는 작업 실패 + 기존 기록 보존,
-같은 시장일 정상 행 보호, UTC 자정 이후 완료, 재시도 횟수, 이력 기록 실패 시 로그."""
+"""실패 처리/기록 보호 테스트(운영 정책 2026-10-21, 규칙 v2 2026-10-26): 필수 가격 실패는 작업 실패 + 기존 기록 보존,
+점수 항목 조회 실패는 대체값 없이 "산출 불가", 같은 시장일 정상 행 보호, UTC 자정 이후 완료, 재시도 횟수, 이력 기록 실패 시 로그."""
 import csv, json, sys, datetime as dt
 from pathlib import Path
 
@@ -70,11 +70,17 @@ def test_price_failure_retries_3_times_total_then_fails_and_preserves_files(env,
     assert "[실패]" in capsys.readouterr().err
 
 
-def test_all_optional_sources_failed_is_failure_not_neutral_score(env, monkeypatch):
+def test_all_optional_sources_failed_is_incomplete_without_any_substitute(env, monkeypatch):
     _fake_sources(monkeypatch, optional_ok=False)
-    assert cd.main() == 1
-    assert not (env / "latest.json").exists() and not (env / "history_oos.csv").exists()
-    assert rows(env / "history_oos_runs.csv")[-1][-2] == "failed"
+    assert cd.main() == 1                                            # 실패 상태로 끝남
+    latest = json.loads((env / "latest.json").read_text(encoding="utf-8"))
+    assert latest["score_status"] == "incomplete" and latest["result"] is None
+    assert set(latest["missing_items"]) == set(cd.SCORING_KEYS)
+    for k in cd.SCORING_KEYS:
+        assert latest["inputs"][k] is None and latest["data_quality"][k] == "unavailable"   # 중립값으로 메우지 않음
+    assert not (env / "history_oos.csv").exists() and not (env / "history.csv").exists()     # 공식 기록·누적 기록 불변
+    last = rows(env / "history_oos_runs.csv")[-1]
+    assert last[-2] == "incomplete" and "대체값 사용 안 함" in last[-1]
 
 
 def test_failure_run_does_not_touch_history_csv(env, monkeypatch):
@@ -103,36 +109,76 @@ def test_transient_failure_is_retried_and_succeeds(env, monkeypatch):
     assert cd.main() == 0 and (env / "latest.json").exists()
 
 
-def test_partial_optional_failure_is_recorded_with_substitution_flags(env, monkeypatch):
+def test_one_scoring_item_failure_means_no_score_no_substitute(env, monkeypatch, capsys):
     _fake_sources(monkeypatch)
     monkeypatch.setattr(ds, "fetch_cape_percentile", lambda *a, **k: None)
+    assert cd.main() == 1
+    latest = json.loads((env / "latest.json").read_text(encoding="utf-8"))
+    assert latest["score_status"] == "incomplete" and latest["missing_items"] == ["cape_percentile"]
+    assert latest["inputs"]["cape_percentile"] is None and latest["result"] is None
+    assert latest["data_quality"]["cape_percentile"] == "unavailable"
+    assert latest["inputs"]["fear_greed"] == 35.0                    # 성공한 항목 값은 그대로 보인다
+    assert not (env / "history_oos.csv").exists() and not (env / "history.csv").exists()
+    assert "점수 산출 불가" in capsys.readouterr().err
+
+
+def test_fear_greed_is_never_estimated_from_vix(env, monkeypatch):
+    _fake_sources(monkeypatch)                                        # VIX는 있다
+    monkeypatch.setattr(ds, "fetch_fear_greed", lambda *a, **k: None)
+    assert cd.main() == 1
+    latest = json.loads((env / "latest.json").read_text(encoding="utf-8"))
+    assert latest["inputs"]["fear_greed"] is None and latest["data_quality"]["fear_greed"] == "unavailable"
+    assert "derived_from_vix" not in json.dumps(latest) and "calibration" not in latest
+
+
+def test_vix_failure_alone_does_not_block_the_score_and_is_left_blank(env, monkeypatch):
+    _fake_sources(monkeypatch)
+    monkeypatch.setattr(ds, "fetch_macro_snapshot", lambda: {})
     assert cd.main() == 0
     latest = json.loads((env / "latest.json").read_text(encoding="utf-8"))
-    assert latest["data_quality"]["cape_percentile"] == "fallback_neutral"
+    assert latest["score_status"] == "complete" and latest["inputs"]["vix"] is None and latest["data_quality"]["vix"] == "unavailable"
     row = list(csv.DictReader(open(env / "history_oos.csv", encoding="utf-8")))[0]
-    assert row["dq_cape_percentile"] == "fallback_neutral"
+    assert row["vix"] == "" and row["rules_version"] == cd.RULES_VERSION
+
+
+def test_complete_run_records_v2_row_and_payload(env, monkeypatch):
+    _fake_sources(monkeypatch)
+    assert cd.main() == 0
+    latest = json.loads((env / "latest.json").read_text(encoding="utf-8"))
+    assert latest["score_status"] == "complete" and latest["missing_items"] == [] and latest["result"]["total_score"] > 0
+    assert latest["rules_version"] == cd.RULES_VERSION == "v2-no-substitution-2026-10-26"
 
 
 # ── 2. 같은 시장일 / 우선순위 ───────────────────────────────────────────────
-def test_failed_rerun_never_overwrites_good_row(env):
-    rec(dt.datetime(2026, 10, 19, 21, 30, tzinfo=UTC), "2026-10-19")
-    bad = dict(LIVE, cape_percentile="fallback_neutral", hy_spread_percentile="fallback_neutral")
-    st = rec(dt.datetime(2026, 10, 19, 23, 0, tzinfo=UTC), "2026-10-19", dict(INP, cape_percentile=50.0), bad)
-    assert st == "kept_existing"
-    r = list(csv.DictReader(open(env / "history_oos.csv", encoding="utf-8")))
-    assert len(r) == 1 and r[0]["dq_cape_percentile"] == "live" and r[0]["cape_percentile"] == "76.0"
+def test_incomplete_result_never_overwrites_same_day_complete_latest(env, monkeypatch):
+    _fake_sources(monkeypatch)
+    assert cd.main() == 0                                             # 완전한 결과 저장
+    before = (env / "latest.json").read_bytes()
+    monkeypatch.setattr(ds, "fetch_cape_percentile", lambda *a, **k: None)
+    assert cd.main() == 1                                             # 같은 시장일 재실행이 불완전
+    assert (env / "latest.json").read_bytes() == before               # 기존 완전한 결과 보존
+    assert len(rows(env / "history_oos.csv")) - 1 == 1                # 공식 기록도 그대로
 
 
-def test_incomplete_row_is_replaced_only_when_fewer_substitutes(env):
-    t = dt.datetime(2026, 10, 19, 21, 30, tzinfo=UTC)
-    two = dict(LIVE, cape_percentile="fallback_neutral", hy_spread_percentile="fallback_neutral")
-    one = dict(LIVE, cape_percentile="fallback_neutral")
-    rec(t, "2026-10-19", dq=two)
-    assert rec(t + dt.timedelta(hours=1), "2026-10-19", dq=two) == "kept_existing"      # 같은 개수 → 보존
-    assert rec(t + dt.timedelta(hours=2), "2026-10-19", dq=one) == "replaced_incomplete"  # 더 적음 → 교체
-    assert rec(t + dt.timedelta(hours=3), "2026-10-19", dq=two) == "kept_existing"      # 다시 나빠지면 보존
-    r = list(csv.DictReader(open(env / "history_oos.csv", encoding="utf-8")))
-    assert len(r) == 1 and r[0]["dq_hy_spread_percentile"] == "live"
+def test_incomplete_result_for_a_newer_market_day_is_shown(env, monkeypatch):
+    _fake_sources(monkeypatch)
+    (env / "latest.json").write_text(json.dumps({"price_snapshot": {"sp500_date": "2020-01-01"}, "score_status": "complete", "result": {}}), encoding="utf-8")
+    monkeypatch.setattr(ds, "fetch_cape_percentile", lambda *a, **k: None)
+    assert cd.main() == 1
+    assert json.loads((env / "latest.json").read_text(encoding="utf-8"))["score_status"] == "incomplete"   # 어제 점수를 오늘 것처럼 두지 않는다
+
+
+def test_old_rules_records_are_archived_and_new_record_starts_fresh(env):
+    hdr = cd._oos_header(list(cd.INPUT_KEYS))
+    old = [["2026-10-13", "v1-frozen-2026-10-12", "2026-10-12", "6700", "", "40", "50"] + ["1"] * len(cd.INPUT_KEYS) + ["live"] * len(cd.INPUT_KEYS) + [""]]
+    with open(env / "history_oos.csv", "w", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerows([hdr, *old])
+    assert rec(dt.datetime(2026, 10, 26, 21, 30, tzinfo=UTC), "2026-10-26") == "recorded"
+    names = sorted(x.name for x in env.iterdir())
+    assert "history_oos_v1-frozen-2026-10-12.csv" in names           # 이전 규칙 기록은 지우지 않고 보관
+    new = rows(env / "history_oos.csv")
+    assert len(new) == 2 and new[1][1] == cd.RULES_VERSION and new[1][2] == "2026-10-26"
+    assert len(rows(env / "history_oos_v1-frozen-2026-10-12.csv")) == 2
 
 
 def test_replacement_ignores_score_and_buy_pct(env):
@@ -176,3 +222,23 @@ def test_normal_input_score_and_buy_pct_unchanged():
     r = compute_score(INP)
     # 수정 전 원본 코드(market-dca-assistant-full.zip)로 같은 입력을 돌려 얻은 값. 점수 규칙 불변 확인용.
     assert abs(r.total_score - 40.333333333333336) < 1e-12 and r.buy_pct == 100
+
+
+# ── 대체값 금지: 측정하지 않은 값을 숫자로 꾸며 저장하지 않는다(2026-10-27) ───────────────
+def test_unmeasured_flow_is_stored_empty_not_zero(env, monkeypatch):
+    _fake_sources(monkeypatch)
+    monkeypatch.setattr(ds, "fetch_net_flow_index", lambda *a, **k: None)   # 실제 현재 상태: 항상 None
+    seen = {}
+    real = cd.compute_score
+    monkeypatch.setattr(cd, "compute_score", lambda inp, cfg: (seen.update(inp), real(inp, cfg))[1])
+    assert cd.main() == 0
+    latest = json.loads((env / "latest.json").read_text(encoding="utf-8"))
+    assert latest["inputs"]["net_flow_index"] is None                     # 0.0으로 꾸미지 않는다
+    assert latest["data_quality"]["net_flow_index"] == "excluded_from_scoring"
+    assert seen["net_flow_index"] == 0.0                                   # 엔진 호출용 형식값일 뿐(비활성이라 점수 무관)
+    r = rows(env / "history_oos.csv"); col = r[0].index("net_flow_index")
+    assert r[1][col] == ""                                                 # 기록 파일에도 빈 칸
+    # 점수는 수급 값과 무관하다(비활성 카테고리)
+    base = {k: v for k, v in latest["inputs"].items() if k != "net_flow_index"}
+    for flow in (0.0, 95.0):
+        assert round(real({**base, "net_flow_index": flow}, cd.default_config()).total_score, 1) == latest["result"]["total_score"]

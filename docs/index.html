@@ -236,7 +236,7 @@
   </nav>
 
   <section class="tab-pane" id="pane-score" role="tabpanel" aria-labelledby="tab-score">
-  <div id="whatis"><b>이 점수는 이렇게 읽어요.</b> 점수가 <b style="display:inline">높을수록</b> 시장이 싸졌거나 불안하다(낙폭이 크고, 공포가 크고, 신용 스프레드가 커졌다)는 뜻이에요. 시장 상황이 좋다는 뜻이 아니에요. 남들이 겁먹을 때 싸게 사는 역발상 관점으로 만들었고, 실제 매수는 고정 DCA로 하고 이 점수는 참고용이에요. 점선 밑줄 친 용어는 마우스를 올리거나(모바일은 눌러서) 설명을 볼 수 있어요.</div>
+  <div id="whatis"><b>이 점수는 이렇게 읽어요.</b> 점수가 <b style="display:inline">높을수록</b> 시장이 싸졌거나 불안하다(낙폭이 크고, 공포가 크고, 신용 스프레드가 커졌다)는 뜻이에요. 시장 상황이 좋다는 뜻이 아니에요. 남들이 겁먹을 때 싸게 사는 역발상 관점으로 만들었고, 실제 매수는 고정 DCA로 하고 이 점수는 참고용이에요. 점수에 쓰는 항목 중 하나라도 조회에 실패하면 중립값·추정값으로 메우지 않고 점수를 계산하지 않아요(산출 불가). 점선 밑줄 친 용어는 마우스를 올리거나(모바일은 눌러서) 설명을 볼 수 있어요.</div>
   <div class="hero-grid">
     <div class="panel gauge-panel">
       <div class="panel-label">Composite Score</div>
@@ -411,7 +411,7 @@
   <details id="glossary"><summary>용어집 — 뉴스에서 자주 보는 말</summary><dl id="glossary-body"></dl></details>
 
   <footer>
-    시장 데이터는 Yahoo Finance 및 FRED에서 가져옵니다. 가격·매크로 카드는 조회에 실패하면 ‘조회 실패’로 표시합니다. 점수 계산에 쓰는 지표(CAPE, 공포탐욕, HY 스프레드, 필라델피아 연은 지수 등)가 조회에 실패하면 중립값(예: 백분위 50)으로 대체하며, 이때는 화면 위 경고와 해당 카드에 ‘조회 실패 · 중립값 사용’ 표시가 붙습니다. 대체값으로 계산한 점수는 실제 시장 상태를 반영하지 않아요. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
+    시장 데이터는 Yahoo Finance 및 FRED에서 가져옵니다. 가격·매크로 카드는 조회에 실패하면 ‘조회 실패’로 표시합니다. 점수 계산에 쓰는 지표(CAPE, 공포탐욕, HY 스프레드, 필라델피아 연은 지수)가 하나라도 조회에 실패하면 중립값이나 추정값으로 메우지 않고, 종합 점수와 참고 매수 비중을 ‘산출 불가’로 표시합니다. 이때는 화면 위 경고와 해당 카드에 실패 사유가 붙습니다. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
     슬라이더를 움직이면 Score Engine 로직에 따라 점수·매수 비중이 재계산됩니다. 매크로 스냅샷은 참고용이며 투자 조언이 아닙니다.
   </footer>
 </div>
@@ -600,11 +600,9 @@ function renderMacroSnapshot(payload){
     vixEl.textContent = result.text; vixEl.title = result.title;
     vixEl.style.color = result.stale ? getCss('--warn') : '';
   } else if (payload && payload.inputs && Number.isFinite(payload.inputs.vix)) {
-    const q = payload.data_quality && payload.data_quality.vix;
-    const label = q === 'live' ? '점수 입력값' : '대체값';
-    vixEl.textContent = `${payload.inputs.vix.toFixed(2)} (${label})`;
-    vixEl.title = '화면용 VIX 관측값은 없으며, 괄호는 점수 계산 입력의 상태입니다.';
-    vixEl.style.color = q === 'live' ? '' : getCss('--warn');
+    vixEl.textContent = `${payload.inputs.vix.toFixed(2)} (경고 판정 입력값)`;
+    vixEl.title = '화면용 VIX 관측값은 없고, 경고 판정에 쓰인 값이에요.';
+    vixEl.style.color = '';
   } else { vixEl.textContent = '조회 실패'; vixEl.title = 'VIX 실데이터 및 점수 입력값 조회 실패'; }
 }
 
@@ -656,7 +654,7 @@ function macroNoteBody(card, macro, payload){
       const st = cur === null ? '' : cur < 15 ? '안정' : cur < 20 ? '보통' : cur < 28 ? '불안' : '과열 경고 기준(28) 이상';
       return 'S&P 500 옵션이 반영하는 향후 한 달 변동성 기대치예요. 15 미만 안정, 15~20 보통, 20~28 불안, 28 이상이면 이 대시보드가 "VIX 과열" 경고를 띄워요.' +
         (cur === null ? '' : `\n지금은 ${cur.toFixed(1)}로 "${st}" 구간이에요.`) +
-        '\n점수에는 직접 쓰이지 않고, 경고 판정과 심리 지수 대체 추정에만 쓰여요.';
+        '\n점수에는 쓰이지 않고, "VIX 과열" 경고 판정에만 쓰여요. 조회에 실패하면 값을 만들어 채우지 않고 "조회 실패"로 표시해요.';
     }
     case 'hy_oas':
       return '신용등급이 낮은 회사가 발행한 채권(하이일드, HY)의 금리가 미국 국채 금리보다 얼마나 더 높은지(가산금리, OAS)예요. 예를 들어 국채 4%, HY 7%이면 3%p(300bp)예요. 이 값이 커지는 것을 뉴스에서 "스프레드 확대"라고 하고, 투자자들이 위험을 크게 본다는 뜻이에요. 위기 때 급격히 커져요.\n점수에는 이 값 자체가 아니라 1996년 이후 기록과 비교한 백분위를 써요(신용 항목).';
@@ -775,18 +773,26 @@ function renderMacroExtras(payload){
 const SCORE_INPUT_KEYS = ['drawdown_pct','cape_percentile','fear_greed','hy_spread_percentile','ism'];
 const KEY_LABEL = {drawdown_pct:'최고가 대비 하락률', cape_percentile:'CAPE(밸류에이션)', fear_greed:'공포·탐욕 지수',
                    hy_spread_percentile:'HY 신용 스프레드', ism:'필라델피아 연은 제조업지수', vix:'VIX'};
-const NEUTRAL_TEXT = {drawdown_pct:'0%', cape_percentile:'백분위 50', fear_greed:'50', hy_spread_percentile:'백분위 50', ism:'0'};
 const CARD_KEYS = {tech:['drawdown_pct','in-drawdown'], val:['cape_percentile','in-per'], fear:['fear_greed','in-feargreed'],
                    rate:['hy_spread_percentile','in-spread'], macro:['ism','in-ism']};
 const GENERATED_MAX_AGE_DAYS = 5;
 
-// latest.json이 점수 표시에 쓸 수 있는 형태인지 검사한다. 쓸 수 없으면 이유(문자열), 괜찮으면 null.
+// 규칙 v2(대체값 금지): 조회에 실패한 항목은 값이 없다(null). 이전 규칙(v1)이 만든 파일에는 중립값·VIX 추정값이
+// 섞여 있으므로 그 항목도 '실제 값이 아님'으로 보고 산출 불가로 취급한다.
+const LEGACY_SUBST = ['fallback_neutral', 'derived_from_vix'];
+// 이 파일이 최소한 읽을 수 있는 형태인지 검사한다. 읽을 수 없으면 이유(문자열), 괜찮으면 null. (일부 항목 없음은 문제가 아니다)
 function payloadProblem(p){
   if (!p || typeof p !== 'object' || Array.isArray(p)) return '데이터 형식 오류';
   if (!p.inputs || typeof p.inputs !== 'object') return '입력값(inputs) 없음 또는 옛 형식';
-  const missing = SCORE_INPUT_KEYS.filter(k => typeof p.inputs[k] !== 'number' || !Number.isFinite(p.inputs[k]));
-  if (missing.length) return `숫자가 아닌 입력값: ${missing.join(', ')}`;
   return null;
+}
+// 점수에 쓰는 항목 중 실제 값이 없는 것들의 키 목록.
+function unavailableKeys(p){
+  if (!p || !p.inputs) return SCORE_INPUT_KEYS.slice();
+  return SCORE_INPUT_KEYS.filter(k => {
+    const v = p.inputs[k]; const q = p.data_quality && p.data_quality[k];
+    return typeof v !== 'number' || !Number.isFinite(v) || q === 'unavailable' || LEGACY_SUBST.includes(q);
+  });
 }
 function dqState(payload, key){
   return payload && payload.data_quality && payload.data_quality[key];
@@ -810,12 +816,10 @@ function renderDataBanner(payload){
     nodata = true;
     msgs.push(`<b>데이터 없음</b> — 자동 갱신 데이터(latest.json)를 쓸 수 없어 점수와 매수 비중을 표시하지 않습니다. (${loadProblem || '파일 없음'}) 다음 자동 실행 후 다시 확인하세요.`);
   } else {
-    const subs = SCORE_INPUT_KEYS.concat(['vix']).filter(k => dqState(payload,k) === 'fallback_neutral');
-    const derived = SCORE_INPUT_KEYS.filter(k => dqState(payload,k) === 'derived_from_vix');
-    if (subs.length) msgs.push(`<b>일부 데이터 조회 실패</b> — 점수에 쓰인 지표 ${subs.length}개가 중립값으로 대체됐어요. 이 점수는 실제 시장 상태를 완전히 반영하지 않아요(해당 카드에도 표시).` +
-      subs.map(k => `\n· ${esc(KEY_LABEL[k])} — 사유: ${esc(failReasonOf(payload, REASON_KEY[k]))}`).join(''));
-    if (derived.length) msgs.push(`직접 조회에 실패해 VIX로 추정한 값을 쓴 지표` +
-      derived.map(k => `\n· ${esc(KEY_LABEL[k])} — 사유: ${esc(failReasonOf(payload, REASON_KEY[k]))}`).join(''));
+    const miss = unavailableKeys(payload);
+    if (miss.length) msgs.push(`<b>점수 산출 불가</b> — 점수에 쓰는 항목 ${miss.length}개를 조회하지 못해 종합 점수와 참고 매수 비중을 계산하지 않았어요. 중립값이나 추정값으로 대체하지 않아요.` +
+      miss.map(k => `\n· ${esc(KEY_LABEL[k])} — 사유: ${esc(failReasonOf(payload, REASON_KEY[k]))}`).join('') +
+      (payload.score_status ? '' : '\n(이 데이터는 이전 규칙이 만든 것이라 대체값이 섞여 있어요. 다음 자동 실행부터 새 규칙으로 갱신돼요.)'));
     const snap = payload.price_snapshot || {};
     const pAge = daysOld(snap.sp500_date);
     if (!Number.isFinite(snap.sp500_close) || pAge === null) msgs.push('<b>데이터 기준일 불명</b> — S&P500 종가/날짜가 없어요. 사유: ' + esc(failReasonOf(payload, 'price:sp500')));
@@ -832,25 +836,15 @@ function renderDataBanner(payload){
   el.innerHTML = msgs.map(m => `<div style="white-space:pre-line;">${m}</div>`).join('');
 }
 
-// 카드별 대체값 표시. 사용자가 슬라이더를 움직여 값이 오늘 입력과 달라지면(시나리오) 표시를 숨긴다.
+// 카드별 조회 실패 표시. (규칙 v2: 값을 대체하지 않으므로 실패한 항목은 점수 없이 사유만 보여준다)
 function renderCardQuality(){
+  const miss = todayData ? unavailableKeys(todayData) : [];
   Object.entries(CARD_KEYS).forEach(([card,[key,sliderId]]) => {
     const badge = document.getElementById(`dq-${card}`);
     if (!badge) return;
     badge.className = 'dq-badge'; badge.textContent = '';
-    if (!todayData) return;
-    const slider = document.getElementById(sliderId);
-    const same = slider && Math.abs(parseFloat(slider.value) - todayData.inputs[key]) < 1e-9;
-    const st = dqState(todayData, key);
-    if (!same) return;
-    const exp = document.getElementById(`exp-${card}`);
-    if (st === 'fallback_neutral') {
-      badge.textContent = '조회 실패 · 중립값 사용'; badge.className = 'dq-badge show';
-      if (exp) exp.textContent = `이 항목은 조회에 실패해 중립값(${NEUTRAL_TEXT[key]})으로 대체했어요. 실제 시장 상태가 아니라서 이 카드의 점수는 참고하지 마세요.\n실패 사유: ${failReasonOf(todayData, REASON_KEY[key])}`;
-    } else if (st === 'derived_from_vix') {
-      badge.textContent = 'VIX로 추정한 값'; badge.className = 'dq-badge show';
-      if (exp) exp.textContent += `\n(직접 조회에 실패해 VIX로 추정한 값이에요. 실패 사유: ${failReasonOf(todayData, REASON_KEY[key])})`;
-    }
+    if (!todayData || !miss.includes(key)) return;
+    badge.textContent = '조회 실패 · 점수 없음'; badge.className = 'dq-badge show';
   });
 }
 
@@ -862,8 +856,7 @@ function setUpdatedBadge(payload){
     label.textContent = '데이터 없음 · 자동 갱신 데이터를 쓸 수 없어요'; return;
   }
   const dq = payload.data_quality || {};
-  const scoreFallback = Object.entries(dq).filter(([k,v]) => k !== 'net_flow_index' && v === 'fallback_neutral').map(([k])=>k);
-  const scoreDerived = Object.entries(dq).filter(([,v]) => v === 'derived_from_vix').map(([k])=>k);
+  const scoreMissing = unavailableKeys(payload);
   const macro = payload.price_snapshot && payload.price_snapshot.macro || {};
   const macroKeys = Object.keys(MACRO_MAX_AGE_DAYS);
   const macroIssues = macroKeys.filter(k => {
@@ -876,13 +869,12 @@ function setUpdatedBadge(payload){
     if (!Number.isFinite(snapP[v])) return true;
     const age = daysOld(snapP[d]); return age === null || age < 0 || age > PRICE_MAX_AGE_DAYS;
   });
-  const issueCount = scoreFallback.length + scoreDerived.length + macroIssues.length + priceIssues.length;
+  const issueCount = scoreMissing.length + macroIssues.length + priceIssues.length;
   dot.style.background = issueCount ? getCss('--warn') : getCss('--zone-4');
   dot.style.boxShadow = `0 0 6px ${dot.style.background}`;
   const ts = payload.generated_at_utc ? new Date(payload.generated_at_utc).toLocaleString('ko-KR') : '시각 미상';
   const parts = [];
-  if (scoreFallback.length) parts.push(`점수 중립 대체 ${scoreFallback.length}개`);
-  if (scoreDerived.length) parts.push(`점수 추정 입력 ${scoreDerived.length}개`);
+  if (scoreMissing.length) parts.push(`점수 항목 조회 실패 ${scoreMissing.length}개 · 점수 산출 불가`);
   if (macroIssues.length) parts.push(`매크로 조회 실패/오래됨 ${macroIssues.length}개`);
   if (priceIssues.length) parts.push(`지수 가격 조회 실패/오래됨 ${priceIssues.length}개`);
   const basis = (payload.price_snapshot && payload.price_snapshot.sp500_date) ? `데이터 기준일 ${payload.price_snapshot.sp500_date}(시장일) · ` : '데이터 기준일 불명 · ';
@@ -906,11 +898,8 @@ async function loadTodayData(){
   renderMacroSnapshot(todayData);
   renderMacroExtras(todayData);
   if(todayData){
-    document.getElementById('in-drawdown').value = todayData.inputs.drawdown_pct;
-    document.getElementById('in-per').value = todayData.inputs.cape_percentile;
-    document.getElementById('in-feargreed').value = todayData.inputs.fear_greed;
-    document.getElementById('in-spread').value = todayData.inputs.hy_spread_percentile;
-    document.getElementById('in-ism').value = todayData.inputs.ism;
+    const miss = unavailableKeys(todayData);
+    Object.values(CARD_KEYS).forEach(([key, id]) => { if (!miss.includes(key)) document.getElementById(id).value = todayData.inputs[key]; });
   }
 }
 
@@ -925,10 +914,11 @@ function localCompute(inputs){
   const total = rawTotal / maxPossible * 100;
   const fgLabelKr = fg<=20?'극단적 공포':fg<=40?'공포':fg<=60?'보통':fg<=80?'탐욕':'극단적 탐욕';
   const risks=[];
-  if(cape>=90) risks.push('CAPE 역사 고평가권');
+  const gone = new Set(inputs.__missing || []);   // 조회 실패 항목(표시용 자리값이 들어 있으므로 판정에서 뺀다)
+  if(!gone.has('cape_percentile') && cape>=90) risks.push('CAPE 역사 고평가권');
   if(Number.isFinite(inputs.vix) && inputs.vix>=28) risks.push('VIX 과열');
-  if(fg>=80) risks.push('Extreme Greed 국면');
-  if(spread>=90) risks.push('신용 스프레드 역사적 확대');
+  if(!gone.has('fear_greed') && fg>=80) risks.push('Extreme Greed 국면');
+  if(!gone.has('hy_spread_percentile') && spread>=90) risks.push('신용 스프레드 역사적 확대');
   const f1 = v => Number(v).toFixed(1);
   // ---- 항목별 보조 설명(점수식은 그대로, 설명 문구만 상세화) ----
   const ddState = dd<=0 ? '최고가 부근이에요' : dd<5 ? '고점 부근이라 아직 할인된 구간은 아니에요' : dd<10 ? '조정(correction)이라 부르는 10%에는 못 미쳐요'
@@ -949,7 +939,7 @@ function localCompute(inputs){
   const fearText =
     `CNN Fear & Greed Index가 ${Math.round(fg)}점으로 '${fgState}'예요(CNN 기준: 0~24 극단적 공포 · 25~44 공포 · 45~55 중립 · 56~75 탐욕 · 76~100 극단적 탐욕).\n` +
     `점수 ${f1(pFear)}/20 · 공포일수록 점수가 높아요. 남들이 겁먹고 팔 때 가격이 싸졌을 가능성이 있다고 보는 역발상이에요(지수 20 이하 20점 ~ 100 0점, 사이는 직선으로 계산).\n` +
-    `${fg>=80 ? '과열(탐욕 80 이상) 경고 기준에 해당해요. ' : ''}값을 CNN에서 못 받으면 VIX로 추정하고, 그 경우 상단 상태 표시에 "점수 추정 입력"으로 나와요.`;
+    `${fg>=80 ? '과열(탐욕 80 이상) 경고 기준에 해당해요. ' : ''}CNN에서 값을 받지 못하면 VIX로 추정하거나 중립값으로 채우지 않아요. 이 항목을 "조회 실패"로 표시하고 종합 점수도 계산하지 않아요.`;
   const rateLabel = spread<30 ? '안정적인 편' : spread<60 ? '보통 수준' : spread<80 ? '다소 불안한 편' : '불안한 편';
   const rateText =
     `HY 스프레드(하이일드 가산금리, OAS)의 백분위가 ${Math.round(spread)}예요. 하이일드는 신용등급이 낮은 회사의 채권이고, 스프레드는 그 금리가 미국 국채보다 얼마나 더 높은지예요. 커질수록(스프레드 확대) 투자자들이 위험을 크게 본다는 뜻이에요. 백분위 ${Math.round(spread)}는 1996년 이후 매일 값 100개 중 ${Math.round(spread)}개가 지금보다 낮거나 같았다는 뜻이고, 신용시장은 ${rateLabel}이에요.\n` +
@@ -976,36 +966,57 @@ function localCompute(inputs){
 }
 
 /* ---------------- Apply result (shared by API + local paths) ---------------- */
-function applyResult(data, dd){
+function applyResult(data, dd, missingKeys){
+  const miss = Array.isArray(missingKeys) ? missingKeys : [];
   const s = data.sub_scores;
   const rows = [
     ['tech', s.technical, 30], ['val', s.valuation, 20], ['fear', s.fear_greed, 20],
     ['rate', s.rate_credit, 10], ['macro', s.macro, 10],
   ];
+  const KEY_OF_ROW = {tech:'drawdown_pct', val:'cape_percentile', fear:'fear_greed', rate:'hy_spread_percentile', macro:'ism'};
   rows.forEach(([key, r, max])=>{
+    if (miss.includes(KEY_OF_ROW[key])) {          // 조회 실패: 점수도 설명도 만들지 않는다(값을 대체하지 않는다)
+      document.getElementById(`pts-${key}`).textContent = '—';
+      document.getElementById(`bar-${key}`).style.width = '0%';
+      document.getElementById(`exp-${key}`).textContent = `이 항목은 조회에 실패해서 점수를 계산하지 않았어요. 중립값이나 추정값으로 대체하지 않아요.\n실패 사유: ${failReasonOf(todayData, REASON_KEY[KEY_OF_ROW[key]])}`;
+      return;
+    }
     document.getElementById(`pts-${key}`).textContent = r.score.toFixed(1);
     document.getElementById(`bar-${key}`).style.width = (r.score/max*100)+'%';
     document.getElementById(`exp-${key}`).textContent = r.reason;
   });
 
   const total = Math.round(data.total_score);
-  document.getElementById('score-num').textContent = total;
-  document.getElementById('score-num').style.color = zoneColor(total);
-  const tag = document.getElementById('zone-tag');
-  tag.textContent = zoneLabel(total);
-  tag.style.color = zoneColor(total);
-  tag.style.borderColor = zoneColor(total);
-  renderGauge(total);
+  const unavailable = miss.length > 0;
+  if (unavailable) {
+    const sn = document.getElementById('score-num'); sn.textContent = '—'; sn.style.color = '';
+    const tag0 = document.getElementById('zone-tag'); tag0.textContent = '산출 불가'; tag0.style.color = getCss('--warn'); tag0.style.borderColor = getCss('--warn');
+    document.getElementById('gauge').innerHTML = '';
+    document.getElementById('buy-pct').textContent = '산출 불가';
+    document.getElementById('percentile-txt').textContent = `조회에 실패한 항목이 있어 종합 점수와 참고 매수 비중을 계산하지 않았어요. 중립값이나 추정값으로 대체하지 않아요.\n실패한 항목: ${miss.map(k => KEY_LABEL[k]).join(', ')}`;
+  } else {
+    document.getElementById('score-num').textContent = total;
+    document.getElementById('score-num').style.color = zoneColor(total);
+    const tag = document.getElementById('zone-tag');
+    tag.textContent = zoneLabel(total);
+    tag.style.color = zoneColor(total);
+    tag.style.borderColor = zoneColor(total);
+    renderGauge(total);
 
-  document.getElementById('buy-pct').textContent = data.buy_pct+'%';
-  { const ex = dd>=30 ? 100 : dd>=20 ? 50 : dd>=10 ? 20 : 0; const baseP = data.buy_pct - ex;
-    document.getElementById('percentile-txt').textContent =
-      `점수 구간별 기본 비중: 20 이하 0% · 20 초과~40 50% · 40 초과~60 100% · 60 초과~80 150% · 80 초과 200%.\n지금은 ${total}점이라 기본 ${baseP}%` + (ex ? ` + 낙폭 가산 ${ex}%p = ${data.buy_pct}%` : '') + `예요(구간은 소수점 반올림 전 점수로 판정해요). 평소 정기 매수액을 100%로 본 참고 값이고, 실제 매수 금액이 아니에요.`; }
+    document.getElementById('buy-pct').textContent = data.buy_pct+'%';
+    { const ex = dd>=30 ? 100 : dd>=20 ? 50 : dd>=10 ? 20 : 0; const baseP = data.buy_pct - ex;
+      document.getElementById('percentile-txt').textContent =
+        `점수 구간별 기본 비중: 20 이하 0% · 20 초과~40 50% · 40 초과~60 100% · 60 초과~80 150% · 80 초과 200%.\n지금은 ${total}점이라 기본 ${baseP}%` + (ex ? ` + 낙폭 가산 ${ex}%p = ${data.buy_pct}%` : '') + `예요(구간은 소수점 반올림 전 점수로 판정해요). 평소 정기 매수액을 100%로 본 참고 값이고, 실제 매수 금액이 아니에요.`; }
 
+  }
   const banner=document.getElementById('risk-banner');
+  const skipped = unavailable ? `<li class="none-msg">조회에 실패한 항목(${esc(miss.map(k => KEY_LABEL[k]).join(', '))})은 경고를 판단하지 못했어요.</li>` : '';
   if(data.risk_warnings.length){
     banner.classList.remove('none');
-    document.getElementById('risk-list').innerHTML = data.risk_warnings.map(r=>`<li>${r}</li>`).join('');
+    document.getElementById('risk-list').innerHTML = data.risk_warnings.map(r=>`<li>${r}</li>`).join('') + skipped;
+  } else if (unavailable) {
+    banner.classList.remove('none');
+    document.getElementById('risk-list').innerHTML = `<li class="none-msg">조회된 항목에서는 해당되는 경고가 없어요.</li>` + skipped;
   } else {
     banner.classList.add('none');
     document.getElementById('risk-list').innerHTML = '<li class="none-msg">현재 해당되는 리스크 경고가 없습니다</li>';
@@ -1053,20 +1064,24 @@ function applyResult(data, dd){
 
 /* ---------------- Main recalc ---------------- */
 async function recalc(){
-  const dd = parseFloat(document.getElementById('in-drawdown').value);
-  const cape = parseFloat(document.getElementById('in-per').value);
-  const fg = parseFloat(document.getElementById('in-feargreed').value);
-  const spread = parseFloat(document.getElementById('in-spread').value);
-  const ism = parseFloat(document.getElementById('in-ism').value);
+  const miss = todayData ? unavailableKeys(todayData) : [];
+  const val = (key, id) => miss.includes(key) ? 0 : parseFloat(document.getElementById(id).value);   // 실패 항목의 0은 계산 자리일 뿐 화면에 쓰지 않는다
+  const dd = val('drawdown_pct', 'in-drawdown');
+  const cape = val('cape_percentile', 'in-per');
+  const fg = val('fear_greed', 'in-feargreed');
+  const spread = val('hy_spread_percentile', 'in-spread');
+  const ism = val('ism', 'in-ism');
   const vix = currentVix;  // null이면 VIX 경고는 판정하지 않는다
 
   const inputs = {
     drawdown_pct: dd, cape_percentile: cape, fear_greed: fg,
-    hy_spread_percentile: spread, ism: ism, vix: vix,
+    hy_spread_percentile: spread, ism: ism, vix: vix, __missing: miss,
   };
 
-  applyResult(localCompute(inputs), dd);
+  applyResult(localCompute(inputs), dd, miss);
   renderCardQuality();
+  // 조회 실패 항목의 슬라이더는 의미가 없으므로 숨긴다(성공한 항목은 그대로 만져 볼 수 있다)
+  Object.entries(CARD_KEYS).forEach(([card,[key,id]]) => { const el = document.getElementById(id); if (el) el.style.visibility = miss.includes(key) ? 'hidden' : ''; });
 }
 
 // latest.json이 없으면 샘플 값을 실제 점수처럼 보여주지 않고 '데이터 없음'을 표시한다.
@@ -1092,7 +1107,7 @@ function renderNoData(){
 
 /* ---------------- ④ 표본 외 기록 ---------------- */
 const OOS_TARGET_DAYS = 730;      // 최소 2년
-const OOS_SUBST = ['fallback_neutral', 'derived_from_vix'];
+const OOS_SUBST = ['fallback_neutral', 'derived_from_vix', 'unavailable'];   // 규칙 v2에서는 기록에 들어오지 않는다(이전 규칙 기록 판별용)
 function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // 따옴표/BOM/CRLF를 처리하는 작은 CSV 파서
@@ -1185,7 +1200,7 @@ async function loadOos(){
   const runsInfo = runs.missing || runs.broken
     ? '<div class="oos-msg">실행 이력 파일(history_oos_runs.csv)을 읽지 못했어요.</div>'
     : `<div class="oos-scroll"><table class="oos-table"><thead><tr><th>실행 시각(UTC)</th><th>상태</th><th>메모</th></tr></thead><tbody>${
-        recent.map(r => { const st = (r.status || 'legacy').trim(); const lab = ({recorded:'기록', kept_existing:'기존 행 보존(재실행)', replaced_incomplete:'불완전 행 교체', failed:'실패', legacy:'이전 형식'})[st] || st;
+        recent.map(r => { const st = (r.status || 'legacy').trim(); const lab = ({recorded:'기록', kept_existing:'기존 행 보존(재실행)', replaced_incomplete:'불완전 행 교체(이전 규칙)', incomplete:'점수 산출 불가(공식 기록 안 함)', failed:'실패', legacy:'이전 형식'})[st] || st;
           return `<tr><td>${esc((r.run_utc || '').replace('T',' ').slice(0,19))}</td><td class="${st === 'failed' ? 'oos-fail' : ''}">${esc(lab)}</td><td style="white-space:normal;text-align:left;">${esc(r.note || '')}</td></tr>`; }).join('')
       }</tbody></table></div>`;
 
@@ -1200,7 +1215,7 @@ async function loadOos(){
       <div class="oos-card"><div class="lbl">공식 기록 (시장일 기준)</div><div class="val">${days.length}일</div><div class="sub">${esc(first)} ~ ${esc(last)}${dupes ? `<br>같은 시장일 중복 ${dupes}행은 제외(첫 행 유지)` : ''}${skippedNoDate ? `<br>시장일 없는 ${skippedNoDate}행 제외` : ''}</div></div>
       <div class="oos-card"><div class="lbl">최소 2년 기준 진행</div><div class="val">${spanDays}일 / ${OOS_TARGET_DAYS}일</div><div class="oos-bar"><i style="width:${pct.toFixed(1)}%"></i></div><div class="sub">기간만 채운다고 검증이 끝나는 건 아니에요.</div></div>
       <div class="oos-card"><div class="lbl">하락 10% 이상 구간 포함?</div><div class="val">${ddOk ? '포함됨' : '아직 없음'}</div><div class="sub">기록 중 최대 낙폭 ${maxDd.toFixed(1)}% (S&amp;P500, 최근 252거래일 최고가 대비)</div></div>
-      <div class="oos-card"><div class="lbl">중립 대체값을 쓴 날</div><div class="val">${subDays}일</div><div class="sub">전체 ${days.length}일 중. 대체값이 있는 날은 신호 해석에 주의하세요.</div></div>
+      <div class="oos-card"><div class="lbl">대체값이 섞인 날(이전 규칙 기록)</div><div class="val">${subDays}일</div><div class="sub">전체 ${days.length}일 중. 새 규칙(v2)은 대체값을 쓰지 않아 0일이어야 해요.</div></div>
       <div class="oos-card"><div class="lbl">리스크 경고가 있던 날</div><div class="val">${warnDays}일</div><div class="sub">CAPE·VIX·탐욕·신용 경고 중 하나라도 있던 날</div></div>
       <div class="oos-card"><div class="lbl">실행 이력</div><div class="val">${r_ok + r_fail}회</div><div class="sub">성공 ${r_ok}회 · <span class="${r_fail ? 'oos-fail' : ''}">실패 ${r_fail}회</span><br>같은 날 재실행(기존 행 보존) ${r_kept}회${r_rep ? ` · 불완전 행 교체 ${r_rep}회` : ''}</div></div>
     </div>

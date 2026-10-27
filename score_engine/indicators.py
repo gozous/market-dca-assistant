@@ -69,9 +69,8 @@ def valuation_score(cape_percentile: float, cfg: Dict[str, Any]) -> IndicatorRes
 def fear_greed_score(index_value: float, cfg: Dict[str, Any]) -> IndicatorResult:
     """
     Fear & Greed 지수(0~100). 낮을수록(공포) 점수가 높다.
-    CNN 원본이든 VIX 대체 근사치든 현재는 동일한 신뢰도로 취급한다 — 대체값에 대한
-    할인 계수는 실제 오차를 측정하기 전까지는 임의로 정하지 않는다(config.py 주석 참고).
-    어떤 소스였는지는 raw_value가 아니라 상위 계층(compute_daily.py의 data_quality)에서 추적한다.
+    입력은 CNN이 발표한 실제 값이어야 한다. 규칙 v2(2026-10-26)부터 VIX 추정값이나 중립값은 쓰지 않는다
+    (조회에 실패하면 compute_daily.py가 점수 산출 불가로 처리하고 이 함수를 부르지 않는다).
     """
     fcfg = cfg["fear_greed"]
     max_score = fcfg["max_score"]

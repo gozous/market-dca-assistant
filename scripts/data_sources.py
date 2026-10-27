@@ -238,7 +238,7 @@ def fetch_fear_greed() -> Optional[float]:
     이 엔드포인트는 날짜를 경로에 붙여야(.../graphdata/2026-08-26) 정상 응답이 온다 —
     처음 버전은 이걸 빠뜨려서 항상 실패했었다.
     CNN이 언제든 이 엔드포인트를 바꾸거나 막을 수 있으니, 실패하면 None을 반환한다.
-    (compute_daily.py가 이걸 VIX 기반 근사치로 먼저 대체 시도하고, 그마저 안 되면 중립값을 쓴다.)
+    (조회에 실패하면 None을 돌려준다. 규칙 v2부터 VIX 추정이나 중립값으로 대체하지 않고, 점수 산출 불가로 처리한다.)
     """
     from datetime import date as _date
     try:
@@ -268,18 +268,6 @@ def fetch_fear_greed() -> Optional[float]:
         return None
 
 
-def derive_fear_greed_from_vix(vix: float) -> float:
-    """
-    CNN 엔드포인트가 막혔을 때 쓰는 근사치. VIX와 시장 심리는 역의 상관관계가 있다는
-    잘 알려진 경험칙을 이용한다 (VIX 낮음=안심/탐욕, 높음=불안/공포).
-    CNN의 실제 산출 방식(7개 지표 조합)과는 다른 단순화된 근사치임을 명심할 것 —
-    data_quality에 'derived_from_vix'로 별도 표시해서 진짜 CNN 값과 구분한다.
-    VIX 12 -> 100(Extreme Greed), VIX 40 -> 0(Extreme Fear) 선형 매핑, 범위 밖은 clip.
-    """
-    score = 100 - (vix - 12) * (100 / 28)
-    return max(0.0, min(100.0, score))
-
-
 def fetch_cape_percentile(lookback_years: int = 30) -> Optional[float]:
     """
     CAPE(Shiller PE)의 "최근 lookback_years년 시계열 대비 백분위"(0~100). 예일대 로버트 실러
@@ -289,7 +277,7 @@ def fetch_cape_percentile(lookback_years: int = 30) -> Optional[float]:
 
     1순위: 예일대 옛 고정 경로(econ.yale.edu)로 바로 시도.
     2순위: shillerdata.com 페이지에서 서명된 다운로드 링크를 긁어와서 시도.
-    둘 다 실패하면 None을 반환하고 compute_daily.py가 중립값으로 대체한다.
+    둘 다 실패하면 None을 반환한다. 규칙 v2부터 compute_daily.py는 중립값으로 대체하지 않고 '점수 산출 불가'로 처리한다.
     """
     _CAPE_PARTS.clear()
     xls_bytes = _try_fetch_yale_direct() or _try_fetch_shillerdata_scrape()
@@ -465,7 +453,7 @@ def snapshot_from_series(series, points: int = 60) -> dict:
 
 def fetch_net_flow_index() -> Optional[float]:
     """
-    ETF/기관 순유입 지표. 무료 소스 미확정 — 현재 None, 중립값으로 대체.
+    ETF/기관 순유입 지표. 무료 소스 미확정 — 현재 항상 None(점수에 쓰이지 않고, 기록에도 빈 칸으로 남는다).
     다음 단계: ETF.com, TrendForce, 또는 유료 API 검토.
     """
     return None
