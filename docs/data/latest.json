@@ -1,12 +1,15 @@
 {
-  "generated_at_utc": "2026-10-27T00:41:21.057781+00:00",
+  "generated_at_utc": "2026-10-27T03:13:06.421671+00:00",
+  "rules_version": "v2-no-substitution-2026-10-26",
+  "score_status": "complete",
+  "missing_items": [],
   "inputs": {
     "drawdown_pct": 1.8181535459970477,
     "cape_percentile": 75.83333333333333,
     "fear_greed": 27.0788912579957,
     "hy_spread_percentile": 84.67432950191571,
     "ism": 20.9,
-    "net_flow_index": 0.0,
+    "net_flow_index": null,
     "vix": 18.389999389648438
   },
   "data_quality": {
@@ -152,7 +155,7 @@
     "nasdaq100_drawdown_pct": 6.248517147977573,
     "macro": {
       "usd_krw": {
-        "value": 1324.1800537109375,
+        "value": 1324.760009765625,
         "date": "2026-10-27",
         "series_start": "2026-08-05",
         "series": [
@@ -215,11 +218,11 @@
           1325.59,
           1325.99,
           1321.76,
-          1324.1801
+          1324.76
         ]
       },
       "dxy": {
-        "value": 102.01899719238281,
+        "value": 102.04900360107422,
         "date": "2026-10-26",
         "series_start": "2026-08-03",
         "series": [
@@ -282,7 +285,7 @@
           101.78,
           101.61,
           101.81,
-          102.019
+          102.049
         ]
       },
       "us_2y": {
@@ -596,8 +599,5 @@
       "flow"
     ]
   },
-  "failure_reasons": {},
-  "calibration": {
-    "fear_greed_vix_shadow_estimate": 77.17857360839844
-  }
+  "failure_reasons": {}
 }
