@@ -884,7 +884,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-10-28.1';
+const APP_VERSION = '2026-10-28.2';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1304,19 +1304,30 @@ const HIST_ITEMS = [
 function histChart(pts, max, color, unit){
   const real = pts.filter(p => p.v != null);
   if (real.length < 2) return `<div class="cap">실제 조회된 기록이 2일 이상 쌓이면 그래프가 표시돼요(지금 ${real.length}일 / 전체 ${pts.length}일).</div>`;
-  const w = 600, h = 84, padX = 10, padY = 8, n = pts.length;
-  const x = i => n === 1 ? w / 2 : padX + i * (w - 2 * padX) / (n - 1);
-  const y = v => h - padY - (Math.max(0, Math.min(max, v)) / max) * (h - 2 * padY);
+  const vals = real.map(p => p.v), lo = Math.min(...vals), hi = Math.max(...vals), last = real[real.length - 1], first = real[0];
+  // 세로 눈금은 이 기간 값의 범위에 맞춘다(변화가 보이도록). 눈금 숫자를 그래프에 직접 적어서 부풀려 보이지 않게 한다.
+  const span = hi - lo, pad = Math.max(span * 0.3, max * 0.03);
+  const yMin = Math.max(0, lo - pad), yMax = Math.min(max, hi + pad), yr = (yMax - yMin) || 1;
+  const w = 600, h = 170, left = 56, right = 24, top = 22, bottom = 30, n = pts.length;
+  const x = i => n === 1 ? (left + w - right) / 2 : left + i * (w - left - right) / (n - 1);
+  const y = v => top + (1 - (Math.max(yMin, Math.min(yMax, v)) - yMin) / yr) * (h - top - bottom);
+  const dim = getCss('--text-dim'), soft = getCss('--border-soft');
+  const ticks = [yMin, (yMin + yMax) / 2, yMax];
+  const grid = ticks.map(t => `<line x1="${left}" x2="${w - right}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="${soft}" stroke-width="1"/>` +
+    `<text x="${left - 8}" y="${(y(t) + 7).toFixed(1)}" text-anchor="end" font-size="20" fill="${dim}">${t.toFixed(1)}</text>`).join('');
   let path = '', prev = false;
   pts.forEach((p, i) => { if (p.v == null) { prev = false; return; } path += `${prev ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)} `; prev = true; });
   const dots = pts.map((p, i) => p.v == null
-    ? `<circle cx="${x(i).toFixed(1)}" cy="${h - 3}" r="2.6" fill="none" stroke="${getCss('--warn')}" stroke-width="1.2"/>`
-    : (n <= 60 ? `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="2.8" fill="${color}"/>` : '')).join('');
-  const grid = [0, 0.5, 1].map(f => `<line x1="0" x2="${w}" y1="${y(max * f).toFixed(1)}" y2="${y(max * f).toFixed(1)}" stroke="${getCss('--border-soft')}" stroke-width="1"/>`).join('');
-  const vals = real.map(p => p.v), lo = Math.min(...vals), hi = Math.max(...vals), last = real[real.length - 1];
+    ? `<circle cx="${x(i).toFixed(1)}" cy="${h - bottom + 14}" r="5" fill="none" stroke="${getCss('--warn')}" stroke-width="2"/>`
+    : (n <= 60 ? `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="6" fill="${color}"/>` : '')).join('');
+  const iFirst = pts.indexOf(first), iLast = pts.indexOf(last);
+  const labels = `<text x="${x(iFirst).toFixed(1)}" y="${(y(first.v) - 12).toFixed(1)}" text-anchor="${iFirst === iLast ? 'middle' : 'start'}" font-size="21" font-weight="600" fill="${color}">${first.v.toFixed(1)}</text>` +
+    (iLast !== iFirst ? `<text x="${x(iLast).toFixed(1)}" y="${(y(last.v) - 12).toFixed(1)}" text-anchor="end" font-size="21" font-weight="600" fill="${color}">${last.v.toFixed(1)}</text>` : '');
+  const dates = `<text x="${left}" y="${h - 4}" text-anchor="start" font-size="19" fill="${dim}">${esc(pts[0].d.slice(5))}</text>` +
+    `<text x="${w - right}" y="${h - 4}" text-anchor="end" font-size="19" fill="${dim}">${esc(pts[n - 1].d.slice(5))}</text>`;
   const gaps = pts.length - real.length;
-  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="점수 추이 그래프">${grid}<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>${dots}</svg>
-    <div class="cap">${esc(pts[0].d)} ~ ${esc(pts[pts.length - 1].d)} · 눈금 0 / ${max / 2} / ${max}${unit} · 최근 ${last.v.toFixed(1)}${unit} (기간 중 ${lo.toFixed(1)} ~ ${hi.toFixed(1)})${gaps ? `<br>빈 동그라미 ${gaps}일은 조회 실패·대체값이라 값으로 그리지 않았어요.` : ''}</div>`;
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="점수 추이 그래프">${grid}<path d="${path}" fill="none" stroke="${color}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>${dots}${labels}${dates}</svg>
+    <div class="cap">${esc(pts[0].d)} ~ ${esc(pts[n - 1].d)} · 최근 ${last.v.toFixed(1)}${unit} (기간 중 ${lo.toFixed(1)} ~ ${hi.toFixed(1)}) · 세로 눈금은 이 기간 값에 맞춘 것이라 실제 만점(${max}${unit})과 다릅니다.${gaps ? `<br>빈 동그라미 ${gaps}일은 조회 실패라 값으로 그리지 않았어요.` : ''}</div>`;
 }
 async function loadScoreHistory(){
   const setAll = html => { HIST_ITEMS.forEach(it => { const el = document.getElementById('hist-' + it.id); if (el) el.innerHTML = html; });
