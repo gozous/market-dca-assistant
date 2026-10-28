@@ -44,6 +44,7 @@
   .brand-eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:0.18em; color:var(--text-faint); text-transform:uppercase; margin-bottom:6px;}
   h1{font-size:26px; font-weight:700; letter-spacing:-0.01em;}
   h1 span{color:var(--zone-4);}
+  #ver-line{font-family:var(--mono); font-size:11.5px; line-height:1.7; color:var(--text-dim); margin:-6px 0 14px;}
   .header-right{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:12px; color:var(--text-dim);}
   .refresh-btn{
     background:var(--panel-2); border:1px solid var(--border); color:var(--text);
@@ -220,6 +221,7 @@
       <button class="refresh-btn" onclick="resetToTodayData()">↻ 오늘 데이터로 리셋</button>
     </div>
   </header>
+  <div id="ver-line">버전 확인 중…</div>
 
   <div id="data-banner" role="status"></div>
 
@@ -881,6 +883,22 @@ function setUpdatedBadge(payload){
   label.textContent = `${basis}수집 실행 ${ts} · ${parts.length ? parts.join(' · ') : '점수·매크로 상태 정상'}`;
 }
 
+// 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
+const APP_VERSION = '2026-10-28.1';
+function fmtKst(iso){
+  const t = new Date(iso); if (isNaN(t)) return '—';
+  const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
+    .reduce((o, x) => (o[x.type] = x.value, o), {});
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute} KST`;
+}
+function renderVersion(){
+  const el = document.getElementById('ver-line'); if (!el) return;
+  const rules = todayData ? (todayData.rules_version || '이전 규칙(v1) 형식') : '데이터 없음';
+  const gen = (todayData && todayData.generated_at_utc) ? fmtKst(todayData.generated_at_utc) : '—';
+  const mk = (todayData && todayData.price_snapshot && todayData.price_snapshot.sp500_date) || '—';
+  el.textContent = `화면 v${APP_VERSION} · 점수 규칙 ${rules} · 데이터 생성 ${gen} · 시장일 ${mk}`;
+}
+
 async function loadTodayData(){
   loadProblem = null;
   try{
@@ -1258,6 +1276,7 @@ function resetToTodayData(){
   loadTodayData().then(afterLoad);
 }
 function afterLoad(){
+  renderVersion();
   if (!todayData) { renderNoData(); return; }
   Object.values(CARD_KEYS).forEach(([,id]) => { document.getElementById(id).disabled = false; });
   recalc();
