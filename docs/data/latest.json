@@ -1,13 +1,13 @@
 {
-  "generated_at_utc": "2026-10-29T01:09:09.534930+00:00",
+  "generated_at_utc": "2026-10-29T15:36:29.288126+00:00",
   "rules_version": "v2-no-substitution-2026-10-26",
   "score_status": "complete",
   "missing_items": [],
   "inputs": {
     "drawdown_pct": 0.958573534070617,
     "cape_percentile": 75.83333333333333,
-    "fear_greed": 35.8571428571429,
-    "hy_spread_percentile": 68.36734693877551,
+    "fear_greed": 35.5428571428571,
+    "hy_spread_percentile": 61.910828025477706,
     "ism": 20.9,
     "net_flow_index": null,
     "vix": 16.90999984741211
@@ -87,7 +87,7 @@
       7743.98
     ],
     "sp500_series_start": "2026-08-05",
-    "nasdaq100_close": 29813.15625,
+    "nasdaq100_close": 29813.16015625,
     "nasdaq100_date": "2026-10-28",
     "nasdaq100_series": [
       29487.7891,
@@ -149,13 +149,13 @@
       28957.5293,
       29273.4004,
       29651.4395,
-      29813.1562
+      29813.1602
     ],
     "nasdaq100_series_start": "2026-08-05",
-    "nasdaq100_drawdown_pct": 4.5198987247644595,
+    "nasdaq100_drawdown_pct": 4.5198862145444,
     "macro": {
       "usd_krw": {
-        "value": 1334.5799560546875,
+        "value": 1337.469970703125,
         "date": "2026-10-29",
         "series_start": "2026-08-07",
         "series": [
@@ -218,15 +218,14 @@
           1321.76,
           1324.77,
           1326.8101,
-          1334.58
+          1337.47
         ]
       },
       "dxy": {
-        "value": 102.23899841308594,
-        "date": "2026-10-28",
-        "series_start": "2026-08-05",
+        "value": 101.96099853515625,
+        "date": "2026-10-29",
+        "series_start": "2026-08-06",
         "series": [
-          99.69,
           99.97,
           99.6,
           99.81,
@@ -285,7 +284,8 @@
           101.81,
           101.96,
           102.32,
-          102.239
+          102.19,
+          101.961
         ]
       },
       "us_2y": {
@@ -423,11 +423,10 @@
         ]
       },
       "hy_oas": {
-        "value": 3.18,
-        "date": "2026-10-27",
-        "series_start": "2026-08-05",
+        "value": 3.14,
+        "date": "2026-10-28",
+        "series_start": "2026-08-06",
         "series": [
-          2.75,
           2.71,
           2.7,
           2.7,
@@ -486,7 +485,8 @@
           3.4,
           3.38,
           3.3,
-          3.18
+          3.18,
+          3.14
         ]
       },
       "vix": {
@@ -559,7 +559,7 @@
     }
   },
   "result": {
-    "total_score": 31.2,
+    "total_score": 30.6,
     "sub_scores": {
       "technical": {
         "score": 0.4,
@@ -574,16 +574,16 @@
         "raw_value": 75.83333333333333
       },
       "fear_greed": {
-        "score": 16.0,
+        "score": 16.1,
         "max_score": 20,
         "reason": "지금 투자 심리는 '공포' 상태예요",
-        "raw_value": 35.8571428571429
+        "raw_value": 35.5428571428571
       },
       "rate_credit": {
-        "score": 6.8,
+        "score": 6.2,
         "max_score": 10,
-        "reason": "회사채 시장 분위기는 불안한 편이에요(최근 역사 중 상위 32%)",
-        "raw_value": 68.36734693877551
+        "reason": "회사채 시장 분위기는 불안한 편이에요(최근 역사 중 상위 38%)",
+        "raw_value": 61.910828025477706
       },
       "macro": {
         "score": 0,
@@ -617,26 +617,26 @@
       "month_ago_value": 30.469742507138623
     },
     "fear_greed": {
-      "value": 35.8571428571429,
+      "value": 35.5428571428571,
       "rating": "fear",
-      "timestamp": "2026-10-28T23:59:59+00:00",
-      "previous_close": 33.6,
-      "week_ago": 30.25714285714286,
-      "month_ago": 32.4,
-      "year_ago": 39.34285714285714
+      "timestamp": "2026-10-29T15:32:03+00:00",
+      "previous_close": 35.8571428571429,
+      "week_ago": 19.985714285714288,
+      "month_ago": 31.057142857142857,
+      "year_ago": 42.114285714285714
     },
     "hy_spread_percentile": {
-      "value": 3.18,
-      "date": "2026-10-27",
-      "month_ago_value": 2.93,
-      "month_ago_date": "2026-09-25",
+      "value": 3.14,
+      "date": "2026-10-28",
+      "month_ago_value": 3.02,
+      "month_ago_date": "2026-09-28",
       "year_low": 2.6,
       "year_high": 3.46,
       "all_low": 2.59,
       "all_high": 4.61,
       "all_median": 3.02,
       "since": "2023-10-30",
-      "n": 785
+      "n": 786
     },
     "ism": {
       "value": 20.9,

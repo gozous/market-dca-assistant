@@ -1,0 +1,45 @@
+{
+  "generated_at_utc": "2026-10-29T15:36:35.866223+00:00",
+  "note": "진단용 기록. 점수 계산에는 쓰이지 않는다.",
+  "cape": [
+    {
+      "source": "yale_old_url",
+      "fetched": true,
+      "bytes": 1628672,
+      "last_valid_cape_rows": [
+        {
+          "date": "2023-07",
+          "cape": 30.89
+        },
+        {
+          "date": "2023-08",
+          "cape": 30.47
+        },
+        {
+          "date": "2023-09",
+          "cape": 30.81
+        }
+      ],
+      "last_row_label_any_column": "2023.09",
+      "rows_total": 1834
+    },
+    {
+      "source": "shillerdata_com",
+      "fetched": false
+    }
+  ],
+  "hy_oas": {
+    "series": "BAMLH0A0HYM2",
+    "count": 786,
+    "first": "2023-10-30",
+    "last": "2026-10-28",
+    "observation_start_param": "1600-01-01",
+    "api_count": 794,
+    "fred_meta": {
+      "observation_start": "2023-10-30",
+      "observation_end": "2026-10-28",
+      "last_updated": "2026-10-29 09:27:15-05",
+      "notes": "Starting in April 2026, this series will only include 3 years of observations. For more data, go to the source.\n\nThe ICE BofA Option-Adjusted Spreads (OASs) are the calculated spreads between a computed OAS index of all bonds in a given rating category and a spot Treasury curve. An OAS index is constructed using each constituent bond's OAS, weighted by market capitalization. The ICE BofA High Yield Master II OAS uses an index of bonds that are below investment grade (those rated BB or below).\nThis data represents the ICE BofA US High Yield Index value, which tracks the performance of US dollar"
+    }
+  }
+}
