@@ -271,7 +271,7 @@ def fetch_ism() -> Optional[float]:
 
 def fetch_hy_spread_percentile() -> Optional[float]:
     """
-    하이일드 OAS의 "역사 전체 시계열(FRED, 1996~) 대비 백분위"(0~100).
+    하이일드 OAS의 "FRED가 제공하는 전체 시계열 대비 백분위"(0~100). 2026-10 확인 결과 FRED 이력은 2023-10-30부터라 약 3년치다(과거엔 1996~였음).
     절대 bp 구간을 임의로 정하면 평시/위기 구간 비율을 왜곡할 수 있어서,
     CAPE와 동일하게 percentile 방식으로 통일했다.
     """

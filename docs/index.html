@@ -665,7 +665,7 @@ function macroNoteBody(card, macro, payload){
         '\n점수에는 쓰이지 않고, "VIX 과열" 경고 판정에만 쓰여요. 조회에 실패하면 값을 만들어 채우지 않고 "조회 실패"로 표시해요.';
     }
     case 'hy_oas':
-      return '신용등급이 낮은 회사가 발행한 채권(하이일드, HY)의 금리가 미국 국채 금리보다 얼마나 더 높은지(가산금리, OAS)예요. 예를 들어 국채 4%, HY 7%이면 3%p(300bp)예요. 이 값이 커지는 것을 뉴스에서 "스프레드 확대"라고 하고, 투자자들이 위험을 크게 본다는 뜻이에요. 위기 때 급격히 커져요.\n점수에는 이 값 자체가 아니라 1996년 이후 기록과 비교한 백분위를 써요(신용 항목).';
+      return '신용등급이 낮은 회사가 발행한 채권(하이일드, HY)의 금리가 미국 국채 금리보다 얼마나 더 높은지(가산금리, OAS)예요. 예를 들어 국채 4%, HY 7%이면 3%p(300bp)예요. 이 값이 커지는 것을 뉴스에서 "스프레드 확대"라고 하고, 투자자들이 위험을 크게 본다는 뜻이에요. 위기 때 급격히 커져요.\n점수에는 이 값 자체가 아니라 FRED가 제공하는 과거 기록(오늘 실측값에 시작일 표시)과 비교한 백분위를 써요(신용 항목).';
   }
   return '';
 }
@@ -890,7 +890,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-10-29.2';
+const APP_VERSION = '2026-10-29.3';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -966,7 +966,7 @@ function localCompute(inputs){
     `${fg>=80 ? '과열(탐욕 80 이상) 경고 기준에 해당해요. ' : ''}CNN에서 값을 받지 못하면 VIX로 추정하거나 중립값으로 채우지 않아요. 이 항목을 "조회 실패"로 표시하고 종합 점수도 계산하지 않아요.`;
   const rateLabel = spread<30 ? '안정적인 편' : spread<60 ? '보통 수준' : spread<80 ? '다소 불안한 편' : '불안한 편';
   const rateText =
-    `HY 스프레드(하이일드 가산금리, OAS)의 백분위가 ${Math.round(spread)}예요. 하이일드는 신용등급이 낮은 회사의 채권이고, 스프레드는 그 금리가 미국 국채보다 얼마나 더 높은지예요. 커질수록(스프레드 확대) 투자자들이 위험을 크게 본다는 뜻이에요. 백분위 ${Math.round(spread)}는 1996년 이후 매일 값 100개 중 ${Math.round(spread)}개가 지금보다 낮거나 같았다는 뜻이고, 신용시장은 ${rateLabel}이에요.\n` +
+    `HY 스프레드(하이일드 가산금리, OAS)의 백분위가 ${Math.round(spread)}예요. 하이일드는 신용등급이 낮은 회사의 채권이고, 스프레드는 그 금리가 미국 국채보다 얼마나 더 높은지예요. 커질수록(스프레드 확대) 투자자들이 위험을 크게 본다는 뜻이에요. 백분위 ${Math.round(spread)}는 FRED가 제공하는 과거 매일 값(시작일은 아래 실측값 참고) 100개 중 ${Math.round(spread)}개가 지금보다 낮거나 같았다는 뜻이고, 신용시장은 ${rateLabel}이에요.\n` +
     `점수 ${f1(pRate)}/10 · 스프레드가 클수록(신용이 불안할수록) 점수가 높아요. 위기 때 가격이 싸지는 경향 때문이에요. 점수가 높다는 건 시장이 좋다는 뜻이 아니라 불안하다는 뜻이에요(0이면 0점, 100이면 10점).\n` +
     `${spread>=90 ? '신용 스트레스 경고 기준(90) 이상이에요. ' : ''}불안이 더 커질 수도 있어서, 점수가 높다고 바닥이라는 뜻은 아니에요.`;
   const macroState = ism<=-12.5 ? '뚜렷한 위축' : ism<0 ? '위축' : ism<12.5 ? '확장' : '뚜렷한 확장';
@@ -1313,6 +1313,11 @@ function factsFor(key, det, snap){
     if (has(det.value)) parts.push(`Shiller CAPE <b>${nf(det.value, 1)}</b>${det.date ? ` (${esc(det.date)} 월간 값)` : ''}`);
     if (has(det.low) && has(det.high)) parts.push(`최근 ${esc(det.lookback_years)}년 범위 ${nf(det.low, 1)} ~ ${nf(det.high, 1)}, 중앙값 ${nf(det.median, 1)}`);
     if (has(det.month_ago_value)) parts.push(`직전 월 ${nf(det.month_ago_value, 1)}`);
+    const m = /^(\d{4})-(\d{2})$/.exec(det.date || '');
+    if (m) {
+      const now = new Date(); const gap = (now.getFullYear() - Number(m[1])) * 12 + (now.getMonth() + 1 - Number(m[2]));
+      if (gap >= 4) parts.push(`⚠ 이 파일의 마지막 CAPE 관측월이 ${gap}개월 전이에요. 현재 시장과 어긋난 값일 수 있어서 이 항목 점수는 참고만 하세요.`);
+    }
   } else if (key === 'fear' && det) {
     if (has(det.value)) parts.push(`CNN Fear & Greed <b>${nf(det.value, 1)}</b>${det.rating ? ` (${esc(det.rating)})` : ''}`);
     const hist = [['previous_close', '전일'], ['week_ago', '1주 전'], ['month_ago', '1개월 전'], ['year_ago', '1년 전']]
@@ -1352,7 +1357,7 @@ const SRC = {
           links:[A('Shiller 데이터', 'https://shillerdata.com/')], note:'수집: Yale 사이트의 ie_data.xls, 실패하면 shillerdata.com'},
   fear:  {desc:'CNN Fear & Greed Index(0~100).',
           links:[A('CNN Fear & Greed', 'https://edition.cnn.com/markets/fear-and-greed')], note:'수집: CNN 페이지가 쓰는 데이터 주소(공식 API가 아니라 바뀌거나 막힐 수 있어요)'},
-  rate:  {desc:'ICE BofA US High Yield Index 옵션조정스프레드(OAS)를 FRED에서 받아요. 1996년 이후 값 대비 백분위는 이 프로그램이 계산해요.',
+  rate:  {desc:'ICE BofA US High Yield Index 옵션조정스프레드(OAS)를 FRED에서 받아요. FRED가 제공하는 전체 기간(현재 약 3년치, 시작일은 실측값에 표시) 값 대비 백분위는 이 프로그램이 계산해요.',
           links:[A('FRED BAMLH0A0HYM2', 'https://fred.stlouisfed.org/series/BAMLH0A0HYM2')], note:'수집: FRED API'},
   macro: {desc:'필라델피아 연은 제조업 조사의 현재 일반활동지수(월 단위, 0이 기준)를 FRED에서 받아요.',
           links:[A('FRED GACDFSA066MSFRBPHI', 'https://fred.stlouisfed.org/series/GACDFSA066MSFRBPHI')], note:'수집: FRED API'},
