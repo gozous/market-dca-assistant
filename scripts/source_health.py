@@ -31,14 +31,33 @@ def _cape_tail(xls_bytes, n=3):
 
 def _probe_cape(name, fetcher):
     out = {"source": name}
+    ds._CAPE_PARTS.clear()
     try:
         data = fetcher()
         if data is None:
             out["fetched"] = False
+            out["reason"] = "; ".join(ds._CAPE_PARTS.values()) or "사유 없음(링크 못 찾음 등)"
             return out
         out["fetched"] = True
         out["bytes"] = len(data)
         out.update(_cape_tail(data))
+    except Exception as e:
+        out["error"] = ds.describe_error(e)
+    return out
+
+
+def _probe_shillerdata_page():
+    """shillerdata.com 첫 페이지가 열리는지, 엑셀 링크가 어떤 형태인지 기록한다."""
+    import re
+    out = {}
+    try:
+        page = ds.requests.get("https://shillerdata.com/", headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+        out["status"] = page.status_code
+        out["length"] = len(page.text)
+        links = re.findall(r'https?://[^"\' )]+?\.xls[x]?[^"\' )]*', page.text)
+        out["xls_links"] = [l[:160] for l in links[:5]]
+        out["has_old_pattern"] = bool(re.search(r'https://img1\.wsimg\.com/blobby/go/[^"]+?ie_data\.xls[^"]*', page.text))
+        out["head"] = page.text[:200]
     except Exception as e:
         out["error"] = ds.describe_error(e)
     return out
@@ -76,5 +95,6 @@ def collect():
         "note": "진단용 기록. 점수 계산에는 쓰이지 않는다.",
         "cape": [_probe_cape("yale_old_url", ds._try_fetch_yale_direct),
                  _probe_cape("shillerdata_com", ds._try_fetch_shillerdata_scrape)],
+        "shillerdata_page": _probe_shillerdata_page(),
         "hy_oas": _probe_hy(),
     }
