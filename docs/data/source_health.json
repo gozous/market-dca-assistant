@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-29T15:39:48.894026+00:00",
+  "generated_at_utc": "2026-10-29T15:41:52.481533+00:00",
   "note": "진단용 기록. 점수 계산에는 쓰이지 않는다.",
   "cape": [
     {
@@ -25,8 +25,24 @@
     },
     {
       "source": "shillerdata_com",
-      "fetched": false,
-      "reason": "shillerdata.com: 다운로드 링크를 찾지 못함(페이지 구조 변경 가능성)"
+      "fetched": true,
+      "bytes": 1675264,
+      "last_valid_cape_rows": [
+        {
+          "date": "2026-08",
+          "cape": 40.99
+        },
+        {
+          "date": "2026-09",
+          "cape": 40.58
+        },
+        {
+          "date": "2026-10",
+          "cape": 40.71
+        }
+      ],
+      "last_row_label_any_column": "2026.1",
+      "rows_total": 1871
     }
   ],
   "shillerdata_page": {
