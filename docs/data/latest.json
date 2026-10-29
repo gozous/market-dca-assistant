@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-29T15:38:47.530227+00:00",
+  "generated_at_utc": "2026-10-29T15:39:44.941435+00:00",
   "rules_version": "v2-no-substitution-2026-10-26",
   "score_status": "complete",
   "missing_items": [],
@@ -155,7 +155,7 @@
     "nasdaq100_drawdown_pct": 4.5198862145444,
     "macro": {
       "usd_krw": {
-        "value": 1337.5699462890625,
+        "value": 1337.47998046875,
         "date": "2026-10-29",
         "series_start": "2026-08-07",
         "series": [
@@ -218,7 +218,7 @@
           1321.76,
           1324.77,
           1326.8101,
-          1337.5699
+          1337.48
         ]
       },
       "dxy": {
