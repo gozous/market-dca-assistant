@@ -30,8 +30,18 @@ _FRED_LATEST_KEYS = {"GACDFSA066MSFRBPHI": "ism"}
 _FRED_HISTORY_KEYS = {"BAMLH0A0HYM2": "hy_spread_percentile"}
 
 
+# 화면에 실제 값·관측일·범위를 보여 주기 위한 부가 정보. 이미 받은 데이터에서만 뽑으며 추가 조회나 추정은 하지 않는다.
+# 조회에 실패한 항목은 키 자체가 없다(성공한 값만 기록).
+DETAILS = {}
+
+
+def _set_detail(key, **kw):
+    DETAILS[key] = kw
+
+
 def reset_failure_reasons():
     FAILURE_REASONS.clear()
+    DETAILS.clear()
 
 
 def _redact(text):
@@ -111,6 +121,9 @@ def _finite_positive(x) -> bool:
         return False
 
 
+_DD_LAST = {}
+
+
 def compute_drawdown_pct(close_series, window: int = 252) -> Optional[float]:
     """
     52주 최고가 대비 하락률(%). 백테스트(backtest/data.py의 rolling(252).max())와
@@ -128,6 +141,12 @@ def compute_drawdown_pct(close_series, window: int = 252) -> Optional[float]:
     windowed = close_series.tail(window)
     rolling_high = windowed.max()
     current = windowed.iloc[-1]
+    try:
+        _DD_LAST.clear()
+        _DD_LAST.update(high=float(rolling_high), high_date=str(windowed.idxmax())[:10], close=float(current),
+                        date=str(windowed.index[-1])[:10], window=int(len(windowed)))
+    except Exception:
+        _DD_LAST.clear()
     return float((1 - current / rolling_high) * 100)
 
 
@@ -160,15 +179,42 @@ def fetch_fred_series_history(series_id: str, limit: int = 100000):
         resp = requests.get(url, params=params, timeout=20)
         resp.raise_for_status()
         obs = resp.json().get("observations", [])
-        values = [float(o["value"]) for o in obs if o["value"] != "."]
+        valid = [(o["date"], float(o["value"])) for o in obs if o["value"] != "."]
+        values = [v for _, v in valid]
         if not values:
             _note_fail(key, "FRED가 응답했지만 유효한 관측값이 없음", f"fetch_fred_series_history({series_id})")
             return None
         _clear_fail(key)
+        _record_history_detail(series_id, valid)
         return values
     except Exception as e:
         _note_fail(key, describe_error(e), f"fetch_fred_series_history({series_id})")
         return None
+
+
+def _record_history_detail(series_id, valid):
+    """HY 스프레드 전체 이력에서 화면용 요약(현재값·관측일·1개월 전·1년 범위·전체 범위)을 만든다."""
+    if series_id != "BAMLH0A0HYM2" or not valid:
+        return
+    from datetime import date as _d, timedelta
+    last_date, last_val = valid[-1]
+    try:
+        ld = _d.fromisoformat(last_date)
+        def at_or_before(days):
+            cut = (ld - timedelta(days=days)).isoformat()
+            prior = [x for x in valid if x[0] <= cut]
+            return prior[-1] if prior else None
+        m1 = at_or_before(30)
+        y1 = [v for d, v in valid if d > (ld - timedelta(days=365)).isoformat()]
+        allv = [v for _, v in valid]
+        srt = sorted(allv)
+        _set_detail("hy_spread_percentile", value=last_val, date=last_date,
+                    month_ago_value=m1[1] if m1 else None, month_ago_date=m1[0] if m1 else None,
+                    year_low=min(y1), year_high=max(y1),
+                    all_low=srt[0], all_high=srt[-1], all_median=srt[len(srt) // 2],
+                    since=valid[0][0], n=len(valid))
+    except Exception:
+        pass
 
 
 def _percentile_rank(history: list, current: float) -> float:
@@ -193,7 +239,7 @@ def fetch_fred_series_latest(series_id: str) -> Optional[float]:
             "api_key": FRED_API_KEY,
             "file_type": "json",
             "sort_order": "desc",
-            "limit": 1,
+            "limit": 2,
         }
         resp = requests.get(url, params=params, timeout=10)
         resp.raise_for_status()
@@ -202,6 +248,10 @@ def fetch_fred_series_latest(series_id: str) -> Optional[float]:
             _note_fail(key, "FRED가 응답했지만 최신 관측값이 비어 있음(미발표 또는 결측)", f"fetch_fred_series_latest({series_id})")
             return None
         _clear_fail(key)
+        if series_id == "GACDFSA066MSFRBPHI":
+            prev = obs[1] if len(obs) > 1 and obs[1]["value"] != "." else None
+            _set_detail("ism", value=float(obs[0]["value"]), date=obs[0]["date"],
+                        prev_value=float(prev["value"]) if prev else None, prev_date=prev["date"] if prev else None)
         return float(obs[0]["value"])
     except Exception as e:
         _note_fail(key, describe_error(e), f"fetch_fred_series_latest({series_id})")
@@ -255,7 +305,22 @@ def fetch_fear_greed() -> Optional[float]:
         data = resp.json()
         if "fear_and_greed" in data:
             _clear_fail("fear_greed")
-            return float(data["fear_and_greed"]["score"])
+            fg = data["fear_and_greed"]
+            det = {"value": float(fg["score"])}
+            for src, dst in (("rating", "rating"), ("timestamp", "timestamp"), ("previous_close", "previous_close"),
+                             ("previous_1_week", "week_ago"), ("previous_1_month", "month_ago"), ("previous_1_year", "year_ago")):
+                v = fg.get(src)
+                if v is None:
+                    continue
+                if dst in ("rating", "timestamp"):
+                    det[dst] = str(v)
+                else:
+                    try:
+                        det[dst] = float(v)
+                    except (TypeError, ValueError):
+                        pass
+            _set_detail("fear_greed", **det)
+            return float(fg["score"])
         # 응답 형태가 다르면(히스토리 배열만 오는 경우) 가장 최근 값을 쓴다
         hist = data.get("fear_and_greed_historical", {}).get("data", [])
         if hist:
@@ -342,12 +407,23 @@ def _parse_cape_percentile(xls_bytes: bytes, lookback_years: int) -> Optional[fl
             return None
 
         current_cape = float(series.iloc[-1])
+        cape_date = None
+        try:
+            date_col = df.columns[0]
+            raw_d = df.loc[series.index[-1], date_col]
+            ym = f"{float(raw_d):.2f}"  # Shiller 날짜 형식: 2026.09 = 2026년 9월
+            cape_date = f"{ym[:4]}-{ym[5:7]}"
+        except Exception:
+            cape_date = None
         # Shiller 데이터는 월 단위이므로 lookback_years*12개월치만 윈도우로 쓴다 (현재값 제외한 과거분).
         window_size = lookback_years * 12
         history = series.iloc[:-1].tail(window_size).tolist()
         if not history:
             _note_fail("cape_percentile", "CAPE 과거 값이 부족해 백분위를 계산하지 못함", "fetch_cape_percentile")
             return None
+        _set_detail("cape_percentile", value=current_cape, date=cape_date, lookback_years=lookback_years,
+                    low=float(min(history)), high=float(max(history)), median=float(sorted(history)[len(history) // 2]),
+                    month_ago_value=float(series.iloc[-2]) if len(series) > 1 else None)
         return _percentile_rank(history, current_cape)
     except Exception as e:
         _note_fail("cape_percentile", "CAPE 파일 해석 실패: " + describe_error(e) + " (Shiller 파일 구조 변경 가능성)", "fetch_cape_percentile")

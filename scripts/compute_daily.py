@@ -37,6 +37,18 @@ _REASON_KEYS = {"drawdown_pct": "price:sp500", "cape_percentile": "cape_percenti
                 "hy_spread_percentile": "hy_spread_percentile", "ism": "ism", "vix": "macro:vix"}
 
 
+def _dd_with_detail(close):
+    v = ds.compute_drawdown_pct(close)
+    if v is not None and ds._DD_LAST:
+        ds._set_detail("drawdown_pct", **ds._DD_LAST)
+    return v
+
+
+def _clean_details(raw):
+    """값이 실제로 산출된 입력에 대해서만 부가 정보를 남긴다(실패 항목은 제외)."""
+    return {k: dict(v) for k, v in ds.DETAILS.items() if raw.get(k) is not None}
+
+
 def _reason_key(key):
     return _REASON_KEYS.get(key, key)
 
@@ -126,7 +138,7 @@ def gather_inputs():
     vix_for_score = macro_vix.get("value")
 
     raw = {
-        "drawdown_pct": ds.compute_drawdown_pct(sp_close),
+        "drawdown_pct": _dd_with_detail(sp_close),
         "cape_percentile": _with_retry(lambda: ds.fetch_cape_percentile(cfg["valuation"]["lookback_years"]), "CAPE"),
         "fear_greed": _with_retry(ds.fetch_fear_greed, "Fear&Greed"),
         "hy_spread_percentile": _with_retry(ds.fetch_hy_spread_percentile, "HY 스프레드"),
@@ -256,6 +268,7 @@ def main():
         "data_quality": data_quality,     # live / unavailable / excluded_from_scoring
         "price_snapshot": price_snapshot,
         "result": result.to_dict() if result else None,
+        "input_details": _clean_details(inputs),
         "failure_reasons": failure_report(),  # 조회 실패 항목의 사유(성공한 항목은 없음)
     }
 

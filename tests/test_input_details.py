@@ -1,0 +1,26 @@
+import numpy as np
+import pandas as pd
+import scripts.data_sources as ds
+
+
+def test_drawdown_detail_matches_value():
+    idx = pd.date_range("2025-01-01", periods=300, freq="B")
+    s = pd.Series(np.linspace(100, 120, 300), index=idx)
+    s.iloc[100] = 150
+    ds.DETAILS.clear()
+    v = ds.compute_drawdown_pct(s)
+    d = ds._DD_LAST
+    assert d["high"] == 150.0 and d["close"] == 120.0
+    assert abs(v - (1 - d["close"] / d["high"]) * 100) < 1e-9
+
+
+def test_hy_detail_from_history_only():
+    valid = [(x.strftime("%Y-%m-%d"), float(3 + i % 5)) for i, x in enumerate(pd.date_range("2024-01-01", periods=700, freq="B"))]
+    ds.DETAILS.clear()
+    ds._record_history_detail("BAMLH0A0HYM2", valid)
+    h = ds.DETAILS["hy_spread_percentile"]
+    assert h["value"] == valid[-1][1] and h["date"] == valid[-1][0]
+    assert h["year_low"] >= h["all_low"] and h["year_high"] <= h["all_high"]
+    ds.DETAILS.clear()
+    ds._record_history_detail("OTHER", valid)
+    assert ds.DETAILS == {}

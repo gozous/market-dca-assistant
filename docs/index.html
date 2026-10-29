@@ -64,6 +64,8 @@
   .tab-pane[hidden]{display:none;}
   @media (max-width:560px){ .tab-btn{font-size:14px; padding:11px 4px;} }
 
+  .facts{grid-column:1 / -1; font-size:13px; line-height:1.7; color:var(--text); margin-top:8px; padding:8px 10px; border-left:3px solid var(--border,#8884); background:rgba(127,127,127,.08); border-radius:4px;}
+  .facts b{font-weight:600;}
   .src{grid-column:1 / -1; font-size:12px; line-height:1.7; color:var(--text-dim); margin-top:8px;}
   .src a{color:inherit; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:2px;}
   .src a:hover{color:var(--text);}
@@ -888,7 +890,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-10-29.1';
+const APP_VERSION = '2026-10-29.2';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1281,6 +1283,7 @@ function resetToTodayData(){
 }
 function afterLoad(){
   renderVersion();
+  renderFacts();
   renderSources();
   if (!todayData) { renderNoData(); return; }
   Object.values(CARD_KEYS).forEach(([,id]) => { document.getElementById(id).disabled = false; });
@@ -1295,6 +1298,49 @@ document.getElementById('today-tag').textContent = new Date().toLocaleDateString
   loadScoreHistory();       // 항목별 점수 추이(① 탭, 공식 기록만 사용)
 })();
 
+
+/* ================= 오늘 실측값 (latest.json의 input_details) =================
+   백엔드가 실제로 받은 값만 담겨 있다. 없으면 그 줄을 그리지 않는다(추정으로 채우지 않는다). */
+const nf = (v, d = 2) => Number(v).toLocaleString('en-US', {minimumFractionDigits: d, maximumFractionDigits: d});
+const has = v => v !== null && v !== undefined && Number.isFinite(Number(v));
+function factsFor(key, det, snap){
+  const parts = [];
+  if (key === 'tech' && det) {
+    if (has(det.close)) parts.push(`S&P 500 종가 <b>${nf(det.close)}</b>${det.date ? ` (${esc(det.date)})` : ''}`);
+    if (has(det.high)) parts.push(`최근 ${esc(det.window || 252)}거래일 고점 <b>${nf(det.high)}</b>${det.high_date ? ` (${esc(det.high_date)})` : ''}`);
+    if (has(det.close) && has(det.high)) parts.push(`고점 대비 낙폭(drawdown) <b>${nf((1 - det.close / det.high) * 100, 1)}%</b>`);
+  } else if (key === 'val' && det) {
+    if (has(det.value)) parts.push(`Shiller CAPE <b>${nf(det.value, 1)}</b>${det.date ? ` (${esc(det.date)} 월간 값)` : ''}`);
+    if (has(det.low) && has(det.high)) parts.push(`최근 ${esc(det.lookback_years)}년 범위 ${nf(det.low, 1)} ~ ${nf(det.high, 1)}, 중앙값 ${nf(det.median, 1)}`);
+    if (has(det.month_ago_value)) parts.push(`직전 월 ${nf(det.month_ago_value, 1)}`);
+  } else if (key === 'fear' && det) {
+    if (has(det.value)) parts.push(`CNN Fear & Greed <b>${nf(det.value, 1)}</b>${det.rating ? ` (${esc(det.rating)})` : ''}`);
+    const hist = [['previous_close', '전일'], ['week_ago', '1주 전'], ['month_ago', '1개월 전'], ['year_ago', '1년 전']]
+      .filter(([k]) => has(det[k])).map(([k, l]) => `${l} ${nf(det[k], 1)}`);
+    if (hist.length) parts.push(hist.join(' · '));
+  } else if (key === 'rate' && det) {
+    if (has(det.value)) parts.push(`HY OAS <b>${nf(det.value)}%p (${nf(det.value * 100, 0)}bp)</b>${det.date ? ` (${esc(det.date)})` : ''}`);
+    if (has(det.month_ago_value)) parts.push(`1개월 전 ${nf(det.month_ago_value)}%p (${esc(det.month_ago_date)})`);
+    if (has(det.year_low) && has(det.year_high)) parts.push(`최근 1년 범위 ${nf(det.year_low)} ~ ${nf(det.year_high)}%p`);
+    if (has(det.all_median)) parts.push(`${esc((det.since || '').slice(0, 4))}년 이후 중앙값 ${nf(det.all_median)}%p, 범위 ${nf(det.all_low)} ~ ${nf(det.all_high)}%p`);
+  } else if (key === 'macro' && det) {
+    if (has(det.value)) parts.push(`필라델피아 연은 일반활동지수 <b>${nf(det.value, 1)}</b>${det.date ? ` (${esc(String(det.date).slice(0, 7))} 월간 값)` : ''}`);
+    if (has(det.prev_value)) parts.push(`직전 월 ${nf(det.prev_value, 1)}`);
+  }
+  return parts.join('<br>');
+}
+function renderFacts(){
+  const det = (todayData && todayData.input_details) || {};
+  const map = {tech: 'drawdown_pct', val: 'cape_percentile', fear: 'fear_greed', rate: 'hy_spread_percentile', macro: 'ism'};
+  Object.entries(map).forEach(([k, dk]) => {
+    const exp = document.getElementById('exp-' + k); if (!exp) return;
+    let el = exp.parentNode.querySelector(`.facts[data-k="${k}"]`);
+    const html = factsFor(k, det[dk]);
+    if (!html) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement('div'); el.className = 'facts'; el.dataset.k = k; exp.insertAdjacentElement('afterend', el); }
+    el.innerHTML = '<b>오늘 실측값</b><br>' + html;
+  });
+}
 
 /* ================= 데이터 출처 표시 =================
    각 값이 어디서 오는지 해당 카드 안에 적는다. 이름과 주소는 수집 코드(scripts/data_sources.py)가 실제로 쓰는 것과 같다. */
@@ -1326,6 +1372,7 @@ function srcHtml(key, dateText){
 }
 function ensureSrc(anchorEl, key){
   if (!anchorEl) return null;
+  const f = anchorEl.parentNode.querySelector(`.facts[data-k="${key}"]`); if (f) anchorEl = f;
   let el = anchorEl.parentNode.querySelector(`.src[data-k="${key}"]`);
   if (!el) { el = document.createElement('div'); el.className = 'src'; el.dataset.k = key; anchorEl.insertAdjacentElement('afterend', el); }
   return el;
