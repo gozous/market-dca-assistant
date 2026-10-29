@@ -37,6 +37,15 @@ _REASON_KEYS = {"drawdown_pct": "price:sp500", "cape_percentile": "cape_percenti
                 "hy_spread_percentile": "hy_spread_percentile", "ism": "ism", "vix": "macro:vix"}
 
 
+def _write_source_health():
+    """소스 진단 기록(점수 무관). 어떤 오류가 나도 본 계산을 막지 않는다."""
+    try:
+        from scripts import source_health
+        _atomic_write_json(DATA_DIR / "source_health.json", source_health.collect())
+    except Exception as e:
+        print(f"[warn] 소스 진단 기록 실패(점수에는 영향 없음): {e}")
+
+
 def _dd_with_detail(close):
     v = ds.compute_drawdown_pct(close)
     if v is not None and ds._DD_LAST:
@@ -278,6 +287,8 @@ def main():
         oos_status = _record_incomplete_run(now, inputs, data_quality, price_snapshot, f"점수 산출 불가(대체값 사용 안 함) - {why}")
     else:
         oos_status = _record_oos_row(now, inputs, data_quality, price_snapshot, result)
+
+    _write_source_health()
 
     latest_path = DATA_DIR / "latest.json"
     if _latest_should_update(latest_path, payload):

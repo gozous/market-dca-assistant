@@ -24,3 +24,12 @@ def test_hy_detail_from_history_only():
     ds.DETAILS.clear()
     ds._record_history_detail("OTHER", valid)
     assert ds.DETAILS == {}
+
+
+def test_source_health_failure_does_not_break_main(tmp_path, monkeypatch):
+    import scripts.compute_daily as cd
+    from scripts import source_health
+    monkeypatch.setattr(cd, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(source_health, "collect", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+    cd._write_source_health()  # 예외가 밖으로 나오지 않아야 한다
+    assert not (tmp_path / "source_health.json").exists()
