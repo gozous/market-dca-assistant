@@ -64,6 +64,9 @@
   .tab-pane[hidden]{display:none;}
   @media (max-width:560px){ .tab-btn{font-size:14px; padding:11px 4px;} }
 
+  .src{grid-column:1 / -1; font-size:12px; line-height:1.7; color:var(--text-dim); margin-top:8px;}
+  .src a{color:inherit; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:2px;}
+  .src a:hover{color:var(--text);}
   .hist{grid-column:1 / -1; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-soft);}
   .hist svg{display:block; width:100%; height:auto;}
   .hist .cap{font-size:12px; line-height:1.6; color:var(--text-dim); margin-top:4px;}
@@ -413,7 +416,8 @@
   <details id="glossary"><summary>용어집 — 뉴스에서 자주 보는 말</summary><dl id="glossary-body"></dl></details>
 
   <footer>
-    시장 데이터는 Yahoo Finance 및 FRED에서 가져옵니다. 가격·매크로 카드는 조회에 실패하면 ‘조회 실패’로 표시합니다. 점수 계산에 쓰는 지표(CAPE, 공포탐욕, HY 스프레드, 필라델피아 연은 지수)가 하나라도 조회에 실패하면 중립값이나 추정값으로 메우지 않고, 종합 점수와 참고 매수 비중을 ‘산출 불가’로 표시합니다. 이때는 화면 위 경고와 해당 카드에 실패 사유가 붙습니다. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
+    <b>데이터 출처</b> — 주가·환율·달러지수·VIX는 Yahoo Finance(yfinance 라이브러리), 국채 금리·하이일드 스프레드·필라델피아 연은 지수는 FRED(세인트루이스 연은), CAPE는 Robert Shiller 교수 데이터, 공포·탐욕 지수는 CNN입니다. 각 카드에도 출처와 링크가 있어요. 평일 21:30 UTC(한국 06:30)에 자동으로 수집해요. CNN과 Yahoo는 공식 API가 아니라 바뀌거나 막힐 수 있어요.<br>
+    가격·매크로 카드는 조회에 실패하면 ‘조회 실패’로 표시합니다. 점수 계산에 쓰는 지표(CAPE, 공포탐욕, HY 스프레드, 필라델피아 연은 지수)가 하나라도 조회에 실패하면 중립값이나 추정값으로 메우지 않고, 종합 점수와 참고 매수 비중을 ‘산출 불가’로 표시합니다. 이때는 화면 위 경고와 해당 카드에 실패 사유가 붙습니다. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
     슬라이더를 움직이면 Score Engine 로직에 따라 점수·매수 비중이 재계산됩니다. 매크로 스냅샷은 참고용이며 투자 조언이 아닙니다.
   </footer>
 </div>
@@ -884,7 +888,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-10-28.2';
+const APP_VERSION = '2026-10-29.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1277,6 +1281,7 @@ function resetToTodayData(){
 }
 function afterLoad(){
   renderVersion();
+  renderSources();
   if (!todayData) { renderNoData(); return; }
   Object.values(CARD_KEYS).forEach(([,id]) => { document.getElementById(id).disabled = false; });
   recalc();
@@ -1290,6 +1295,56 @@ document.getElementById('today-tag').textContent = new Date().toLocaleDateString
   loadScoreHistory();       // 항목별 점수 추이(① 탭, 공식 기록만 사용)
 })();
 
+
+/* ================= 데이터 출처 표시 =================
+   각 값이 어디서 오는지 해당 카드 안에 적는다. 이름과 주소는 수집 코드(scripts/data_sources.py)가 실제로 쓰는 것과 같다. */
+const A = (t, u) => ({t, u});
+const SRC = {
+  tech:  {desc:'S&P 500 지수(^GSPC) 일별 종가. 최근 252거래일 최고 종가 대비 낙폭은 이 프로그램이 계산해요.',
+          links:[A('Yahoo Finance ^GSPC', 'https://finance.yahoo.com/quote/%5EGSPC/')], note:'수집: yfinance(Yahoo Finance 비공식 라이브러리)'},
+  val:   {desc:'Robert Shiller 교수의 CAPE 데이터(ie_data.xls). 최근 30년 월별 값 대비 백분위는 이 프로그램이 계산해요. 월 단위 발표라 최신 달은 늦을 수 있어요.',
+          links:[A('Shiller 데이터', 'https://shillerdata.com/')], note:'수집: Yale 사이트의 ie_data.xls, 실패하면 shillerdata.com'},
+  fear:  {desc:'CNN Fear & Greed Index(0~100).',
+          links:[A('CNN Fear & Greed', 'https://edition.cnn.com/markets/fear-and-greed')], note:'수집: CNN 페이지가 쓰는 데이터 주소(공식 API가 아니라 바뀌거나 막힐 수 있어요)'},
+  rate:  {desc:'ICE BofA US High Yield Index 옵션조정스프레드(OAS)를 FRED에서 받아요. 1996년 이후 값 대비 백분위는 이 프로그램이 계산해요.',
+          links:[A('FRED BAMLH0A0HYM2', 'https://fred.stlouisfed.org/series/BAMLH0A0HYM2')], note:'수집: FRED API'},
+  macro: {desc:'필라델피아 연은 제조업 조사의 현재 일반활동지수(월 단위, 0이 기준)를 FRED에서 받아요.',
+          links:[A('FRED GACDFSA066MSFRBPHI', 'https://fred.stlouisfed.org/series/GACDFSA066MSFRBPHI')], note:'수집: FRED API'},
+  us_2y:  {desc:'미국 국채 2년 만기 시장수익률(일별).', links:[A('FRED DGS2', 'https://fred.stlouisfed.org/series/DGS2')], note:'수집: FRED API'},
+  us_10y: {desc:'미국 국채 10년 만기 시장수익률(일별).', links:[A('FRED DGS10', 'https://fred.stlouisfed.org/series/DGS10')], note:'수집: FRED API'},
+  dxy:    {desc:'ICE 달러지수(DX-Y.NYB).', links:[A('Yahoo Finance DX-Y.NYB', 'https://finance.yahoo.com/quote/DX-Y.NYB/')], note:'수집: yfinance'},
+  usd_krw:{desc:'원/달러 환율(USDKRW=X).', links:[A('Yahoo Finance USDKRW=X', 'https://finance.yahoo.com/quote/USDKRW%3DX/')], note:'수집: yfinance'},
+  vix:    {desc:'CBOE 변동성지수(^VIX) 종가.', links:[A('Yahoo Finance ^VIX', 'https://finance.yahoo.com/quote/%5EVIX/')], note:'수집: yfinance'},
+  hy_oas: {desc:'ICE BofA US High Yield Index 옵션조정스프레드(OAS).', links:[A('FRED BAMLH0A0HYM2', 'https://fred.stlouisfed.org/series/BAMLH0A0HYM2')], note:'수집: FRED API'},
+  sp500:  {desc:'S&P 500 지수(^GSPC) 종가.', links:[A('Yahoo Finance ^GSPC', 'https://finance.yahoo.com/quote/%5EGSPC/')], note:'수집: yfinance'},
+  ndx:    {desc:'Nasdaq-100 지수(^NDX) 종가.', links:[A('Yahoo Finance ^NDX', 'https://finance.yahoo.com/quote/%5ENDX/')], note:'수집: yfinance'},
+};
+function srcHtml(key, dateText){
+  const c = SRC[key]; if (!c) return '';
+  const links = c.links.map(l => `<a href="${l.u}" target="_blank" rel="noopener noreferrer">${esc(l.t)}</a>`).join(' · ');
+  return `출처: ${esc(c.desc)} ${links}${dateText ? ` · 관측일 ${esc(dateText)}` : ''}<br>${esc(c.note)}`;
+}
+function ensureSrc(anchorEl, key){
+  if (!anchorEl) return null;
+  let el = anchorEl.parentNode.querySelector(`.src[data-k="${key}"]`);
+  if (!el) { el = document.createElement('div'); el.className = 'src'; el.dataset.k = key; anchorEl.insertAdjacentElement('afterend', el); }
+  return el;
+}
+function renderSources(){
+  const snap = (todayData && todayData.price_snapshot) || {};
+  const macro = snap.macro || {};
+  const dateOf = k => (macro[k] && macro[k].date) || '';
+  ['tech', 'val', 'fear', 'rate', 'macro'].forEach(k => {
+    const el = ensureSrc(document.getElementById('exp-' + k), k);
+    if (el) el.innerHTML = srcHtml(k, k === 'tech' ? (snap.sp500_date || '') : '');
+  });
+  [['us2y', 'us_2y'], ['us10y', 'us_10y'], ['dxy', 'dxy'], ['usdkrw', 'usd_krw'], ['vix', 'vix'], ['hy', 'hy_oas']].forEach(([id, k]) => {
+    const el = ensureSrc(document.getElementById(id + '-cap'), k);
+    if (el) el.innerHTML = srcHtml(k, dateOf(k));
+  });
+  const sp = ensureSrc(document.getElementById('sp-cap'), 'sp500'); if (sp) sp.innerHTML = srcHtml('sp500', snap.sp500_date || '');
+  const nd = ensureSrc(document.getElementById('nd-cap'), 'ndx');   if (nd) nd.innerHTML = srcHtml('ndx', snap.nasdaq100_date || '');
+}
 
 /* ================= 점수 추이 그래프 (공식 기록만 사용) =================
    history_oos.csv에 실제 조회값으로 기록된 날만 그린다. 중립값·VIX 추정으로 대체된 날과 항목별 대체 여부를 알 수 없는 행은
@@ -1405,7 +1460,7 @@ const GLOSS_MATCH = (() => {
   const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return {map, re: new RegExp(pairs.map(p => esc(p[0])).join('|'), 'g')};
 })();
-const TERM_SKIP = 'button,script,style,textarea,input,select,svg,.term,#tip,.tab-btn,h1,#glossary,.sub,.dq-badge,option';
+const TERM_SKIP = 'button,script,style,textarea,input,select,svg,.term,#tip,.tab-btn,h1,#glossary,.sub,.dq-badge,option,.src';
 const TERM_BLOCK = '.explain,.note,.macro-act,#macro-strategy,.notice,.oos-msg,li,p,.lbl,.name,.dir-labels,.val,.oos-card,#whatis,#data-banner,div';
 const isLatin = ch => /[A-Za-z0-9]/.test(ch || '');
 let termBusy = false;
