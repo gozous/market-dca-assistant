@@ -1,12 +1,12 @@
 {
-  "generated_at_utc": "2026-10-29T15:36:29.288126+00:00",
+  "generated_at_utc": "2026-10-29T15:38:47.530227+00:00",
   "rules_version": "v2-no-substitution-2026-10-26",
   "score_status": "complete",
   "missing_items": [],
   "inputs": {
     "drawdown_pct": 0.958573534070617,
     "cape_percentile": 75.83333333333333,
-    "fear_greed": 35.5428571428571,
+    "fear_greed": 35.5714285714286,
     "hy_spread_percentile": 61.910828025477706,
     "ism": 20.9,
     "net_flow_index": null,
@@ -155,7 +155,7 @@
     "nasdaq100_drawdown_pct": 4.5198862145444,
     "macro": {
       "usd_krw": {
-        "value": 1337.469970703125,
+        "value": 1337.5699462890625,
         "date": "2026-10-29",
         "series_start": "2026-08-07",
         "series": [
@@ -218,11 +218,11 @@
           1321.76,
           1324.77,
           1326.8101,
-          1337.47
+          1337.5699
         ]
       },
       "dxy": {
-        "value": 101.96099853515625,
+        "value": 101.98100280761719,
         "date": "2026-10-29",
         "series_start": "2026-08-06",
         "series": [
@@ -285,7 +285,7 @@
           101.96,
           102.32,
           102.19,
-          101.961
+          101.981
         ]
       },
       "us_2y": {
@@ -577,7 +577,7 @@
         "score": 16.1,
         "max_score": 20,
         "reason": "지금 투자 심리는 '공포' 상태예요",
-        "raw_value": 35.5428571428571
+        "raw_value": 35.5714285714286
       },
       "rate_credit": {
         "score": 6.2,
@@ -617,9 +617,9 @@
       "month_ago_value": 30.469742507138623
     },
     "fear_greed": {
-      "value": 35.5428571428571,
+      "value": 35.5714285714286,
       "rating": "fear",
-      "timestamp": "2026-10-29T15:32:03+00:00",
+      "timestamp": "2026-10-29T15:36:15+00:00",
       "previous_close": 35.8571428571429,
       "week_ago": 19.985714285714288,
       "month_ago": 31.057142857142857,
