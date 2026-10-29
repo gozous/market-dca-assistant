@@ -345,7 +345,10 @@ def fetch_cape_percentile(lookback_years: int = 30) -> Optional[float]:
     둘 다 실패하면 None을 반환한다. 규칙 v2부터 compute_daily.py는 중립값으로 대체하지 않고 '점수 산출 불가'로 처리한다.
     """
     _CAPE_PARTS.clear()
-    xls_bytes = _try_fetch_yale_direct() or _try_fetch_shillerdata_scrape()
+    # 두 경로를 모두 받아 마지막 CAPE 관측월이 더 최신인 파일을 쓴다.
+    # (예일 옛 주소는 2023-09에서 갱신이 멈춘 파일을 오류 없이 돌려주므로, 먼저 성공했다고 그대로 쓰면 안 된다.)
+    candidates = [b for b in (_try_fetch_yale_direct(), _try_fetch_shillerdata_scrape()) if b is not None]
+    xls_bytes = _pick_freshest_cape(candidates)
     if xls_bytes is None:
         _note_fail("cape_percentile", "; ".join(_CAPE_PARTS.values()) or "CAPE 파일을 받지 못함", "fetch_cape_percentile")
         return None
@@ -356,6 +359,45 @@ def fetch_cape_percentile(lookback_years: int = 30) -> Optional[float]:
 
 
 _CAPE_PARTS = {}  # 경로별 실패 사유(둘 다 실패했을 때 합쳐서 보여 준다)
+
+
+def _cape_last_label(xls_bytes: bytes) -> str:
+    """파일에서 CAPE 값이 있는 마지막 행의 관측월('YYYY-MM'). 읽지 못하면 빈 문자열."""
+    try:
+        import pandas as pd
+        from io import BytesIO
+        df = pd.read_excel(BytesIO(xls_bytes), sheet_name="Data", skiprows=7, engine="xlrd")
+        col = next((c for c in df.columns if "cape" in str(c).lower()), None)
+        if col is None:
+            return ""
+        series = pd.to_numeric(df[col], errors="coerce").dropna()
+        if series.empty:
+            return ""
+        ym = f"{float(df.loc[series.index[-1], df.columns[0]]):.2f}"
+        return f"{ym[:4]}-{ym[5:7]}"
+    except Exception:
+        return ""
+
+
+def _pick_freshest_cape(candidates):
+    """후보 파일 중 마지막 관측월이 가장 최신인 것을 고른다. 읽을 수 있는 후보가 없으면 첫 후보(있다면)를 돌려준다."""
+    best, best_label = None, ""
+    for b in candidates:
+        label = _cape_last_label(b)
+        print(f"[info] CAPE 후보 파일 마지막 관측월: {label or '읽지 못함'}")
+        if label and label > best_label:
+            best, best_label = b, label
+    return best if best is not None else (candidates[0] if candidates else None)
+
+
+def _shiller_link_from_html(html: str) -> Optional[str]:
+    """shillerdata.com 페이지에서 ie_data.xls 다운로드 주소를 찾는다.
+    페이지의 링크는 프로토콜이 없는 형태('//img1.wsimg.com/...')라서 https:를 붙인다."""
+    m = re.search(r'(?:https:)?//img1\.wsimg\.com/blobby/go/[^"\']+?ie_data\.xls[^"\']*', html)
+    if not m:
+        return None
+    url = m.group(0).replace("&amp;", "&")
+    return url if url.startswith("http") else "https:" + url
 
 
 def _try_fetch_yale_direct() -> Optional[bytes]:
@@ -376,12 +418,12 @@ def _try_fetch_shillerdata_scrape() -> Optional[bytes]:
     try:
         page = requests.get("https://shillerdata.com/", headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
         page.raise_for_status()
-        match = re.search(r'https://img1\.wsimg\.com/blobby/go/[^"]+?ie_data\.xls[^"]*', page.text)
-        if not match:
+        link = _shiller_link_from_html(page.text)
+        if not link:
             _CAPE_PARTS["shiller"] = "shillerdata.com: 다운로드 링크를 찾지 못함(페이지 구조 변경 가능성)"
             print("[warn] fetch_cape_percentile: shillerdata.com에서도 ie_data.xls 링크를 못 찾음")
             return None
-        xls_resp = requests.get(match.group(0), headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
+        xls_resp = requests.get(link, headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
         xls_resp.raise_for_status()
         return xls_resp.content
     except Exception as e:

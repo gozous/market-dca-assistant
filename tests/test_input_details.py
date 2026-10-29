@@ -33,3 +33,20 @@ def test_source_health_failure_does_not_break_main(tmp_path, monkeypatch):
     monkeypatch.setattr(source_health, "collect", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
     cd._write_source_health()  # 예외가 밖으로 나오지 않아야 한다
     assert not (tmp_path / "source_health.json").exists()
+
+
+def test_shiller_link_protocol_relative():
+    html = '<a href="//img1.wsimg.com/blobby/go/e5e7/downloads/1449/ie_data.xls?ver=1791297298731" data-aid="X">'
+    assert ds._shiller_link_from_html(html) == "https://img1.wsimg.com/blobby/go/e5e7/downloads/1449/ie_data.xls?ver=1791297298731"
+    assert ds._shiller_link_from_html('<a href="https://img1.wsimg.com/blobby/go/a/ie_data.xls?v=1">').startswith("https://")
+    assert ds._shiller_link_from_html("<html></html>") is None
+
+
+def test_pick_freshest_cape(monkeypatch):
+    labels = {b"old": "2023-09", b"new": "2026-09", b"bad": ""}
+    monkeypatch.setattr(ds, "_cape_last_label", lambda b: labels[b])
+    assert ds._pick_freshest_cape([b"old", b"new"]) == b"new"
+    assert ds._pick_freshest_cape([b"new", b"old"]) == b"new"
+    assert ds._pick_freshest_cape([b"bad", b"old"]) == b"old"
+    assert ds._pick_freshest_cape([b"bad"]) == b"bad"
+    assert ds._pick_freshest_cape([]) is None
