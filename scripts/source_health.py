@@ -58,6 +58,12 @@ def _probe_shillerdata_page():
         out["xls_links"] = [l[:160] for l in links[:5]]
         out["has_old_pattern"] = bool(re.search(r'https://img1\.wsimg\.com/blobby/go/[^"]+?ie_data\.xls[^"]*', page.text))
         out["head"] = page.text[:200]
+        snippets = {}
+        for kw in ("ie_data", "blobby", ".xls", "wsimg", "Download", "download", "Data"):
+            i = page.text.find(kw)
+            if i >= 0:
+                snippets[kw] = {"count": page.text.count(kw), "context": page.text[max(0, i - 150):i + 250]}
+        out["snippets"] = snippets
     except Exception as e:
         out["error"] = ds.describe_error(e)
     return out
