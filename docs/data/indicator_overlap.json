@@ -1,0 +1,47 @@
+{
+  "generated_at_utc": "2026-10-30T03:27:59.860814+00:00",
+  "note": "분석 기록. 점수 계산에는 쓰이지 않는다.",
+  "sources_rows": {
+    "fear_greed_history": 751,
+    "hy_oas_history": 786,
+    "sp500": 1254
+  },
+  "analysis": {
+    "n": 750,
+    "start": "2023-10-31",
+    "end": "2026-10-28",
+    "spearman": {
+      "drawdown_pct": {
+        "drawdown_pct": 1.0,
+        "fear_greed": -0.663,
+        "hy_oas": 0.277,
+        "vix": 0.648
+      },
+      "fear_greed": {
+        "drawdown_pct": -0.663,
+        "fear_greed": 1.0,
+        "hy_oas": -0.011,
+        "vix": -0.507
+      },
+      "hy_oas": {
+        "drawdown_pct": 0.277,
+        "fear_greed": -0.011,
+        "hy_oas": 1.0,
+        "vix": 0.011
+      },
+      "vix": {
+        "drawdown_pct": 0.648,
+        "fear_greed": -0.507,
+        "hy_oas": 0.011,
+        "vix": 1.0
+      }
+    },
+    "pc_variance_share": [
+      0.574,
+      0.331,
+      0.095
+    ],
+    "pc1_share": 0.574,
+    "effective_independent_inputs": 2.23
+  }
+}
