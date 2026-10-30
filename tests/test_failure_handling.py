@@ -146,7 +146,7 @@ def test_complete_run_records_v2_row_and_payload(env, monkeypatch):
     assert cd.main() == 0
     latest = json.loads((env / "latest.json").read_text(encoding="utf-8"))
     assert latest["score_status"] == "complete" and latest["missing_items"] == [] and latest["result"]["total_score"] > 0
-    assert latest["rules_version"] == cd.RULES_VERSION == "v2-no-substitution-2026-10-26"
+    assert latest["rules_version"] == cd.RULES_VERSION == "v3-freshness-gate-2026-10-30"
 
 
 # ── 2. 같은 시장일 / 우선순위 ───────────────────────────────────────────────

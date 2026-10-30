@@ -419,7 +419,7 @@
 
   <footer>
     <b>데이터 출처</b> — 주가·환율·달러지수·VIX는 Yahoo Finance(yfinance 라이브러리), 국채 금리·하이일드 스프레드·필라델피아 연은 지수는 FRED(세인트루이스 연은), CAPE는 Robert Shiller 교수 데이터, 공포·탐욕 지수는 CNN입니다. 각 카드에도 출처와 링크가 있어요. 평일 21:30 UTC(한국 06:30)에 자동으로 수집해요. CNN과 Yahoo는 공식 API가 아니라 바뀌거나 막힐 수 있어요.<br>
-    가격·매크로 카드는 조회에 실패하면 ‘조회 실패’로 표시합니다. 점수 계산에 쓰는 지표(CAPE, 공포탐욕, HY 스프레드, 필라델피아 연은 지수)가 하나라도 조회에 실패하면 중립값이나 추정값으로 메우지 않고, 종합 점수와 참고 매수 비중을 ‘산출 불가’로 표시합니다. 이때는 화면 위 경고와 해당 카드에 실패 사유가 붙습니다. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
+    가격·매크로 카드는 조회에 실패하면 ‘조회 실패’로 표시합니다. 점수 계산에 쓰는 지표(CAPE, 공포탐욕, HY 스프레드, 필라델피아 연은 지수)가 하나라도 조회에 실패하거나 마지막 관측일이 허용 지연(CAPE 3개월, 필라델피아 연은 2개월, HY 스프레드 7일, 공포탐욕 2일, 주가 5일)을 넘어 오래되면 중립값이나 추정값으로 메우지 않고, 종합 점수와 참고 매수 비중을 ‘산출 불가’로 표시합니다. 이때는 화면 위 경고와 해당 카드에 실패 사유가 붙습니다. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
     슬라이더를 움직이면 Score Engine 로직에 따라 점수·매수 비중이 재계산됩니다. 매크로 스냅샷은 참고용이며 투자 조언이 아닙니다.
   </footer>
 </div>
@@ -890,7 +890,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-10-29.3';
+const APP_VERSION = '2026-10-30.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -984,7 +984,6 @@ function localCompute(inputs){
       macro:{score:pMacro, max_score:10, reason:macroText},
     },
     buy_pct: buyPct(total, dd),  // engine.py처럼 반올림 전 점수로 버킷 판정
-    percentile_estimate: Math.max(1, Math.min(99, Math.round(100-total))),
     risk_warnings: risks,
   };
 }
@@ -1002,7 +1001,7 @@ function applyResult(data, dd, missingKeys){
     if (miss.includes(KEY_OF_ROW[key])) {          // 조회 실패: 점수도 설명도 만들지 않는다(값을 대체하지 않는다)
       document.getElementById(`pts-${key}`).textContent = '—';
       document.getElementById(`bar-${key}`).style.width = '0%';
-      document.getElementById(`exp-${key}`).textContent = `이 항목은 조회에 실패해서 점수를 계산하지 않았어요. 중립값이나 추정값으로 대체하지 않아요.\n실패 사유: ${failReasonOf(todayData, REASON_KEY[KEY_OF_ROW[key]])}`;
+      document.getElementById(`exp-${key}`).textContent = `이 항목은 조회에 실패했거나 오래된 값이라 점수를 계산하지 않았어요. 중립값이나 추정값으로 대체하지 않아요.\n실패 사유: ${failReasonOf(todayData, REASON_KEY[KEY_OF_ROW[key]])}`;
       return;
     }
     document.getElementById(`pts-${key}`).textContent = r.score.toFixed(1);

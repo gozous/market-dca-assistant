@@ -30,7 +30,6 @@ class EngineResult:
     total_score: float
     sub_scores: Dict[str, IndicatorResult]
     buy_pct: float
-    percentile_estimate: int
     risk_warnings: List[str] = field(default_factory=list)
     excluded_categories: List[str] = field(default_factory=list)  # 계산에서 제외된 카테고리(비활성화)
     max_possible_raw: float = 100.0  # 제외 전 원점수 만점 합계 (재배분 배율 참고용)
@@ -48,7 +47,6 @@ class EngineResult:
                 for name, r in self.sub_scores.items()
             },
             "buy_pct": self.buy_pct,
-            "percentile_estimate": self.percentile_estimate,
             "risk_warnings": self.risk_warnings,
             "excluded_categories": self.excluded_categories,
         }
@@ -103,14 +101,12 @@ def compute_score(inputs: Dict[str, float], config: Optional[Dict[str, Any]] = N
     total = (raw_total / max_possible * 100) if max_possible > 0 else 0.0
 
     buy_pct = _resolve_buy_pct(total, inputs["drawdown_pct"], cfg["buy_rules"])
-    percentile = _estimate_percentile(total)
     warnings = _check_risk_warnings(inputs, cfg["risk_thresholds"])
 
     return EngineResult(
         total_score=total,
         sub_scores=sub_scores,
         buy_pct=buy_pct,
-        percentile_estimate=percentile,
         risk_warnings=warnings,
         excluded_categories=excluded,
         max_possible_raw=max_possible,
@@ -167,16 +163,6 @@ def _resolve_buy_pct(total_score: float, drawdown_pct: float, buy_rules: Dict[st
             extra = add_pct  # 가장 큰 해당 구간값으로 갱신(누적 아님, 최고 구간 적용)
 
     return base + extra
-
-
-def _estimate_percentile(total_score: float) -> int:
-    """
-    단순 추정치: 총점이 높을수록(=시장이 싸고 공포에 질려있을수록) 역사적으로
-    상위(비싼 쪽) 퍼센타일에서 멀어진다는 가정의 placeholder.
-    실제로는 과거 점수 분포(백테스트 결과)에서 산출한 percentile rank로 교체해야 한다.
-    """
-    est = round(100 - total_score)
-    return max(1, min(99, est))
 
 
 def _check_risk_warnings(inputs: Dict[str, float], thresholds: Dict[str, Any]) -> List[str]:

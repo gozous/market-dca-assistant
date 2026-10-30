@@ -5,7 +5,7 @@
     1. 실데이터 소스에서 지표를 가져온다 (실패하면 None)
     2. 점수에 쓰는 지표가 하나라도 없으면 "점수 산출 불가"로 처리한다. 중립값·추정값으로 대체하지 않는다(규칙 v2).
     3. 모두 있으면 score_engine.compute_score()로 채점 (대시보드/API/백테스트와 동일 로직)
-    4. docs/data/latest.json 갱신 + (산출 가능한 날만) docs/data/history.csv에 한 줄 추가
+    4. docs/data/latest.json 갱신 (옛 history.csv는 2026-10-30부터 쓰지 않는다. 공식 기록은 history_oos.csv)
 
 출력은 정적 파일(JSON/CSV)이라 별도 서버·DB 없이 GitHub Pages가 그대로 서빙한다.
 """
@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from score_engine import compute_score, default_config
 from scripts import data_sources as ds
+from scripts import freshness
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "docs" / "data"
@@ -156,6 +157,13 @@ def gather_inputs():
         "vix": vix_for_score,
     }
 
+    # 신선도 게이트(규칙 v3): 오래된 값은 조회 실패와 똑같이 취급한다(대체하지 않는다).
+    sp_date = ds.snapshot_from_series(sp_close).get("date")
+    for key, why in freshness.stale_reasons(raw, ds.DETAILS, sp_date, datetime.now(timezone.utc).date()).items():
+        print(f"[warn] {key}: {why} - 사용하지 않음")
+        ds.FAILURE_REASONS[_reason_key(key)] = why
+        raw[key] = None
+
     for key, value in list(raw.items()):
         if value is not None and not math.isfinite(float(value)):
             print(f"[warn] {key} 값이 유한하지 않아({value}) 조회 실패로 처리")
@@ -281,7 +289,7 @@ def main():
         "failure_reasons": failure_report(),  # 조회 실패 항목의 사유(성공한 항목은 없음)
     }
 
-    # 순서: 실행 이력 → 공식 OOS 기록(산출된 날만) → 화면용 latest.json → history.csv(산출된 날만)
+    # 순서: 실행 이력 → 공식 OOS 기록(산출된 날만) → 화면용 latest.json
     if missing:
         why = "; ".join(f"{k}: {reason_for(k)}" for k in missing)
         oos_status = _record_incomplete_run(now, inputs, data_quality, price_snapshot, f"점수 산출 불가(대체값 사용 안 함) - {why}")
@@ -293,8 +301,6 @@ def main():
     latest_path = DATA_DIR / "latest.json"
     if _latest_should_update(latest_path, payload):
         _atomic_write_json(latest_path, payload)
-        if result is not None:
-            _append_history_row(now, inputs, result)
     else:
         print("[주의] 기존 latest.json이 같은 시장일의 완전한 결과라서 산출 불가 결과로 덮어쓰지 않음")
 
@@ -305,29 +311,8 @@ def main():
     return 0
 
 
-def _append_history_row(now, inputs, result):
-    """화면 참고용 누적 기록(평가에는 쓰지 않는다). 점수가 산출된 날만 쓴다. 예전 열 구성과 맞추려고
-    추정값 열(fear_greed_vix_shadow_estimate)은 비워 둔다."""
-    import csv
-    history_path = DATA_DIR / "history.csv"
-    is_new = not history_path.exists()
-    with open(history_path, "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        if is_new:
-            writer.writerow([
-                "date_utc", "total_score", "buy_pct", *inputs.keys(),
-                "fear_greed_vix_shadow_estimate", "risk_warnings",
-            ])
-        writer.writerow([
-            now.date().isoformat(), round(result.total_score, 1), result.buy_pct,
-            *[("" if inputs[k] is None else inputs[k]) for k in inputs.keys()], "",
-            ";".join(result.risk_warnings),
-        ])
-
-
-# 표본 외(out-of-sample) 검증용 기록. 규칙이 동결된 시점 이후의 신호와 가격만 쌓는다.
 # 점수식/버킷을 바꾸면 RULES_VERSION을 새로 올려서 이전 기록과 섞이지 않게 한다.
-RULES_VERSION = "v2-no-substitution-2026-10-26"
+RULES_VERSION = "v3-freshness-gate-2026-10-30"
 
 
 def _read_rows(path):
@@ -459,7 +444,7 @@ def _record_oos_row(now, inputs, data_quality, price_snapshot, result):
     실행 이력을 먼저 쓴다(두 번째 쓰기가 실패해도 이력 ⊇ 공식 기록). 두 파일 모두 임시 파일에 쓴 뒤 교체하고,
     헤더가 다르거나 파일이 깨졌으면 옆으로 보존한 뒤 새로 시작한다.
     기준 날짜는 실행 완료 시각(date_utc)이 아니라 시장일이라, UTC 자정을 넘겨 끝난 실행도 올바른 시장일에 기록된다.
-    참고: history.csv(_append_history_row)는 평가에 쓰지 않는다."""
+    참고: 옛 history.csv는 더 이상 쓰지 않는다(보관본 history_legacy_pre-v3.csv)."""
     keys = list(inputs.keys())
     header = _oos_header(keys)
     row = [now.date().isoformat(), RULES_VERSION, price_snapshot.get("sp500_date"), price_snapshot.get("sp500_close"),

@@ -45,7 +45,7 @@ def technical_score(drawdown_pct: float, cfg: Dict[str, Any]) -> IndicatorResult
     """52주 최고가 대비 하락률(%, 양수)이 클수록 점수가 높다."""
     tcfg = cfg["technical"]
     score = _clip(_interp_buckets(drawdown_pct, tcfg["buckets"]), 0, tcfg["max_score"])
-    reason = f"최근 1년 최고가보다 {drawdown_pct:.0f}% 낮은 가격이에요"
+    reason = f"최근 1년 최고가보다 {drawdown_pct:.1f}% 낮은 가격이에요"
     return IndicatorResult(score, tcfg["max_score"], reason, drawdown_pct)
 
 
@@ -59,10 +59,10 @@ def valuation_score(cape_percentile: float, cfg: Dict[str, Any]) -> IndicatorRes
     max_score = vcfg["max_score"]
     score = _clip((100 - cape_percentile) / 100 * max_score, 0, max_score)
     if cape_percentile >= 50:
-        desc = f"비싼 편이에요(최근 30년 중 상위 {100 - cape_percentile:.0f}%)"
+        desc = f"비싼 편이에요(최근 {vcfg['lookback_years']}년 중 상위 {100 - cape_percentile:.0f}%)"
     else:
-        desc = f"저렴한 편이에요(최근 30년 중 하위 {cape_percentile:.0f}%)"
-    reason = f"최근 30년 주가 수준과 비교하면 지금은 {desc}"
+        desc = f"저렴한 편이에요(최근 {vcfg['lookback_years']}년 중 하위 {cape_percentile:.0f}%)"
+    reason = f"최근 {vcfg['lookback_years']}년 주가 수준과 비교하면 지금은 {desc}"
     return IndicatorResult(score, max_score, reason, cape_percentile)
 
 
@@ -94,7 +94,7 @@ def _fear_greed_label_kr(v: float) -> str:
 
 def rate_credit_score(hy_spread_percentile: float, cfg: Dict[str, Any]) -> IndicatorResult:
     """
-    하이일드 OAS의 "역사 전체 시계열(FRED, 1996~) 대비 백분위"(0~100).
+    하이일드 OAS의 "FRED가 제공하는 기간(2026-04부터 최근 3년치) 대비 백분위"(0~100).
     100에 가까울수록 역사상 가장 스프레드가 넓었던(신용시장이 가장 불안했던) 구간 —
     다른 지표들과 동일하게 "시장이 불안해질수록 매수 기회 점수 상승" 방향으로 맞춤.
     """
@@ -102,9 +102,9 @@ def rate_credit_score(hy_spread_percentile: float, cfg: Dict[str, Any]) -> Indic
     max_score = rcfg["max_score"]
     score = _clip(hy_spread_percentile / 100 * max_score, 0, max_score)
     if hy_spread_percentile >= 50:
-        desc = f"불안한 편이에요(최근 역사 중 상위 {100 - hy_spread_percentile:.0f}%)"
+        desc = f"불안한 편이에요(FRED 제공 기간 중 상위 {100 - hy_spread_percentile:.0f}%)"
     else:
-        desc = f"안정적인 편이에요(최근 역사 중 하위 {hy_spread_percentile:.0f}%)"
+        desc = f"안정적인 편이에요(FRED 제공 기간 중 하위 {hy_spread_percentile:.0f}%)"
     reason = f"회사채 시장 분위기는 {desc}"
     return IndicatorResult(score, max_score, reason, hy_spread_percentile)
 

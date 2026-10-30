@@ -325,6 +325,12 @@ def fetch_fear_greed() -> Optional[float]:
         hist = data.get("fear_and_greed_historical", {}).get("data", [])
         if hist:
             _clear_fail("fear_greed")
+            try:
+                from datetime import datetime, timezone
+                ts = datetime.fromtimestamp(float(hist[-1]["x"]) / 1000, tz=timezone.utc).isoformat()
+                _set_detail("fear_greed", value=float(hist[-1]["y"]), timestamp=ts)
+            except Exception:
+                pass
             return float(hist[-1]["y"])
         _note_fail("fear_greed", "CNN이 응답했지만 지수 값이 없음(비공식 응답 형식이 바뀌었을 가능성)", "fetch_fear_greed")
         return None

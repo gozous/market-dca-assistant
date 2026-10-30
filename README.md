@@ -27,7 +27,7 @@ inputs = {
     "cape_percentile": 55,    # CAPE 역사(최근 30년) 백분위 (0~100)
     "fear_greed": 55,         # CNN Fear & Greed (0~100)
     "hy_spread_percentile": 30,  # 하이일드 OAS 역사 백분위 (0~100)
-    "ism": 49,                 # ISM 제조업 지수
+    "ism": 20.9,               # 필라델피아 연은 제조업 일반활동지수(0이 중립)
     "net_flow_index": 10,      # ETF/기관 순유입 지수
     "vix": 16.8,                # 선택, 리스크 경고용
 }
@@ -81,7 +81,7 @@ python3 -m backtest.cli --csv my_history.csv --base-amount 1000000 --out results
 | cape_percentile | CAPE의 최근 30년 시계열 대비 백분위 (0~100) |
 | fear_greed | CNN Fear & Greed (0~100) |
 | hy_spread_percentile | 하이일드 OAS의 역사 시계열 대비 백분위 (0~100) |
-| ism | ISM 제조업 지수 |
+| ism | 필라델피아 연은 제조업 일반활동지수 (0이 중립) |
 | net_flow_index | ETF/기관 순유입 지수 |
 | vix | VIX |
 
@@ -129,8 +129,7 @@ python3 -m backtest.cli --csv my_history.csv --base-amount 1000000 --out results
 - **설정 화면**: `config.py`의 구조를 그대로 폼으로 노출하고, 저장 시 JSON으로
   내보내 `load_config()`에 넘기면 됩니다. `api/main.py`에 이미 `GET /api/config`가 있어
   프론트가 현재 임계값을 읽어올 수 있습니다.
-- **percentile_estimate**는 현재 `100 - total_score` 근사치(placeholder)입니다.
-  백테스트로 실데이터 기준 과거 점수 분포가 쌓이면 실제 percentile rank로 교체해야 합니다.
+- 근거 없는 추정값인 `percentile_estimate`는 제거했습니다(2026-10-30). 실제 점수 분포가 쌓이면 그때 실측 백분위로 추가하세요.
 - **백테스트 결과 반영**: 실데이터로 백테스트를 돌려본 뒤, `buy_rules`나 지표 가중치를
   `config.py`(또는 JSON override)에서 조정하는 루프를 반복하게 될 가능성이 높습니다.
 - **실제 과거 데이터 엔진을 만들 때 반드시 지킬 원칙(point-in-time)**: `backtest/point_in_time.py`에

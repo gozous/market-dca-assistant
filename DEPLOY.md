@@ -27,7 +27,7 @@ git push -u origin main
 ## 3. 매일 자동 갱신 활성화
 
 `.github/workflows/daily-update.yml`이 평일 21:30 UTC(대략 미국 장 마감 후)에 자동 실행되어
-`docs/data/latest.json`, `docs/data/history.csv`를 갱신하고 커밋합니다.
+`docs/data/latest.json`, `docs/data/history_oos.csv` 등을 갱신하고 커밋합니다.
 
 - 저장소 **Settings → Actions → General**에서 Actions가 켜져 있는지 확인
 - **Settings → Actions → General → Workflow permissions**을 `Read and write permissions`로 설정

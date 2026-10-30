@@ -39,7 +39,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "rate_credit": {
         "enabled": True,
         "max_score": 10,
-        # 하이일드 OAS의 "역사 전체 시계열 대비 백분위"를 쓴다 (FRED, 1996~).
+        # 하이일드 OAS의 "FRED가 제공하는 기간 대비 백분위"를 쓴다. FRED는 2026-04부터 이 시리즈를 최근 3년치만 제공한다(과거엔 1996~).
         # 절대 bp 구간을 임의로 정하면 평시/위기 구간 비율을 왜곡할 수 있어 CAPE와
         # 동일하게 percentile 방식으로 통일. percentile 100(역사상 가장 스트레스) -> 만점.
     },
