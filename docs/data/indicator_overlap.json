@@ -1,0 +1,15 @@
+{
+  "generated_at_utc": "2026-10-30T03:25:39.602227+00:00",
+  "note": "분석 기록. 점수 계산에는 쓰이지 않는다.",
+  "sources_rows": {
+    "fear_greed_history": 1,
+    "hy_oas_history": 786,
+    "sp500": 1254
+  },
+  "analysis": {
+    "n": 0,
+    "start": null,
+    "end": null,
+    "error": "겹치는 날짜가 30일 미만이라 분석할 수 없음"
+  }
+}

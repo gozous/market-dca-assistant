@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-10-30T01:16:15.509340+00:00",
-  "rules_version": "v3-freshness-gate-2026-10-30",
+  "generated_at_utc": "2026-10-30T03:25:32.663235+00:00",
+  "rules_version": "v4-crosscheck-2026-10-30",
   "score_status": "complete",
   "missing_items": [],
   "inputs": {
@@ -155,7 +155,7 @@
     "nasdaq100_drawdown_pct": 5.83504811962322,
     "macro": {
       "usd_krw": {
-        "value": 1338.97998046875,
+        "value": 1336.6800537109375,
         "date": "2026-10-30",
         "series_start": "2026-08-10",
         "series": [
@@ -218,11 +218,11 @@
           1324.77,
           1326.8101,
           1340.34,
-          1338.98
+          1336.6801
         ]
       },
       "dxy": {
-        "value": 101.6709976196289,
+        "value": 101.66999816894531,
         "date": "2026-10-29",
         "series_start": "2026-08-06",
         "series": [
@@ -285,7 +285,7 @@
           101.96,
           102.32,
           102.19,
-          101.671
+          101.67
         ]
       },
       "us_2y": {
@@ -645,6 +645,16 @@
       "prev_value": 37.8,
       "prev_date": "2026-09-01"
     }
+  },
+  "price_crosscheck": {
+    "checked": 9,
+    "window": 10,
+    "tolerance": 0.002,
+    "worst_date": "2026-10-23",
+    "worst_yahoo": 7623.68017578125,
+    "worst_fred": 7623.68,
+    "worst_diff_pct": 0.0,
+    "last_checked_date": "2026-10-28"
   },
   "failure_reasons": {}
 }
