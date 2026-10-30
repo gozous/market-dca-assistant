@@ -49,8 +49,10 @@ def collect():
     vix.index = pd.to_datetime([i.date() for i in vix.index])
     dd = (1 - sp / sp.rolling(252, min_periods=252).max()) * 100
 
-    from datetime import date
-    r = ds.requests.get(f"https://production.dataviz.cnn.io/index/fearandgreed/graphdata/{date.today().isoformat()}",
+    # CNN 주소의 날짜는 "이 날짜부터의 이력"을 뜻한다(오늘 날짜를 넣으면 한 건만 온다). HY 이력(약 3년)에 맞춰 3년 전부터 요청한다.
+    from datetime import date, timedelta
+    start = (date.today() - timedelta(days=3 * 365)).isoformat()
+    r = ds.requests.get(f"https://production.dataviz.cnn.io/index/fearandgreed/graphdata/{start}",
                         headers=CNN_HEADERS, timeout=20)
     r.raise_for_status()
     hist = r.json().get("fear_and_greed_historical", {}).get("data", [])
