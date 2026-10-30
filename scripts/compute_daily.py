@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from score_engine import compute_score, default_config
 from scripts import data_sources as ds
 from scripts import freshness
+from scripts import price_crosscheck
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "docs" / "data"
@@ -45,6 +46,33 @@ def _write_source_health():
         _atomic_write_json(DATA_DIR / "source_health.json", source_health.collect())
     except Exception as e:
         print(f"[warn] 소스 진단 기록 실패(점수에는 영향 없음): {e}")
+
+
+def _write_indicator_overlap(max_age_days=7):
+    """지표 중복 분석(점수 무관). 파일이 없거나 오래됐을 때만 다시 만든다. 어떤 오류가 나도 본 계산을 막지 않는다."""
+    path = DATA_DIR / "indicator_overlap.json"
+    try:
+        if path.exists() and (time.time() - path.stat().st_mtime) < max_age_days * 86400:
+            return
+        from scripts import indicator_overlap
+        _atomic_write_json(path, indicator_overlap.collect())
+    except Exception as e:
+        print(f"[warn] 지표 중복 분석 실패(점수에는 영향 없음): {e}")
+
+
+def _crosscheck_sp500(sp_close):
+    """(통과 여부, 사유, 상세). 두 번째 출처를 받지 못하면 검증할 수 없으므로 통과시키지 않는다."""
+    try:
+        if not ds.FRED_API_KEY:
+            return False, "FRED_API_KEY가 없어 S&P 500 종가를 교차 검증할 수 없음", {}
+        fred = price_crosscheck.fetch_fred_sp500(ds.FRED_API_KEY, ds.requests)
+        if not fred:
+            return False, "FRED SP500 시리즈에서 관측값을 받지 못해 교차 검증할 수 없음", {}
+        valid = sp_close.dropna()
+        yahoo = [(i.date().isoformat(), float(v)) for i, v in valid.items()]
+        return price_crosscheck.compare(yahoo, fred)
+    except Exception as e:
+        return False, "S&P 500 교차 검증 중 오류: " + ds.describe_error(e), {}
 
 
 def _dd_with_detail(close):
@@ -78,7 +106,7 @@ class DataUnavailable(Exception):
 #   "점수 산출 불가"다. 중립값이나 VIX 추정으로 메우지 않는다. 이 경우 latest.json에는 조회된 항목과 실패 사유만 남기고
 #   공식 기록(history_oos.csv)에는 쓰지 않으며, 실행은 실패 상태(종료 코드 1)로 끝낸다.
 # VIX와 나스닥100은 점수에 쓰이지 않는 표시용(VIX는 경고 판정용)이라 없어도 점수는 계산된다. 값이 없으면 빈 칸이다.
-SCORING_KEYS = ("cape_percentile", "fear_greed", "hy_spread_percentile", "ism")
+SCORING_KEYS = ("drawdown_pct", "cape_percentile", "fear_greed", "hy_spread_percentile", "ism")
 # 이전 규칙(v1)이 만든 데이터에 남아 있는 대체값 상태. 새 코드는 쓰지 않고, 옛 파일을 알아보는 데만 쓴다.
 LEGACY_SUBSTITUTE_STATES = ("fallback_neutral", "derived_from_vix")
 
@@ -163,6 +191,15 @@ def gather_inputs():
         print(f"[warn] {key}: {why} - 사용하지 않음")
         ds.FAILURE_REASONS[_reason_key(key)] = why
         raw[key] = None
+
+    # 교차 검증(규칙 v4): Yahoo의 S&P 500 종가를 FRED의 SP500과 대조한다. 어긋나거나 검증할 수 없으면 낙폭 입력을 쓰지 않는다.
+    if raw.get("drawdown_pct") is not None:
+        ok, why, det = _crosscheck_sp500(sp_close)
+        ds.DETAILS["_price_crosscheck"] = det
+        if not ok:
+            print(f"[warn] drawdown_pct: {why} - 사용하지 않음")
+            ds.FAILURE_REASONS[_reason_key("drawdown_pct")] = why
+            raw["drawdown_pct"] = None
 
     for key, value in list(raw.items()):
         if value is not None and not math.isfinite(float(value)):
@@ -286,6 +323,7 @@ def main():
         "price_snapshot": price_snapshot,
         "result": result.to_dict() if result else None,
         "input_details": _clean_details(inputs),
+        "price_crosscheck": ds.DETAILS.get("_price_crosscheck"),
         "failure_reasons": failure_report(),  # 조회 실패 항목의 사유(성공한 항목은 없음)
     }
 
@@ -297,6 +335,7 @@ def main():
         oos_status = _record_oos_row(now, inputs, data_quality, price_snapshot, result)
 
     _write_source_health()
+    _write_indicator_overlap()
 
     latest_path = DATA_DIR / "latest.json"
     if _latest_should_update(latest_path, payload):
@@ -312,7 +351,7 @@ def main():
 
 
 # 점수식/버킷을 바꾸면 RULES_VERSION을 새로 올려서 이전 기록과 섞이지 않게 한다.
-RULES_VERSION = "v3-freshness-gate-2026-10-30"
+RULES_VERSION = "v4-crosscheck-2026-10-30"
 
 
 def _read_rows(path):

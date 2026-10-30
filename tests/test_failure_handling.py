@@ -75,8 +75,9 @@ def test_all_optional_sources_failed_is_incomplete_without_any_substitute(env, m
     assert cd.main() == 1                                            # 실패 상태로 끝남
     latest = json.loads((env / "latest.json").read_text(encoding="utf-8"))
     assert latest["score_status"] == "incomplete" and latest["result"] is None
-    assert set(latest["missing_items"]) == set(cd.SCORING_KEYS)
-    for k in cd.SCORING_KEYS:
+    optional = set(cd.SCORING_KEYS) - {"drawdown_pct"}               # 가격(낙폭)은 이 시험에서 정상 조회
+    assert set(latest["missing_items"]) == optional
+    for k in optional:
         assert latest["inputs"][k] is None and latest["data_quality"][k] == "unavailable"   # 중립값으로 메우지 않음
     assert not (env / "history_oos.csv").exists() and not (env / "history.csv").exists()     # 공식 기록·누적 기록 불변
     last = rows(env / "history_oos_runs.csv")[-1]
@@ -146,7 +147,7 @@ def test_complete_run_records_v2_row_and_payload(env, monkeypatch):
     assert cd.main() == 0
     latest = json.loads((env / "latest.json").read_text(encoding="utf-8"))
     assert latest["score_status"] == "complete" and latest["missing_items"] == [] and latest["result"]["total_score"] > 0
-    assert latest["rules_version"] == cd.RULES_VERSION == "v3-freshness-gate-2026-10-30"
+    assert latest["rules_version"] == cd.RULES_VERSION == "v4-crosscheck-2026-10-30"
 
 
 # ── 2. 같은 시장일 / 우선순위 ───────────────────────────────────────────────
