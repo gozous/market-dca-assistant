@@ -39,7 +39,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "rate_credit": {
         "enabled": True,
         "max_score": 10,
-        # 하이일드 OAS의 "FRED가 제공하는 기간 대비 백분위"를 쓴다. FRED는 2026-04부터 이 시리즈를 최근 3년치만 제공한다(과거엔 1996~).
+        # Moody's Baa 회사채 − 10년 국채 스프레드(FRED BAA10Y, 1986~)의 "전체 이력 대비 백분위"를 쓴다(규칙 v5, 2026-10-31).
+        # 하이일드 OAS는 FRED가 2026-04부터 최근 3년치만 제공해 점수에는 쓰지 않고 화면에 참고로만 보여준다.
         # 절대 bp 구간을 임의로 정하면 평시/위기 구간 비율을 왜곡할 수 있어 CAPE와
         # 동일하게 percentile 방식으로 통일. percentile 100(역사상 가장 스트레스) -> 만점.
     },

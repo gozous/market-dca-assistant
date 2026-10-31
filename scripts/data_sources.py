@@ -20,14 +20,15 @@ FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
 
 # ── 실패 사유 기록 ─────────────────────────────────────────────────────────
 # 조회가 실패하면 "왜 실패했는지"를 사람이 읽을 수 있는 한 줄로 남긴다(화면과 실행 이력에 표시).
-# 키: price:sp500, price:nasdaq100, cape_percentile, fear_greed, hy_spread_percentile, ism, macro:<항목>.
+# 키: price:sp500, price:nasdaq100, cape_percentile, fear_greed, credit_spread_percentile, ism, macro:<항목>.
 # 같은 항목을 재시도하다 성공하면 사유를 지운다(마지막 시도의 결과만 남는다).
 # 비밀값(API 키)이 사유 문구에 섞여 공개 저장소의 latest.json으로 새지 않도록 반드시 가린다.
 FAILURE_REASONS = {}
 _PRICE_KEYS = {"^GSPC": "price:sp500", "^NDX": "price:nasdaq100"}
 _YF_KEYS = {"USDKRW=X": "macro:usd_krw", "DX-Y.NYB": "macro:dxy", "^VIX": "macro:vix"}
 _FRED_LATEST_KEYS = {"GACDFSA066MSFRBPHI": "ism"}
-_FRED_HISTORY_KEYS = {"BAMLH0A0HYM2": "hy_spread_percentile"}
+# 점수에 쓰는 신용 지표는 Moody's Baa−10년 국채 스프레드(BAA10Y, 1986~). 하이일드 OAS(BAMLH0A0HYM2)는 FRED가 최근 3년치만 줘서 참고용이다.
+_FRED_HISTORY_KEYS = {"BAMLH0A0HYM2": "hy_3y_percentile", "BAA10Y": "credit_spread_percentile"}
 
 
 # 화면에 실제 값·관측일·범위를 보여 주기 위한 부가 정보. 이미 받은 데이터에서만 뽑으며 추가 조회나 추정은 하지 않는다.
@@ -193,8 +194,9 @@ def fetch_fred_series_history(series_id: str, limit: int = 100000):
 
 
 def _record_history_detail(series_id, valid):
-    """HY 스프레드 전체 이력에서 화면용 요약(현재값·관측일·1개월 전·1년 범위·전체 범위)을 만든다."""
-    if series_id != "BAMLH0A0HYM2" or not valid:
+    """FRED 신용 스프레드 전체 이력에서 화면용 요약(현재값·관측일·1개월 전·1년 범위·전체 범위)을 만든다."""
+    detail_key = _FRED_HISTORY_KEYS.get(series_id)
+    if detail_key is None or not valid:
         return
     from datetime import date as _d, timedelta
     last_date, last_val = valid[-1]
@@ -208,7 +210,7 @@ def _record_history_detail(series_id, valid):
         y1 = [v for d, v in valid if d > (ld - timedelta(days=365)).isoformat()]
         allv = [v for _, v in valid]
         srt = sorted(allv)
-        _set_detail("hy_spread_percentile", value=last_val, date=last_date,
+        _set_detail(detail_key, value=last_val, date=last_date,
                     month_ago_value=m1[1] if m1 else None, month_ago_date=m1[0] if m1 else None,
                     year_low=min(y1), year_high=max(y1),
                     all_low=srt[0], all_high=srt[-1], all_median=srt[len(srt) // 2],
@@ -269,11 +271,21 @@ def fetch_ism() -> Optional[float]:
 
 
 
+def fetch_credit_spread_percentile() -> Optional[float]:
+    """
+    점수에 쓰는 신용 지표(규칙 v5): Moody's Baa 회사채 수익률 − 10년 국채 수익률(FRED BAA10Y, 일별, 1986-01-02~)의
+    "전체 이력 대비 백분위"(0~100). 투자등급(Baa) 채권 스프레드이며 하이일드와 다른 지표다.
+    """
+    history = fetch_fred_series_history("BAA10Y")
+    if not history:
+        return None
+    return _percentile_rank(history[:-1], history[-1])
+
+
 def fetch_hy_spread_percentile() -> Optional[float]:
     """
-    하이일드 OAS의 "FRED가 제공하는 전체 시계열 대비 백분위"(0~100). 2026-10 확인 결과 FRED 이력은 2023-10-30부터라 약 3년치다(과거엔 1996~였음).
-    절대 bp 구간을 임의로 정하면 평시/위기 구간 비율을 왜곡할 수 있어서,
-    CAPE와 동일하게 percentile 방식으로 통일했다.
+    [참고용, 점수에 쓰지 않음] 하이일드 OAS의 "FRED가 제공하는 기간 대비 백분위"(0~100).
+    FRED는 2026-04부터 이 시리즈를 최근 3년치(2023-10-30~)만 제공한다. 점수용 신용 지표와 비교해 볼 수 있게 화면에 같이 보여준다.
     """
     history = fetch_fred_series_history("BAMLH0A0HYM2")
     if not history:

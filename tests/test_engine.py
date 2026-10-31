@@ -29,7 +29,7 @@ def test_total_score_is_rescaled_over_enabled_categories():
     # 나머지 5개 카테고리(90점 만점)를 기준으로 100점으로 재배분되어야 한다.
     inputs = {
         "drawdown_pct": 20, "cape_percentile": 10, "fear_greed": 20,
-        "hy_spread_percentile": 10, "ism": 45, "net_flow_index": -50, "vix": 20,
+        "credit_spread_percentile": 10, "ism": 45, "net_flow_index": -50, "vix": 20,
     }
     result = compute_score(inputs)
     assert "flow" not in result.sub_scores
@@ -44,7 +44,7 @@ def test_excluded_category_does_not_silently_fill_neutral():
     # flow를 극단값으로 줘도(중립이 아니어도) 결과에 전혀 영향이 없어야 한다 — 계산에서 아예 빠지므로.
     base_inputs = {
         "drawdown_pct": 15, "cape_percentile": 5, "fear_greed": 40,
-        "hy_spread_percentile": 25, "ism": 10, "vix": 18,
+        "credit_spread_percentile": 25, "ism": 10, "vix": 18,
     }
     result_a = compute_score({**base_inputs, "net_flow_index": -100})
     result_b = compute_score({**base_inputs, "net_flow_index": 100})
@@ -55,7 +55,7 @@ def test_buy_pct_bucket_and_overlay():
     # 총점이 0~20 구간이지만 drawdown이 30 이상이면 overlay가 최소 매수를 만든다
     inputs = {
         "drawdown_pct": 32, "cape_percentile": 60, "fear_greed": 95,
-        "hy_spread_percentile": 95, "ism": 68, "net_flow_index": 95, "vix": 10,
+        "credit_spread_percentile": 95, "ism": 68, "net_flow_index": 95, "vix": 10,
     }
     result = compute_score(inputs)
     assert result.buy_pct >= 100  # drawdown overlay(+100) 적용 확인
@@ -64,7 +64,7 @@ def test_buy_pct_bucket_and_overlay():
 def test_risk_warnings_trigger():
     inputs = {
         "drawdown_pct": 5, "cape_percentile": 95, "fear_greed": 85,
-        "hy_spread_percentile": 95, "ism": 55, "net_flow_index": 20, "vix": 30,
+        "credit_spread_percentile": 95, "ism": 55, "net_flow_index": 20, "vix": 30,
     }
     result = compute_score(inputs)
     assert "CAPE 역사 고평가권" in result.risk_warnings
@@ -112,7 +112,7 @@ import math as _math
 import pytest as _pytest
 
 _OK = dict(drawdown_pct=10.0, cape_percentile=50.0, fear_greed=50.0,
-           hy_spread_percentile=50.0, ism=0.0)
+           credit_spread_percentile=50.0, ism=0.0)
 _REQUIRED = list(_OK)
 
 

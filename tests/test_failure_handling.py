@@ -11,7 +11,7 @@ import scripts.compute_daily as cd
 from scripts import data_sources as ds
 from score_engine import compute_score
 
-INP = {"drawdown_pct": 8.0, "cape_percentile": 76.0, "fear_greed": 30.0, "hy_spread_percentile": 40.0,
+INP = {"drawdown_pct": 8.0, "cape_percentile": 76.0, "fear_greed": 30.0, "credit_spread_percentile": 40.0,
        "ism": -3.0, "net_flow_index": 0.0, "vix": 22.0}
 LIVE = {k: "live" for k in INP}; LIVE["net_flow_index"] = "excluded_from_scoring"
 UTC = dt.timezone.utc
@@ -46,7 +46,7 @@ def _fake_sources(monkeypatch, price_ok=True, optional_ok=True, calls=None):
     opt = (lambda v: (lambda *a, **k: v)) if optional_ok else (lambda v: (lambda *a, **k: None))
     monkeypatch.setattr(ds, "fetch_cape_percentile", opt(70.0))
     monkeypatch.setattr(ds, "fetch_fear_greed", opt(35.0))
-    monkeypatch.setattr(ds, "fetch_hy_spread_percentile", opt(40.0))
+    monkeypatch.setattr(ds, "fetch_credit_spread_percentile", opt(40.0))
     monkeypatch.setattr(ds, "fetch_ism", opt(-2.0))
     monkeypatch.setattr(ds, "fetch_net_flow_index", opt(0.0))
     macro = {"vix": {"value": 21.0, "date": "2026-10-16", "series": [21.0], "series_start": "2026-10-16"}}
@@ -147,7 +147,7 @@ def test_complete_run_records_v2_row_and_payload(env, monkeypatch):
     assert cd.main() == 0
     latest = json.loads((env / "latest.json").read_text(encoding="utf-8"))
     assert latest["score_status"] == "complete" and latest["missing_items"] == [] and latest["result"]["total_score"] > 0
-    assert latest["rules_version"] == cd.RULES_VERSION == "v4-crosscheck-2026-10-30"
+    assert latest["rules_version"] == cd.RULES_VERSION == "v5-baa-credit-2026-10-31"
 
 
 # ── 2. 같은 시장일 / 우선순위 ───────────────────────────────────────────────
@@ -243,3 +243,23 @@ def test_unmeasured_flow_is_stored_empty_not_zero(env, monkeypatch):
     base = {k: v for k, v in latest["inputs"].items() if k != "net_flow_index"}
     for flow in (0.0, 95.0):
         assert round(real({**base, "net_flow_index": flow}, cd.default_config()).total_score, 1) == latest["result"]["total_score"]
+
+
+def test_hy_reference_does_not_block_score_and_is_not_counted_as_substitution(env, monkeypatch):
+    _fake_sources(monkeypatch)
+    monkeypatch.setattr(ds, "fetch_hy_spread_percentile", lambda: None)       # 참고용 HY 실패
+    assert cd.main() == 0
+    latest = json.loads((env / "latest.json").read_text(encoding="utf-8"))
+    assert latest["score_status"] == "complete" and latest["inputs"]["hy_3y_percentile"] is None
+    assert latest["data_quality"]["hy_3y_percentile"] == "reference_unavailable"
+    assert "hy_3y_percentile" not in cd.SCORING_KEYS
+
+
+def test_hy_reference_value_is_recorded_when_available(env, monkeypatch):
+    _fake_sources(monkeypatch)
+    monkeypatch.setattr(ds, "fetch_hy_spread_percentile", lambda: 68.4)
+    assert cd.main() == 0
+    latest = json.loads((env / "latest.json").read_text(encoding="utf-8"))
+    assert latest["inputs"]["hy_3y_percentile"] == 68.4 and latest["data_quality"]["hy_3y_percentile"] == "reference_only"
+    row = list(csv.DictReader(open(env / "history_oos.csv", newline="", encoding="utf-8")))[-1]
+    assert row["hy_3y_percentile"] == "68.4" and row["dq_hy_3y_percentile"] == "reference_only"

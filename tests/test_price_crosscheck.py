@@ -60,7 +60,7 @@ def test_main_uses_crosscheck(tmp_path, monkeypatch, fred_mode):
         return f
     monkeypatch.setattr(ds, "fetch_cape_percentile", setd("cape_percentile", 70.0, date=md[:7]))
     monkeypatch.setattr(ds, "fetch_fear_greed", setd("fear_greed", 35.0, timestamp=md + "T23:59:59+00:00"))
-    monkeypatch.setattr(ds, "fetch_hy_spread_percentile", setd("hy_spread_percentile", 40.0, date=md))
+    monkeypatch.setattr(ds, "fetch_credit_spread_percentile", setd("credit_spread_percentile", 40.0, date=md))
     monkeypatch.setattr(ds, "fetch_ism", setd("ism", -2.0, date=md[:7] + "-01"))
     monkeypatch.setattr(ds, "fetch_net_flow_index", lambda: None)
     monkeypatch.setattr(ds, "fetch_macro_snapshot", lambda: {})

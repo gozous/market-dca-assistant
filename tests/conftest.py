@@ -35,3 +35,10 @@ def _crosscheck_off_unless_requested(request, monkeypatch):
 def _no_network_overlap(monkeypatch):
     from scripts import indicator_overlap
     monkeypatch.setattr(indicator_overlap, "collect", lambda: {"note": "test"})
+
+
+@pytest.fixture(autouse=True)
+def _no_network_hy_reference(monkeypatch):
+    """참고용 HY(3년치) 조회는 네트워크를 쓰므로 테스트에서는 없는 것으로 둔다."""
+    from scripts import data_sources as ds
+    monkeypatch.setattr(ds, "fetch_hy_spread_percentile", lambda: None)

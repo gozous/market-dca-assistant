@@ -9,7 +9,7 @@ from typing import Dict, Optional
 # 허용 지연. 기준은 S&P 500의 마지막 종가일(시장일)이다.
 MAX_LAG = {
     "fear_greed": ("days", 2),
-    "hy_spread_percentile": ("days", 7),
+    "credit_spread_percentile": ("days", 7),
     "cape_percentile": ("months", 3),
     "ism": ("months", 2),
 }

@@ -40,8 +40,8 @@ def test_http_codes_are_explained():
 
 def test_fred_without_key_records_reason(monkeypatch):
     monkeypatch.setattr(ds, "FRED_API_KEY", "")
-    assert ds.fetch_ism() is None and ds.fetch_hy_spread_percentile() is None
-    assert "FRED_API_KEY" in ds.FAILURE_REASONS["ism"] and "FRED_API_KEY" in ds.FAILURE_REASONS["hy_spread_percentile"]
+    assert ds.fetch_ism() is None and ds.fetch_credit_spread_percentile() is None
+    assert "FRED_API_KEY" in ds.FAILURE_REASONS["ism"] and "FRED_API_KEY" in ds.FAILURE_REASONS["credit_spread_percentile"]
 
 
 def test_fred_http_error_reason_has_no_key(monkeypatch):
@@ -112,7 +112,7 @@ def test_latest_json_has_failure_reasons_and_no_secret(tmp_path, monkeypatch):
     monkeypatch.setattr(ds, "drop_unfinished_last_bar", lambda s, **k: s)
     monkeypatch.setattr(ds, "fetch_cape_percentile", lambda *a, **k: (ds._note_fail("cape_percentile", "예일대 파일: HTTP 404 주소를 찾을 수 없음", "c"), None)[1])
     monkeypatch.setattr(ds, "fetch_fear_greed", lambda *a, **k: 35.0)
-    monkeypatch.setattr(ds, "fetch_hy_spread_percentile", lambda *a, **k: 40.0)
+    monkeypatch.setattr(ds, "fetch_credit_spread_percentile", lambda *a, **k: 40.0)
     monkeypatch.setattr(ds, "fetch_ism", lambda *a, **k: -2.0)
     monkeypatch.setattr(ds, "fetch_net_flow_index", lambda *a, **k: 0.0)
     macro = {"vix": {"value": 21.0, "date": "2026-10-16", "series": [21.0], "series_start": "2026-10-16"}}

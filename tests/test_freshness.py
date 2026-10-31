@@ -4,10 +4,10 @@ from scripts import freshness as fr
 
 pytestmark = pytest.mark.real_freshness
 TODAY = dt.date(2026, 10, 30)
-VALS = {"drawdown_pct": 1.0, "cape_percentile": 90.0, "fear_greed": 40.0, "hy_spread_percentile": 50.0, "ism": 20.0}
+VALS = {"drawdown_pct": 1.0, "cape_percentile": 90.0, "fear_greed": 40.0, "credit_spread_percentile": 50.0, "ism": 20.0}
 DET = {
     "cape_percentile": {"date": "2026-10"}, "ism": {"date": "2026-10-01"},
-    "hy_spread_percentile": {"date": "2026-10-27"}, "fear_greed": {"timestamp": "2026-10-29T23:59:59+00:00"},
+    "credit_spread_percentile": {"date": "2026-10-27"}, "fear_greed": {"timestamp": "2026-10-29T23:59:59+00:00"},
 }
 
 
@@ -24,7 +24,7 @@ def test_stale_cape_is_rejected():
 @pytest.mark.parametrize("key,date,expect_stale", [
     ("cape_percentile", "2026-07", False), ("cape_percentile", "2026-06", True),
     ("ism", "2026-08", False), ("ism", "2026-07", True),
-    ("hy_spread_percentile", "2026-10-22", False), ("hy_spread_percentile", "2026-10-21", True),
+    ("credit_spread_percentile", "2026-10-22", False), ("credit_spread_percentile", "2026-10-21", True),
 ])
 def test_boundaries(key, date, expect_stale):
     det = {**DET, key: {"date": date}}
@@ -40,7 +40,7 @@ def test_fear_greed_boundary():
 
 def test_unknown_observation_date_is_rejected_not_assumed_fresh():
     r = fr.stale_reasons(VALS, {}, "2026-10-29", TODAY)
-    assert set(r) == {"cape_percentile", "fear_greed", "hy_spread_percentile", "ism"}
+    assert set(r) == {"cape_percentile", "fear_greed", "credit_spread_percentile", "ism"}
 
 
 def test_old_market_date_rejects_drawdown():
@@ -74,7 +74,7 @@ def _run_main(tmp_path, monkeypatch, cape_date):
     ym = md[:7]
     monkeypatch.setattr(ds, "fetch_cape_percentile", setd("cape_percentile", 70.0, date=cape_date))
     monkeypatch.setattr(ds, "fetch_fear_greed", setd("fear_greed", 35.0, timestamp=md + "T23:59:59+00:00"))
-    monkeypatch.setattr(ds, "fetch_hy_spread_percentile", setd("hy_spread_percentile", 40.0, date=md))
+    monkeypatch.setattr(ds, "fetch_credit_spread_percentile", setd("credit_spread_percentile", 40.0, date=md))
     monkeypatch.setattr(ds, "fetch_ism", setd("ism", -2.0, date=ym + "-01"))
     monkeypatch.setattr(ds, "fetch_net_flow_index", lambda: None)
     monkeypatch.setattr(ds, "fetch_macro_snapshot", lambda: {})

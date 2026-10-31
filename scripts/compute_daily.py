@@ -31,12 +31,13 @@ DATA_DIR = REPO_ROOT / "docs" / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # 기록 파일/입력의 열 구성(순서 고정). 값이 없을 때 채우는 값은 없다: 조회에 실패한 항목은 None(빈 칸)이다.
-INPUT_KEYS = ("drawdown_pct", "cape_percentile", "fear_greed", "hy_spread_percentile", "ism", "net_flow_index", "vix")
+INPUT_KEYS = ("drawdown_pct", "cape_percentile", "fear_greed", "credit_spread_percentile", "ism", "net_flow_index", "vix", "hy_3y_percentile")
 
 
 # 화면/로그에서 쓰는 항목 키 → 실패 사유 기록기(data_sources.FAILURE_REASONS)의 키
 _REASON_KEYS = {"drawdown_pct": "price:sp500", "cape_percentile": "cape_percentile", "fear_greed": "fear_greed",
-                "hy_spread_percentile": "hy_spread_percentile", "ism": "ism", "vix": "macro:vix"}
+                "credit_spread_percentile": "credit_spread_percentile", "ism": "ism", "vix": "macro:vix",
+                "hy_3y_percentile": "hy_3y_percentile"}
 
 
 def _write_source_health():
@@ -106,7 +107,7 @@ class DataUnavailable(Exception):
 #   "점수 산출 불가"다. 중립값이나 VIX 추정으로 메우지 않는다. 이 경우 latest.json에는 조회된 항목과 실패 사유만 남기고
 #   공식 기록(history_oos.csv)에는 쓰지 않으며, 실행은 실패 상태(종료 코드 1)로 끝낸다.
 # VIX와 나스닥100은 점수에 쓰이지 않는 표시용(VIX는 경고 판정용)이라 없어도 점수는 계산된다. 값이 없으면 빈 칸이다.
-SCORING_KEYS = ("drawdown_pct", "cape_percentile", "fear_greed", "hy_spread_percentile", "ism")
+SCORING_KEYS = ("drawdown_pct", "cape_percentile", "fear_greed", "credit_spread_percentile", "ism")
 # 이전 규칙(v1)이 만든 데이터에 남아 있는 대체값 상태. 새 코드는 쓰지 않고, 옛 파일을 알아보는 데만 쓴다.
 LEGACY_SUBSTITUTE_STATES = ("fallback_neutral", "derived_from_vix")
 
@@ -179,7 +180,8 @@ def gather_inputs():
         "drawdown_pct": _dd_with_detail(sp_close),
         "cape_percentile": _with_retry(lambda: ds.fetch_cape_percentile(cfg["valuation"]["lookback_years"]), "CAPE"),
         "fear_greed": _with_retry(ds.fetch_fear_greed, "Fear&Greed"),
-        "hy_spread_percentile": _with_retry(ds.fetch_hy_spread_percentile, "HY 스프레드"),
+        "credit_spread_percentile": _with_retry(ds.fetch_credit_spread_percentile, "신용 스프레드(BAA10Y)"),
+        "hy_3y_percentile": _with_retry(ds.fetch_hy_spread_percentile, "HY 스프레드(참고, 3년치)"),
         "ism": _with_retry(ds.fetch_ism, "ISM(GAC)"),
         "net_flow_index": ds.fetch_net_flow_index(),
         "vix": vix_for_score,
@@ -210,7 +212,11 @@ def gather_inputs():
     inputs = {}
     data_quality = {}
     for key, value in raw.items():
-        if key == "net_flow_index":
+        if key == "hy_3y_percentile":
+            # 참고용(점수에 쓰지 않음). 없으면 빈 칸이며 대체값 상태로 세지 않는다.
+            inputs[key] = value
+            data_quality[key] = "reference_only" if value is not None else "reference_unavailable"
+        elif key == "net_flow_index":
             # 안정적인 무료 소스가 없어 config에서 이 카테고리 자체를 비활성화했다(점수에 쓰이지 않는다).
             # 측정하지 않은 값을 0.0으로 꾸며 저장하지 않는다: 값이 없으면 빈 칸(None)으로 남긴다.
             inputs[key] = value
@@ -351,7 +357,7 @@ def main():
 
 
 # 점수식/버킷을 바꾸면 RULES_VERSION을 새로 올려서 이전 기록과 섞이지 않게 한다.
-RULES_VERSION = "v4-crosscheck-2026-10-30"
+RULES_VERSION = "v5-baa-credit-2026-10-31"
 
 
 def _read_rows(path):

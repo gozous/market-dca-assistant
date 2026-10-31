@@ -61,7 +61,7 @@ def run_backtest(
             "drawdown_pct": float(row["drawdown_pct"]),
             "cape_percentile": float(row["cape_percentile"]),
             "fear_greed": float(row["fear_greed"]),
-            "hy_spread_percentile": float(row["hy_spread_percentile"]),
+            "credit_spread_percentile": float(row["credit_spread_percentile"]),
             "ism": float(row["ism"]),
             "net_flow_index": float(row["net_flow_index"]),
             "vix": float(row["vix"]),

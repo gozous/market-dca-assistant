@@ -26,7 +26,7 @@ inputs = {
     "drawdown_pct": 8,        # 52주 최고가 대비 하락률(%)
     "cape_percentile": 55,    # CAPE 역사(최근 30년) 백분위 (0~100)
     "fear_greed": 55,         # CNN Fear & Greed (0~100)
-    "hy_spread_percentile": 30,  # 하이일드 OAS 역사 백분위 (0~100)
+    "credit_spread_percentile": 30,  # Baa 회사채−10년 국채 스프레드(BAA10Y, 1986~) 이력 백분위 (0~100)
     "ism": 20.9,               # 필라델피아 연은 제조업 일반활동지수(0이 중립)
     "net_flow_index": 10,      # ETF/기관 순유입 지수
     "vix": 16.8,                # 선택, 리스크 경고용
@@ -80,7 +80,7 @@ python3 -m backtest.cli --csv my_history.csv --base-amount 1000000 --out results
 | close | 지수 종가 |
 | cape_percentile | CAPE의 최근 30년 시계열 대비 백분위 (0~100) |
 | fear_greed | CNN Fear & Greed (0~100) |
-| hy_spread_percentile | 하이일드 OAS의 역사 시계열 대비 백분위 (0~100) |
+| credit_spread_percentile | Baa 회사채−10년 국채 스프레드(BAA10Y, 1986~) 이력 대비 백분위 (0~100) |
 | ism | 필라델피아 연은 제조업 일반활동지수 (0이 중립) |
 | net_flow_index | ETF/기관 순유입 지수 |
 | vix | VIX |
@@ -98,7 +98,7 @@ python3 -m backtest.cli --csv my_history.csv --base-amount 1000000 --out results
    아님)만큼 뒤의 거래일 종가로 체결합니다. 신호 계산일 당일 종가에 사고 싶다면
    `execution_lag_days=0`으로 명시적으로 지정해야 합니다. `daily_log`에 `signal_date`,
    `execution_date`가 둘 다 기록되어 검증 가능합니다.
-2. **데이터 발표 시점 (release_date ≤ signal_date)**: `cape_percentile`, `hy_spread_percentile`처럼
+2. **데이터 발표 시점 (release_date ≤ signal_date)**: `cape_percentile`, `credit_spread_percentile`처럼
    "역사 시계열 대비 백분위"인 값은, CSV를 만들 때 각 날짜마다 "그 시점에 실제로 이미 발표되어
    있던 값"만 써야 합니다. **이 조건은 아직 `run_backtest()`에 연결되지 않았습니다** — 실제
    vintage(재공표 이력) 데이터가 없어서, `backtest/point_in_time.py`에 선택/검증 로직(스키마,

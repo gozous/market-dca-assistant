@@ -18,7 +18,7 @@ def test_hy_detail_from_history_only():
     valid = [(x.strftime("%Y-%m-%d"), float(3 + i % 5)) for i, x in enumerate(pd.date_range("2024-01-01", periods=700, freq="B"))]
     ds.DETAILS.clear()
     ds._record_history_detail("BAMLH0A0HYM2", valid)
-    h = ds.DETAILS["hy_spread_percentile"]
+    h = ds.DETAILS["hy_3y_percentile"]
     assert h["value"] == valid[-1][1] and h["date"] == valid[-1][0]
     assert h["year_low"] >= h["all_low"] and h["year_high"] <= h["all_high"]
     ds.DETAILS.clear()
@@ -50,3 +50,11 @@ def test_pick_freshest_cape(monkeypatch):
     assert ds._pick_freshest_cape([b"bad", b"old"]) == b"old"
     assert ds._pick_freshest_cape([b"bad"]) == b"bad"
     assert ds._pick_freshest_cape([]) is None
+
+
+def test_baa_detail_is_recorded_under_scoring_key():
+    import pandas as pd
+    valid = [(x.strftime("%Y-%m-%d"), float(1 + i % 4)) for i, x in enumerate(pd.date_range("1986-01-02", periods=900, freq="B"))]
+    ds.DETAILS.clear()
+    ds._record_history_detail("BAA10Y", valid)
+    assert set(ds.DETAILS) == {"credit_spread_percentile"} and ds.DETAILS["credit_spread_percentile"]["since"] == "1986-01-02"

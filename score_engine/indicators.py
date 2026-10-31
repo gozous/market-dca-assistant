@@ -92,21 +92,21 @@ def _fear_greed_label_kr(v: float) -> str:
     return "극단적 탐욕"
 
 
-def rate_credit_score(hy_spread_percentile: float, cfg: Dict[str, Any]) -> IndicatorResult:
+def rate_credit_score(credit_spread_percentile: float, cfg: Dict[str, Any]) -> IndicatorResult:
     """
-    하이일드 OAS의 "FRED가 제공하는 기간(2026-04부터 최근 3년치) 대비 백분위"(0~100).
-    100에 가까울수록 역사상 가장 스프레드가 넓었던(신용시장이 가장 불안했던) 구간 —
+    Moody's Baa 회사채 수익률 − 10년 국채 수익률(FRED BAA10Y, 1986~)의 "전체 이력 대비 백분위"(0~100). 규칙 v5부터 이 지표를 쓴다.
+    100에 가까울수록 1986년 이후 스프레드가 가장 넓었던(신용시장이 가장 불안했던) 구간 —
     다른 지표들과 동일하게 "시장이 불안해질수록 매수 기회 점수 상승" 방향으로 맞춤.
     """
     rcfg = cfg["rate_credit"]
     max_score = rcfg["max_score"]
-    score = _clip(hy_spread_percentile / 100 * max_score, 0, max_score)
-    if hy_spread_percentile >= 50:
-        desc = f"불안한 편이에요(FRED 제공 기간 중 상위 {100 - hy_spread_percentile:.0f}%)"
+    score = _clip(credit_spread_percentile / 100 * max_score, 0, max_score)
+    if credit_spread_percentile >= 50:
+        desc = f"불안한 편이에요(1986년 이후 상위 {100 - credit_spread_percentile:.0f}%)"
     else:
-        desc = f"안정적인 편이에요(FRED 제공 기간 중 하위 {hy_spread_percentile:.0f}%)"
+        desc = f"안정적인 편이에요(1986년 이후 하위 {credit_spread_percentile:.0f}%)"
     reason = f"회사채 시장 분위기는 {desc}"
-    return IndicatorResult(score, max_score, reason, hy_spread_percentile)
+    return IndicatorResult(score, max_score, reason, credit_spread_percentile)
 
 
 def macro_score(ism_value: float, cfg: Dict[str, Any]) -> IndicatorResult:

@@ -43,14 +43,14 @@ def test_nonfinite_input_becomes_unavailable_not_neutral(monkeypatch):
     monkeypatch.setattr(ds, "fetch_macro_snapshot", lambda: {"vix": {"value": float("nan"), "date": "2026-10-09"}})
     monkeypatch.setattr(ds, "fetch_cape_percentile", lambda n: float("inf"))
     monkeypatch.setattr(ds, "fetch_fear_greed", lambda: None)
-    monkeypatch.setattr(ds, "fetch_hy_spread_percentile", lambda: 40.0)
+    monkeypatch.setattr(ds, "fetch_credit_spread_percentile", lambda: 40.0)
     monkeypatch.setattr(ds, "fetch_ism", lambda: -3.0)
     inputs, dq, snap = cd.gather_inputs()
     assert all(v is None or math.isfinite(v) for v in inputs.values())
     assert inputs["cape_percentile"] is None and dq["cape_percentile"] == "unavailable"
     assert inputs["fear_greed"] is None and dq["fear_greed"] == "unavailable"     # VIX가 NaN이어도 추정하지 않음
     assert inputs["vix"] is None and dq["vix"] == "unavailable"
-    assert inputs["hy_spread_percentile"] == 40.0 and dq["hy_spread_percentile"] == "live"
+    assert inputs["credit_spread_percentile"] == 40.0 and dq["credit_spread_percentile"] == "live"
     assert snap["sp500_date"] and snap["nasdaq100_drawdown_pct"] is not None
 
 

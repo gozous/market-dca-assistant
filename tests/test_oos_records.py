@@ -9,7 +9,7 @@ import scripts.compute_daily as cd
 from backtest.runner import _select_investment_dates
 from score_engine import compute_score
 
-INP = {"drawdown_pct": 5.0, "cape_percentile": 80.0, "fear_greed": 40.0, "hy_spread_percentile": 30.0,
+INP = {"drawdown_pct": 5.0, "cape_percentile": 80.0, "fear_greed": 40.0, "credit_spread_percentile": 30.0,
        "ism": -5.0, "net_flow_index": 0.0, "vix": 20.0}
 DQ = {k: "live" for k in INP}
 T0 = dt.datetime(2026, 10, 12, 12, tzinfo=dt.timezone.utc)

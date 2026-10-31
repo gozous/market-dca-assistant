@@ -57,7 +57,7 @@ _INDICATOR_FUNCS = {
     "technical": (technical_score, "drawdown_pct"),
     "valuation": (valuation_score, "cape_percentile"),
     "fear_greed": (fear_greed_score, "fear_greed"),
-    "rate_credit": (rate_credit_score, "hy_spread_percentile"),
+    "rate_credit": (rate_credit_score, "credit_spread_percentile"),
     "macro": (macro_score, "ism"),
     "flow": (flow_score, "net_flow_index"),
 }
@@ -69,7 +69,7 @@ def compute_score(inputs: Dict[str, float], config: Optional[Dict[str, Any]] = N
         drawdown_pct          : 52주 최고가 대비 하락률 (%, 양수)
         cape_percentile        : CAPE의 최근 N년 시계열 대비 백분위 (0~100, 높을수록 고평가)
         fear_greed              : Fear & Greed 지수 (0~100)
-        hy_spread_percentile     : 하이일드 OAS의 역사 시계열 대비 백분위 (0~100, 높을수록 스트레스)
+        credit_spread_percentile     : Baa 회사채−10년 국채 스프레드(BAA10Y, 1986~) 이력 대비 백분위 (0~100, 높을수록 스트레스)
         ism                       : 제조업 활동 지수(ISM 프록시)
         net_flow_index            : ETF/기관 순유입 지수 (음수면 순유출) — 기본 비활성화
     선택 키 (리스크 경고에만 사용):
@@ -114,7 +114,7 @@ def compute_score(inputs: Dict[str, float], config: Optional[Dict[str, Any]] = N
 
 
 _OPTIONAL_KEYS = ("vix",)
-_WARNING_KEYS = ("cape_percentile", "fear_greed", "hy_spread_percentile")
+_WARNING_KEYS = ("cape_percentile", "fear_greed", "credit_spread_percentile")
 
 
 def _validate_inputs(inputs: Dict[str, Any], cfg: Dict[str, Any]) -> None:
@@ -173,6 +173,6 @@ def _check_risk_warnings(inputs: Dict[str, float], thresholds: Dict[str, Any]) -
         warnings.append("VIX 과열")
     if inputs.get("fear_greed", 0) >= thresholds["fear_greed_extreme"]:
         warnings.append("Extreme Greed 국면")
-    if inputs.get("hy_spread_percentile", 0) >= thresholds["credit_spread_percentile"]:
+    if inputs.get("credit_spread_percentile", 0) >= thresholds["credit_spread_percentile"]:
         warnings.append("신용 스프레드 역사적 확대")
     return warnings

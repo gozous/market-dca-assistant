@@ -94,7 +94,7 @@ def test_execution_lag_is_trading_days_not_calendar_days():
         "close": [1000 + i for i in range(n)],
         "cape_percentile": [50.0] * n,
         "fear_greed": [50.0] * n,
-        "hy_spread_percentile": [50.0] * n,
+        "credit_spread_percentile": [50.0] * n,
         "ism": [0.0] * n,
         "net_flow_index": [0.0] * n,
         "vix": [18.0] * n,

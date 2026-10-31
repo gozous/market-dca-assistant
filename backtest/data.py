@@ -19,7 +19,7 @@ REQUIRED_COLUMNS = [
     "close",              # 종가 (지수 포인트)
     "cape_percentile",     # CAPE의 최근 N년 시계열 대비 백분위 (0~100, 높을수록 고평가)
     "fear_greed",           # Fear & Greed (0~100)
-    "hy_spread_percentile",  # 하이일드 OAS의 역사 시계열 대비 백분위 (0~100, 높을수록 스트레스)
+    "credit_spread_percentile",  # Baa 회사채−10년 국채 스프레드(BAA10Y) 이력 대비 백분위 (0~100, 높을수록 스트레스)
     "ism",                    # 제조업 활동 지수(필라델피아 연은, ISM 프록시)
     "net_flow_index",          # ETF/기관 순유입 지수 (현재 점수 계산에서 제외됨)
     "vix",                       # VIX
@@ -31,7 +31,7 @@ def load_from_csv(path: Union[str, Path], drawdown_window: int = 252) -> pd.Data
     CSV는 'date' 컬럼(파싱 가능한 날짜) + REQUIRED_COLUMNS를 포함해야 한다.
     drawdown_pct는 여기서 rolling max 기준으로 자동 계산한다(52주 ≈ 252거래일).
 
-    ⚠ Look-ahead bias 주의: cape_percentile, hy_spread_percentile처럼 "역사 시계열 대비
+    ⚠ Look-ahead bias 주의: cape_percentile, credit_spread_percentile처럼 "역사 시계열 대비
     백분위"인 컬럼은, CSV를 만들 때 각 날짜마다 "그 날짜까지의 데이터만" 써서 백분위를
     계산해야 한다. 전체 기간(미래 포함) 데이터로 한 번에 백분위를 계산해서 넣으면,
     미래 정보가 과거 시점의 판단에 새어 들어가는 룩어헤드 편향이 생겨 백테스트 성과가
@@ -83,7 +83,7 @@ def synthesize_sample(
     noise = lambda scale: rng.normal(0, scale, n)
     cape_percentile = np.clip(55 - drawdown_pct.values * 1.8 + noise(12), 0, 100)
     fear_greed = np.clip(70 - drawdown_pct.values * 2.0 + noise(10), 0, 100)
-    hy_spread_percentile = np.clip(25 + drawdown_pct.values * 2.5 + noise(12), 0, 100)
+    credit_spread_percentile = np.clip(25 + drawdown_pct.values * 2.5 + noise(12), 0, 100)
     ism = np.clip(8 - drawdown_pct.values * 1.0 + noise(6), -35, 55)  # 필라델피아 연은 지수 스케일(0=중립)
     net_flow_index = -drawdown_pct.values * 1.5 + noise(20)
     vix = np.clip(14 + drawdown_pct.values * 1.1 + noise(4), 9, None)
@@ -92,7 +92,7 @@ def synthesize_sample(
         "close": close.values,
         "cape_percentile": cape_percentile,
         "fear_greed": fear_greed,
-        "hy_spread_percentile": hy_spread_percentile,
+        "credit_spread_percentile": credit_spread_percentile,
         "ism": ism,
         "net_flow_index": net_flow_index,
         "vix": vix,

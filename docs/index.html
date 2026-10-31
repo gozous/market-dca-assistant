@@ -309,7 +309,7 @@
       </div>
 
       <div class="score-row cat-rate">
-        <div class="name">신용(HY 스프레드)<span class="sub">CREDIT SPREAD · 10</span><span class="dq-badge" id="dq-rate"></span></div>
+        <div class="name">신용(Baa 스프레드)<span class="sub">CREDIT SPREAD · 10</span><span class="dq-badge" id="dq-rate"></span></div>
         <div class="bar-track"><div class="bar-fill" id="bar-rate" style="background:var(--zone-1)"></div></div>
         <div class="points"><b id="pts-rate">0</b>/10</div>
         <input type="range" class="dir-asc" id="in-spread" step="any" min="0" max="100" value="30" oninput="recalc()">
@@ -418,8 +418,8 @@
   <details id="glossary"><summary>용어집 — 뉴스에서 자주 보는 말</summary><dl id="glossary-body"></dl></details>
 
   <footer>
-    <b>데이터 출처</b> — 주가·환율·달러지수·VIX는 Yahoo Finance(yfinance 라이브러리), 국채 금리·하이일드 스프레드·필라델피아 연은 지수는 FRED(세인트루이스 연은), CAPE는 Robert Shiller 교수 데이터, 공포·탐욕 지수는 CNN입니다. 각 카드에도 출처와 링크가 있어요. 평일 21:30 UTC(한국 06:30)에 자동으로 수집해요. CNN과 Yahoo는 공식 API가 아니라 바뀌거나 막힐 수 있어요.<br>
-    가격·매크로 카드는 조회에 실패하면 ‘조회 실패’로 표시합니다. 점수 계산에 쓰는 지표(CAPE, 공포탐욕, HY 스프레드, 필라델피아 연은 지수)가 하나라도 조회에 실패하거나 마지막 관측일이 허용 지연(CAPE 3개월, 필라델피아 연은 2개월, HY 스프레드 7일, 공포탐욕 2일, 주가 5일)을 넘어 오래되거나, S&P 500 종가가 Yahoo와 FRED에서 0.2% 넘게 어긋나면 중립값이나 추정값으로 메우지 않고, 종합 점수와 참고 매수 비중을 ‘산출 불가’로 표시합니다. 이때는 화면 위 경고와 해당 카드에 실패 사유가 붙습니다. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
+    <b>데이터 출처</b> — 주가·환율·달러지수·VIX는 Yahoo Finance(yfinance 라이브러리), 국채 금리·Baa 회사채 스프레드·하이일드 스프레드·필라델피아 연은 지수는 FRED(세인트루이스 연은), CAPE는 Robert Shiller 교수 데이터, 공포·탐욕 지수는 CNN입니다. 각 카드에도 출처와 링크가 있어요. 평일 21:30 UTC(한국 06:30)에 자동으로 수집해요. CNN과 Yahoo는 공식 API가 아니라 바뀌거나 막힐 수 있어요.<br>
+    가격·매크로 카드는 조회에 실패하면 ‘조회 실패’로 표시합니다. 점수 계산에 쓰는 지표(CAPE, 공포탐욕, Baa 신용 스프레드, 필라델피아 연은 지수)가 하나라도 조회에 실패하거나 마지막 관측일이 허용 지연(CAPE 3개월, 필라델피아 연은 2개월, 신용 스프레드 7일, 공포탐욕 2일, 주가 5일)을 넘어 오래되거나, S&P 500 종가가 Yahoo와 FRED에서 0.2% 넘게 어긋나면 중립값이나 추정값으로 메우지 않고, 종합 점수와 참고 매수 비중을 ‘산출 불가’로 표시합니다. 이때는 화면 위 경고와 해당 카드에 실패 사유가 붙습니다. 값 옆 날짜는 해당 데이터의 마지막 관측일입니다.<br>
     슬라이더를 움직이면 Score Engine 로직에 따라 점수·매수 비중이 재계산됩니다. 매크로 스냅샷은 참고용이며 투자 조언이 아닙니다.
   </footer>
 </div>
@@ -457,7 +457,7 @@ function fearScore(fg){
   return b[b.length-1][1];
 }
 function rateScore(spreadPercentile){
-  // 하이일드 OAS 역사 백분위(0~100). 높을수록 신용시장 스트레스 -> 점수 높음(매수 기회).
+  // Baa 회사채−10년 국채 스프레드(BAA10Y, 1986~) 이력 백분위(0~100). 높을수록 신용시장 스트레스 -> 점수 높음(매수 기회).
   return Math.max(0, Math.min(10, spreadPercentile/100*10));
 }
 function macroScore(ism){ // 필라델피아 연은 지수(ISM 프록시): 0 아래로 갈수록 위축 -> 매수 기회 점수 상승
@@ -665,7 +665,7 @@ function macroNoteBody(card, macro, payload){
         '\n점수에는 쓰이지 않고, "VIX 과열" 경고 판정에만 쓰여요. 조회에 실패하면 값을 만들어 채우지 않고 "조회 실패"로 표시해요.';
     }
     case 'hy_oas':
-      return '신용등급이 낮은 회사가 발행한 채권(하이일드, HY)의 금리가 미국 국채 금리보다 얼마나 더 높은지(가산금리, OAS)예요. 예를 들어 국채 4%, HY 7%이면 3%p(300bp)예요. 이 값이 커지는 것을 뉴스에서 "스프레드 확대"라고 하고, 투자자들이 위험을 크게 본다는 뜻이에요. 위기 때 급격히 커져요.\n점수에는 이 값 자체가 아니라 FRED가 제공하는 과거 기록(오늘 실측값에 시작일 표시)과 비교한 백분위를 써요(신용 항목).';
+      return '신용등급이 낮은 회사가 발행한 채권(하이일드, HY)의 금리가 미국 국채 금리보다 얼마나 더 높은지(가산금리, OAS)예요. 예를 들어 국채 4%, HY 7%이면 3%p(300bp)예요. 이 값이 커지는 것을 뉴스에서 "스프레드 확대"라고 하고, 투자자들이 위험을 크게 본다는 뜻이에요. 위기 때 급격히 커져요.\n이 값은 FRED가 최근 3년치만 제공해서 점수에는 쓰지 않고 참고로만 보여줘요. 신용 항목 점수는 투자등급(Baa) 회사채 스프레드의 1986년 이후 백분위로 계산해요.';
   }
   return '';
 }
@@ -778,11 +778,11 @@ function renderMacroExtras(payload){
   renderMacroStrategy(payload);
 }
 
-const SCORE_INPUT_KEYS = ['drawdown_pct','cape_percentile','fear_greed','hy_spread_percentile','ism'];
+const SCORE_INPUT_KEYS = ['drawdown_pct','cape_percentile','fear_greed','credit_spread_percentile','ism'];
 const KEY_LABEL = {drawdown_pct:'최고가 대비 하락률', cape_percentile:'CAPE(밸류에이션)', fear_greed:'공포·탐욕 지수',
-                   hy_spread_percentile:'HY 신용 스프레드', ism:'필라델피아 연은 제조업지수', vix:'VIX'};
+                   credit_spread_percentile:'회사채(Baa) 신용 스프레드', ism:'필라델피아 연은 제조업지수', vix:'VIX'};
 const CARD_KEYS = {tech:['drawdown_pct','in-drawdown'], val:['cape_percentile','in-per'], fear:['fear_greed','in-feargreed'],
-                   rate:['hy_spread_percentile','in-spread'], macro:['ism','in-ism']};
+                   rate:['credit_spread_percentile','in-spread'], macro:['ism','in-ism']};
 const GENERATED_MAX_AGE_DAYS = 5;
 
 // 규칙 v2(대체값 금지): 조회에 실패한 항목은 값이 없다(null). 이전 규칙(v1)이 만든 파일에는 중립값·VIX 추정값이
@@ -808,7 +808,7 @@ function dqState(payload, key){
 
 // 항목 키 → 실패 사유(latest.json의 failure_reasons). 사유가 없는 옛 데이터와 '사유 미기록'을 구분해서 알려 준다.
 const REASON_KEY = {drawdown_pct:'price:sp500', cape_percentile:'cape_percentile', fear_greed:'fear_greed',
-                    hy_spread_percentile:'hy_spread_percentile', ism:'ism', vix:'macro:vix'};
+                    credit_spread_percentile:'credit_spread_percentile', ism:'ism', vix:'macro:vix'};
 function failReasonOf(payload, key){
   if (!payload) return loadProblem || '파일 없음';
   const fr = payload.failure_reasons;
@@ -890,7 +890,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-10-30.2';
+const APP_VERSION = '2026-10-31.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -930,7 +930,7 @@ async function loadTodayData(){
 // score_engine과 동일한 규칙의 클라이언트 계산 (정적 배포라 서버 없이 슬라이더 조작 시 여기서 계산)
 // 수급(flow)은 서버와 동일하게 계산에서 제외하고 90점 만점 기준으로 100점 재배분한다.
 function localCompute(inputs){
-  const {drawdown_pct:dd, cape_percentile:cape, fear_greed:fg, hy_spread_percentile:spread, ism} = inputs;
+  const {drawdown_pct:dd, cape_percentile:cape, fear_greed:fg, credit_spread_percentile:spread, ism} = inputs;
   const pTech = techScore(dd), pVal = valScore(cape), pFear = fearScore(fg),
         pRate = rateScore(spread), pMacro = macroScore(ism);
   const rawTotal = pTech+pVal+pFear+pRate+pMacro;
@@ -942,7 +942,7 @@ function localCompute(inputs){
   if(!gone.has('cape_percentile') && cape>=90) risks.push('CAPE 역사 고평가권');
   if(Number.isFinite(inputs.vix) && inputs.vix>=28) risks.push('VIX 과열');
   if(!gone.has('fear_greed') && fg>=80) risks.push('Extreme Greed 국면');
-  if(!gone.has('hy_spread_percentile') && spread>=90) risks.push('신용 스프레드 역사적 확대');
+  if(!gone.has('credit_spread_percentile') && spread>=90) risks.push('신용 스프레드 역사적 확대');
   const f1 = v => Number(v).toFixed(1);
   // ---- 항목별 보조 설명(점수식은 그대로, 설명 문구만 상세화) ----
   const ddState = dd<=0 ? '최고가 부근이에요' : dd<5 ? '고점 부근이라 아직 할인된 구간은 아니에요' : dd<10 ? '조정(correction)이라 부르는 10%에는 못 미쳐요'
@@ -966,7 +966,7 @@ function localCompute(inputs){
     `${fg>=80 ? '과열(탐욕 80 이상) 경고 기준에 해당해요. ' : ''}CNN에서 값을 받지 못하면 VIX로 추정하거나 중립값으로 채우지 않아요. 이 항목을 "조회 실패"로 표시하고 종합 점수도 계산하지 않아요.`;
   const rateLabel = spread<30 ? '안정적인 편' : spread<60 ? '보통 수준' : spread<80 ? '다소 불안한 편' : '불안한 편';
   const rateText =
-    `HY 스프레드(하이일드 가산금리, OAS)의 백분위가 ${Math.round(spread)}예요. 하이일드는 신용등급이 낮은 회사의 채권이고, 스프레드는 그 금리가 미국 국채보다 얼마나 더 높은지예요. 커질수록(스프레드 확대) 투자자들이 위험을 크게 본다는 뜻이에요. 백분위 ${Math.round(spread)}는 FRED가 제공하는 과거 매일 값(시작일은 아래 실측값 참고) 100개 중 ${Math.round(spread)}개가 지금보다 낮거나 같았다는 뜻이고, 신용시장은 ${rateLabel}이에요.\n` +
+    `회사채 신용 스프레드의 백분위가 ${Math.round(spread)}예요. 여기서는 무디스 Baa 등급(투자등급 중 가장 낮은 단계) 회사채 금리가 미국 10년 국채 금리보다 얼마나 더 높은지(BAA10Y)를 써요. 커질수록(스프레드 확대) 투자자들이 위험을 크게 본다는 뜻이에요. 백분위 ${Math.round(spread)}는 1986년 이후 매일 값 100개 중 ${Math.round(spread)}개가 지금보다 낮거나 같았다는 뜻이고, 신용시장은 ${rateLabel}이에요. 하이일드(HY)가 아니라 투자등급 채권 지표이고, HY는 FRED가 3년치만 제공해서 아래에 참고로 같이 보여줘요.\n` +
     `점수 ${f1(pRate)}/10 · 스프레드가 클수록(신용이 불안할수록) 점수가 높아요. 위기 때 가격이 싸지는 경향 때문이에요. 점수가 높다는 건 시장이 좋다는 뜻이 아니라 불안하다는 뜻이에요(0이면 0점, 100이면 10점).\n` +
     `${spread>=90 ? '신용 스트레스 경고 기준(90) 이상이에요. ' : ''}불안이 더 커질 수도 있어서, 점수가 높다고 바닥이라는 뜻은 아니에요.`;
   const macroState = ism<=-12.5 ? '뚜렷한 위축' : ism<0 ? '위축' : ism<12.5 ? '확장' : '뚜렷한 확장';
@@ -996,7 +996,7 @@ function applyResult(data, dd, missingKeys){
     ['tech', s.technical, 30], ['val', s.valuation, 20], ['fear', s.fear_greed, 20],
     ['rate', s.rate_credit, 10], ['macro', s.macro, 10],
   ];
-  const KEY_OF_ROW = {tech:'drawdown_pct', val:'cape_percentile', fear:'fear_greed', rate:'hy_spread_percentile', macro:'ism'};
+  const KEY_OF_ROW = {tech:'drawdown_pct', val:'cape_percentile', fear:'fear_greed', rate:'credit_spread_percentile', macro:'ism'};
   rows.forEach(([key, r, max])=>{
     if (miss.includes(KEY_OF_ROW[key])) {          // 조회 실패: 점수도 설명도 만들지 않는다(값을 대체하지 않는다)
       document.getElementById(`pts-${key}`).textContent = '—';
@@ -1092,13 +1092,13 @@ async function recalc(){
   const dd = val('drawdown_pct', 'in-drawdown');
   const cape = val('cape_percentile', 'in-per');
   const fg = val('fear_greed', 'in-feargreed');
-  const spread = val('hy_spread_percentile', 'in-spread');
+  const spread = val('credit_spread_percentile', 'in-spread');
   const ism = val('ism', 'in-ism');
   const vix = currentVix;  // null이면 VIX 경고는 판정하지 않는다
 
   const inputs = {
     drawdown_pct: dd, cape_percentile: cape, fear_greed: fg,
-    hy_spread_percentile: spread, ism: ism, vix: vix, __missing: miss,
+    credit_spread_percentile: spread, ism: ism, vix: vix, __missing: miss,
   };
 
   applyResult(localCompute(inputs), dd, miss);
@@ -1323,7 +1323,8 @@ function factsFor(key, det, snap){
       .filter(([k]) => has(det[k])).map(([k, l]) => `${l} ${nf(det[k], 1)}`);
     if (hist.length) parts.push(hist.join(' · '));
   } else if (key === 'rate' && det) {
-    if (has(det.value)) parts.push(`HY OAS <b>${nf(det.value)}%p (${nf(det.value * 100, 0)}bp)</b>${det.date ? ` (${esc(det.date)})` : ''}`);
+    const inp = (todayData && todayData.inputs) || {};
+    if (has(det.value)) parts.push(`Baa−10년 국채 스프레드 <b>${nf(det.value)}%p (${nf(det.value * 100, 0)}bp)</b>${det.date ? ` (${esc(det.date)})` : ''}${has(inp.credit_spread_percentile) ? ` · ${esc((det.since || '').slice(0, 4))}년 이후 백분위 <b>${nf(inp.credit_spread_percentile, 0)}</b>` : ''}`);
     if (has(det.month_ago_value)) parts.push(`1개월 전 ${nf(det.month_ago_value)}%p (${esc(det.month_ago_date)})`);
     if (has(det.year_low) && has(det.year_high)) parts.push(`최근 1년 범위 ${nf(det.year_low)} ~ ${nf(det.year_high)}%p`);
     if (has(det.all_median)) parts.push(`${esc((det.since || '').slice(0, 4))}년 이후 중앙값 ${nf(det.all_median)}%p, 범위 ${nf(det.all_low)} ~ ${nf(det.all_high)}%p`);
@@ -1333,13 +1334,26 @@ function factsFor(key, det, snap){
   }
   return parts.join('<br>');
 }
+function hyReferenceFacts(det, inp){
+  if (!det || !has(det.value)) return '';
+  const parts = [`<b>참고 · 하이일드(HY) OAS</b> — FRED가 최근 3년치만 제공해서 점수에는 쓰지 않아요.`];
+  parts.push(`HY OAS <b>${nf(det.value)}%p (${nf(det.value * 100, 0)}bp)</b>${det.date ? ` (${esc(det.date)})` : ''}${has(inp.hy_3y_percentile) ? ` · ${esc((det.since || '').slice(0, 7))} 이후 3년 중 백분위 <b>${nf(inp.hy_3y_percentile, 0)}</b>` : ''}`);
+  if (has(det.month_ago_value)) parts.push(`1개월 전 ${nf(det.month_ago_value)}%p (${esc(det.month_ago_date)})`);
+  if (has(det.year_low) && has(det.year_high)) parts.push(`최근 1년 범위 ${nf(det.year_low)} ~ ${nf(det.year_high)}%p`);
+  if (has(det.all_median)) parts.push(`3년 중앙값 ${nf(det.all_median)}%p, 범위 ${nf(det.all_low)} ~ ${nf(det.all_high)}%p`);
+  return parts.join('<br>');
+}
 function renderFacts(){
   const det = (todayData && todayData.input_details) || {};
-  const map = {tech: 'drawdown_pct', val: 'cape_percentile', fear: 'fear_greed', rate: 'hy_spread_percentile', macro: 'ism'};
+  const map = {tech: 'drawdown_pct', val: 'cape_percentile', fear: 'fear_greed', rate: 'credit_spread_percentile', macro: 'ism'};
   Object.entries(map).forEach(([k, dk]) => {
     const exp = document.getElementById('exp-' + k); if (!exp) return;
     let el = exp.parentNode.querySelector(`.facts[data-k="${k}"]`);
-    const html = factsFor(k, det[dk]);
+    let html = factsFor(k, det[dk]);
+    if (k === 'rate') {
+      const ref = hyReferenceFacts(det.hy_3y_percentile, (todayData && todayData.inputs) || {});
+      if (ref) html = (html ? html + '<br><br>' : '') + ref;
+    }
     if (!html) { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('div'); el.className = 'facts'; el.dataset.k = k; exp.insertAdjacentElement('afterend', el); }
     el.innerHTML = '<b>오늘 실측값</b><br>' + html;
@@ -1356,8 +1370,8 @@ const SRC = {
           links:[A('Shiller 데이터', 'https://shillerdata.com/')], note:'수집: Yale 사이트의 ie_data.xls, 실패하면 shillerdata.com'},
   fear:  {desc:'CNN Fear & Greed Index(0~100).',
           links:[A('CNN Fear & Greed', 'https://edition.cnn.com/markets/fear-and-greed')], note:'수집: CNN 페이지가 쓰는 데이터 주소(공식 API가 아니라 바뀌거나 막힐 수 있어요)'},
-  rate:  {desc:'ICE BofA US High Yield Index 옵션조정스프레드(OAS)를 FRED에서 받아요. FRED가 제공하는 전체 기간(현재 약 3년치, 시작일은 실측값에 표시) 값 대비 백분위는 이 프로그램이 계산해요.',
-          links:[A('FRED BAMLH0A0HYM2', 'https://fred.stlouisfed.org/series/BAMLH0A0HYM2')], note:'수집: FRED API'},
+  rate:  {desc:'점수에는 Moody\'s Baa 회사채 수익률에서 10년 국채 수익률을 뺀 스프레드(BAA10Y, 1986년~)를 FRED에서 받아 써요. 1986년 이후 전체 값 대비 백분위는 이 프로그램이 계산해요. 참고로 같이 보여주는 하이일드 OAS(BAMLH0A0HYM2)는 FRED가 최근 3년치만 제공해요.',
+          links:[A('FRED BAA10Y', 'https://fred.stlouisfed.org/series/BAA10Y'), A('FRED BAMLH0A0HYM2(참고)', 'https://fred.stlouisfed.org/series/BAMLH0A0HYM2')], note:'수집: FRED API'},
   macro: {desc:'필라델피아 연은 제조업 조사의 현재 일반활동지수(월 단위, 0이 기준)를 FRED에서 받아요.',
           links:[A('FRED GACDFSA066MSFRBPHI', 'https://fred.stlouisfed.org/series/GACDFSA066MSFRBPHI')], note:'수집: FRED API'},
   us_2y:  {desc:'미국 국채 2년 만기 시장수익률(일별).', links:[A('FRED DGS2', 'https://fred.stlouisfed.org/series/DGS2')], note:'수집: FRED API'},
@@ -1404,7 +1418,7 @@ const HIST_ITEMS = [
   {id:'tech',  field:'drawdown_pct',         score:v => techScore(v),  max:30, label:'기술적(낙폭) 점수'},
   {id:'val',   field:'cape_percentile',      score:v => valScore(v),   max:20, label:'밸류에이션(CAPE) 점수'},
   {id:'fear',  field:'fear_greed',           score:v => fearScore(v),  max:20, label:'공포·탐욕 점수'},
-  {id:'rate',  field:'hy_spread_percentile', score:v => rateScore(v),  max:10, label:'신용(HY 스프레드) 점수'},
+  {id:'rate',  field:'credit_spread_percentile', score:v => rateScore(v),  max:10, label:'신용(Baa 스프레드) 점수'},
   {id:'macro', field:'ism',                  score:v => macroScore(v), max:10, label:'경기 점수'},
 ];
 function histChart(pts, max, color, unit){
@@ -1475,6 +1489,7 @@ async function loadScoreHistory(){
    같은 설명 칸 안에서는 같은 용어를 처음 한 번만 표시한다. 점수 계산에는 관여하지 않는다. */
 const GLOSS = [
   {k:'hy', t:'하이일드(HY)', m:['하이일드','정크본드'], d:'하이일드(High Yield) 채권이에요. 신용등급이 낮아(투기등급) 부도 위험이 큰 대신 이자를 많이 주는 회사채예요. 정크본드라고도 불러요.', n:'"하이일드 채권 약세", "정크본드 금리 급등"'},
+  {k:'baa', t:'Baa 등급·투자등급', m:['Baa','투자등급','BAA10Y'], d:'무디스 신용등급에서 Baa는 투자등급 가운데 가장 낮은 단계예요(S&P 기준 BBB). 하이일드(투기등급)보다 한 단계 위라 부도 위험이 상대적으로 낮아요. 점수의 신용 항목은 이 등급 회사채 금리와 10년 국채 금리의 차이(BAA10Y)를 써요.', n:'"투자등급 회사채 스프레드", "BBB 스프레드"'},
   {k:'oas', t:'가산금리·스프레드(OAS)', m:['HY 스프레드','HY OAS','OAS','가산금리','스프레드'], d:'여기서는 하이일드 채권 금리가 미국 국채 금리보다 얼마나 더 높은지를 뜻해요(OAS는 옵션조정스프레드).\n예: 국채 4%, 하이일드 7%이면 3%p(300bp)예요. 클수록 투자자들이 위험을 크게 본다는 뜻이에요.', n:'"하이일드 스프레드 확대/축소", "신용 스프레드 급등"'},
   {k:'bp', t:'bp(베이시스포인트)', m:['bp'], d:'0.01%p예요. 100bp = 1%p. 금리 뉴스에서 "50bp 인하"는 금리를 0.5%p 내렸다는 뜻이에요.', n:'"25bp 인상", "스프레드 300bp"'},
   {k:'pp', t:'%p(퍼센트포인트)', m:['%p'], d:'퍼센트끼리의 차이예요. 4%에서 5%가 되면 1%p 오른 거예요(25% 오른 게 아니에요).', n:''},
