@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-30T03:27:57.817228+00:00",
+  "generated_at_utc": "2026-10-31T00:57:40.473218+00:00",
   "note": "진단용 기록. 점수 계산에는 쓰이지 않는다.",
   "cape": [
     {
@@ -85,14 +85,14 @@
   "hy_oas": {
     "series": "BAMLH0A0HYM2",
     "count": 786,
-    "first": "2023-10-30",
-    "last": "2026-10-28",
+    "first": "2023-10-31",
+    "last": "2026-10-29",
     "observation_start_param": "1600-01-01",
     "api_count": 794,
     "fred_meta": {
-      "observation_start": "2023-10-30",
-      "observation_end": "2026-10-28",
-      "last_updated": "2026-10-29 09:27:15-05",
+      "observation_start": "2023-10-31",
+      "observation_end": "2026-10-29",
+      "last_updated": "2026-10-30 09:21:41-05",
       "notes": "Starting in April 2026, this series will only include 3 years of observations. For more data, go to the source.\n\nThe ICE BofA Option-Adjusted Spreads (OASs) are the calculated spreads between a computed OAS index of all bonds in a given rating category and a spot Treasury curve. An OAS index is constructed using each constituent bond's OAS, weighted by market capitalization. The ICE BofA High Yield Master II OAS uses an index of bonds that are below investment grade (those rated BB or below).\nThis data represents the ICE BofA US High Yield Index value, which tracks the performance of US dollar"
     }
   }
