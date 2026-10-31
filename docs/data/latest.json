@@ -1,13 +1,14 @@
 {
-  "generated_at_utc": "2026-10-31T00:57:34.746127+00:00",
-  "rules_version": "v4-crosscheck-2026-10-30",
+  "generated_at_utc": "2026-10-31T05:39:03.984345+00:00",
+  "rules_version": "v5-baa-credit-2026-10-31",
   "score_status": "complete",
   "missing_items": [],
   "inputs": {
     "drawdown_pct": 3.0548981279096,
     "cape_percentile": 94.72222222222221,
     "fear_greed": 26.2386554621849,
-    "hy_spread_percentile": 78.47133757961784,
+    "credit_spread_percentile": 4.987262394669802,
+    "hy_3y_percentile": 78.47133757961784,
     "ism": 20.9,
     "net_flow_index": null,
     "vix": 19.420000076293945
@@ -16,7 +17,8 @@
     "drawdown_pct": "live",
     "cape_percentile": "live",
     "fear_greed": "live",
-    "hy_spread_percentile": "live",
+    "credit_spread_percentile": "live",
+    "hy_3y_percentile": "reference_only",
     "ism": "live",
     "net_flow_index": "excluded_from_scoring",
     "vix": "live"
@@ -87,7 +89,7 @@
       7580.0698
     ],
     "sp500_series_start": "2026-08-07",
-    "nasdaq100_close": 28384.845703125,
+    "nasdaq100_close": 28384.849609375,
     "nasdaq100_date": "2026-10-30",
     "nasdaq100_series": [
       29722.3008,
@@ -149,17 +151,16 @@
       29651.4395,
       29813.1602,
       29402.5098,
-      28384.8457
+      28384.8496
     ],
     "nasdaq100_series_start": "2026-08-07",
-    "nasdaq100_drawdown_pct": 9.094229417044385,
+    "nasdaq100_drawdown_pct": 9.094216906824315,
     "macro": {
       "usd_krw": {
-        "value": 1337.97998046875,
-        "date": "2026-10-30",
-        "series_start": "2026-08-10",
+        "value": 1335.0999755859375,
+        "date": "2026-10-31",
+        "series_start": "2026-08-11",
         "series": [
-          1407.0,
           1417.3101,
           1412.1801,
           1416.46,
@@ -218,11 +219,12 @@
           1324.77,
           1326.8101,
           1340.34,
-          1337.98
+          1337.98,
+          1335.1
         ]
       },
       "dxy": {
-        "value": 101.96399688720703,
+        "value": 101.87999725341797,
         "date": "2026-10-30",
         "series_start": "2026-08-07",
         "series": [
@@ -285,7 +287,7 @@
           102.32,
           102.19,
           102.04,
-          101.964
+          101.88
         ]
       },
       "us_2y": {
@@ -559,7 +561,7 @@
     }
   },
   "result": {
-    "total_score": 31.7,
+    "total_score": 23.6,
     "sub_scores": {
       "technical": {
         "score": 1.2,
@@ -580,10 +582,10 @@
         "raw_value": 26.2386554621849
       },
       "rate_credit": {
-        "score": 7.8,
+        "score": 0.5,
         "max_score": 10,
-        "reason": "회사채 시장 분위기는 불안한 편이에요(FRED 제공 기간 중 상위 22%)",
-        "raw_value": 78.47133757961784
+        "reason": "회사채 시장 분위기는 안정적인 편이에요(1986년 이후 하위 5%)",
+        "raw_value": 4.987262394669802
       },
       "macro": {
         "score": 0,
@@ -626,7 +628,20 @@
       "month_ago": 30.314285714285717,
       "year_ago": 37.05714285714286
     },
-    "hy_spread_percentile": {
+    "credit_spread_percentile": {
+      "value": 1.49,
+      "date": "2026-10-29",
+      "month_ago_value": 1.46,
+      "month_ago_date": "2026-09-29",
+      "year_low": 1.39,
+      "year_high": 1.85,
+      "all_low": 1.16,
+      "all_high": 6.16,
+      "all_median": 2.13,
+      "since": "1986-01-02",
+      "n": 10207
+    },
+    "hy_3y_percentile": {
       "value": 3.26,
       "date": "2026-10-29",
       "month_ago_value": 3.08,

@@ -1,0 +1,3 @@
+date_utc,rules_version,sp500_date,sp500_close,nasdaq100_close,total_score,buy_pct,drawdown_pct,cape_percentile,fear_greed,hy_spread_percentile,ism,net_flow_index,vix,dq_drawdown_pct,dq_cape_percentile,dq_fear_greed,dq_hy_spread_percentile,dq_ism,dq_net_flow_index,dq_vix,risk_warnings
+2026-10-30,v4-crosscheck-2026-10-30,2026-10-29,7720.39013671875,29402.5078125,26.8,50,1.260275214731077,94.72222222222221,34.6,61.910828025477706,20.9,,17.200000762939453,live,live,live,live,live,excluded_from_scoring,live,CAPE 역사 고평가권
+2026-10-31,v4-crosscheck-2026-10-30,2026-10-30,7580.06982421875,28384.845703125,31.7,50,3.0548981279096,94.72222222222221,26.2386554621849,78.47133757961784,20.9,,19.420000076293945,live,live,live,live,live,excluded_from_scoring,live,CAPE 역사 고평가권
