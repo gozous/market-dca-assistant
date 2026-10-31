@@ -42,3 +42,9 @@ def _no_network_hy_reference(monkeypatch):
     """참고용 HY(3년치) 조회는 네트워크를 쓰므로 테스트에서는 없는 것으로 둔다."""
     from scripts import data_sources as ds
     monkeypatch.setattr(ds, "fetch_hy_spread_percentile", lambda: None)
+
+
+@pytest.fixture(autouse=True)
+def _no_network_sell_validation(monkeypatch):
+    from scripts import sell_rule_validation
+    monkeypatch.setattr(sell_rule_validation, "collect", lambda: {"note": "test"})
