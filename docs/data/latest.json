@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-31T06:08:31.716460+00:00",
+  "generated_at_utc": "2026-10-31T15:57:20.125656+00:00",
   "rules_version": "v5-baa-credit-2026-10-31",
   "score_status": "complete",
   "missing_items": [],
@@ -670,6 +670,33 @@
     "worst_fred": 7623.68,
     "worst_diff_pct": 0.0,
     "last_checked_date": "2026-10-28"
+  },
+  "reduction_signals": {
+    "thresholds": {
+      "cape_percentile": 90.0,
+      "credit_percentile": 90.0,
+      "drawdown_pct": 10.0,
+      "sma_days": 200
+    },
+    "validated_cut_pp": 20,
+    "R1": {
+      "on": true,
+      "value": 94.72222222222221,
+      "validated": false
+    },
+    "R3": {
+      "on": false,
+      "value": 4.987262394669802,
+      "validated": true
+    },
+    "R2": {
+      "on": false,
+      "validated": true,
+      "close": 7580.06982421875,
+      "sma200": 7309.7571630859375,
+      "high": 7818.93017578125,
+      "drawdown_pct": 3.0548981279096
+    }
   },
   "failure_reasons": {}
 }
