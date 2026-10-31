@@ -87,3 +87,14 @@ def test_run_all_on_synthetic_data_has_expected_keys():
     out = sv.run_all(c, r)
     assert set(out["strategies"]) == set(sv.STRATEGIES) and len(out["start_windows"]["S1"]) == 4 and out["start_windows"]["S1"]["n"] > 0
     assert out["strategies"]["S1"]["trades"] > 1
+
+
+def test_float_noise_tie_is_not_counted_as_better():
+    ep = lambda s, m: {"e1": {"mdd": m}, "e2": {"mdd": -0.3}, "e3": {"mdd": -0.3}, "e4": {"mdd": -0.3}}
+    res = {"strategies": {"H": {"cagr": 0.08, "mdd": -0.5}, **{s: {"cagr": 0.08, "mdd": -0.4} for s in ("S1", "S2", "S3", "S4")}},
+           "episodes": {"H": ep("H", -0.25425096619230425), **{s: ep(s, -0.2542509661923038) for s in ("S1", "S2", "S3", "S4")}},
+           "start_windows": {s: {"share_ge_H": 0.6, "min_ratio": 0.9} for s in ("S1", "S2", "S3", "S4")}}
+    res["episodes"]["H"] = {"e1": {"mdd": -0.25425096619230425}, "e2": {"mdd": -0.4}, "e3": {"mdd": -0.4}, "e4": {"mdd": -0.4}}
+    for s in ("S1", "S2", "S3", "S4"):
+        res["episodes"][s] = {"e1": {"mdd": -0.2542509661923038}, "e2": {"mdd": -0.3}, "e3": {"mdd": -0.3}, "e4": {"mdd": -0.3}}
+    assert sv.adoption(res)["S3"]["episodes_better"] == 3          # e1은 동률

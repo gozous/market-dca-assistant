@@ -18,6 +18,7 @@ CUT_SINGLE, CUT_PER_RULE = 0.20, 0.10
 EPISODES = [("2000-03-24", "2002-10-09"), ("2007-10-09", "2009-03-09"), ("2020-02-19", "2020-03-23"), ("2022-01-03", "2022-10-12")]
 SUBPERIODS = [("1991-01-01", "1999-12-31"), ("2000-01-01", "2009-12-31"), ("2010-01-01", "2019-12-31"), ("2020-01-01", None)]
 STRATEGIES = ("H", "S1", "S2", "S3", "S4")
+TIE_TOL = 1e-9     # 부동소수점 잡음 때문에 사실상 같은 값(예: 4e-16 차이)을 '더 낫다'로 세지 않는다(결과 확인 후 발견한 판정 버그 수정, 기준은 그대로)
 
 
 # ── 입력 가공(미래 값을 쓰지 않는다) ─────────────────────────────────────────
@@ -173,10 +174,10 @@ def adoption(res: dict) -> dict:
     for s in ("S1", "S2", "S3", "S4"):
         st = res["strategies"][s]
         ep_better = sum(1 for k, v in res["episodes"][s].items()
-                        if v["mdd"] is not None and res["episodes"]["H"][k]["mdd"] is not None and v["mdd"] > res["episodes"]["H"][k]["mdd"])
+                        if v["mdd"] is not None and res["episodes"]["H"][k]["mdd"] is not None and v["mdd"] > res["episodes"]["H"][k]["mdd"] + TIE_TOL)
         sw = res["start_windows"][s]
         crit = {
-            "a_total_mdd_lower": st["mdd"] > h["mdd"],
+            "a_total_mdd_lower": st["mdd"] > h["mdd"] + TIE_TOL,
             "b_episodes_mdd_lower_at_least_3_of_4": ep_better >= 3,
             "c_cagr_loss_within_0_5pp": (h["cagr"] - st["cagr"]) <= 0.005,
             "d_windows_share_ge_H_at_least_50pct_and_min_ratio_at_least_0_85": bool(sw["share_ge_H"] is not None and sw["share_ge_H"] >= 0.5 and sw["min_ratio"] >= 0.85),
