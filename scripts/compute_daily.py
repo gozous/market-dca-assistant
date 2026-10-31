@@ -25,6 +25,7 @@ from score_engine import compute_score, default_config
 from scripts import data_sources as ds
 from scripts import freshness
 from scripts import price_crosscheck
+from scripts import reduction_signals
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "docs" / "data"
@@ -47,6 +48,27 @@ def _write_source_health():
         _atomic_write_json(DATA_DIR / "source_health.json", source_health.collect())
     except Exception as e:
         print(f"[warn] 소스 진단 기록 실패(점수에는 영향 없음): {e}")
+
+
+def _log_reduction_signals(payload):
+    """비중 축소 신호의 일별 상태를 시장일마다 한 줄 기록한다(표본 외 추적용, 점수와 무관). 오류가 나도 본 계산을 막지 않는다."""
+    try:
+        sig = payload.get("reduction_signals")
+        market_date = (payload.get("price_snapshot") or {}).get("sp500_date")
+        if not sig or not market_date:
+            return
+        path = DATA_DIR / "history_reduction_signals.csv"
+        header = ["market_date", "rules_version", "R1_on", "R1_cape_pct", "R2_on", "R2_close", "R2_sma200", "R2_drawdown_pct", "R3_on", "R3_credit_pct"]
+        rows = _read_rows(path) if path.exists() else []
+        if rows and any(r and r[0] == market_date for r in rows[1:]):
+            return
+        f = lambda v: "" if v is None else (int(v) if isinstance(v, bool) else v)
+        r1, r2, r3 = sig["R1"], sig["R2"], sig["R3"]
+        row = [market_date, RULES_VERSION, f(r1["on"]), f(r1["value"]), f(r2["on"]), f(r2.get("close")), f(r2.get("sma200")),
+               f(r2.get("drawdown_pct")), f(r3["on"]), f(r3["value"])]
+        _atomic_write_csv(path, header, (rows[1:] if rows else []) + [row])
+    except Exception as e:
+        print(f"[warn] 비중 축소 신호 기록 실패(점수에는 영향 없음): {e}")
 
 
 def _write_sell_rule_validation():
@@ -266,6 +288,10 @@ def gather_inputs():
     }
     if not price_snapshot.get("sp500_date"):
         raise DataUnavailable("S&P500 확정 종가 날짜를 확인하지 못함 - 시장일 기준 기록 불가")
+    # 비중 축소 검토 신호(점수와 별개). 가격이 교차 검증·신선도 검사를 통과하지 못했으면 추세 규칙(R2)도 판정하지 않는다.
+    ds.DETAILS["_reduction_signals"] = reduction_signals.compute(
+        sp_close if inputs.get("drawdown_pct") is not None else None,
+        inputs.get("cape_percentile"), inputs.get("credit_spread_percentile"))
     return inputs, data_quality, price_snapshot
 
 
@@ -350,6 +376,7 @@ def main():
         "result": result.to_dict() if result else None,
         "input_details": _clean_details(inputs),
         "price_crosscheck": ds.DETAILS.get("_price_crosscheck"),
+        "reduction_signals": ds.DETAILS.get("_reduction_signals"),
         "failure_reasons": failure_report(),  # 조회 실패 항목의 사유(성공한 항목은 없음)
     }
 
@@ -361,6 +388,7 @@ def main():
         oos_status = _record_oos_row(now, inputs, data_quality, price_snapshot, result)
 
     _write_source_health()
+    _log_reduction_signals(payload)
     _write_indicator_overlap()
     _write_sell_rule_validation()
 

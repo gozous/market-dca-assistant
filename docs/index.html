@@ -64,6 +64,12 @@
   .tab-pane[hidden]{display:none;}
   @media (max-width:560px){ .tab-btn{font-size:14px; padding:11px 4px;} }
 
+  .reduce-grid{display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); margin-top:10px;}
+  .reduce-rule{border:1px solid var(--border,#8884); border-radius:8px; padding:12px; font-size:13px; line-height:1.7;}
+  .reduce-rule .rname{font-weight:600; font-size:14px; margin-bottom:4px;}
+  .reduce-badge{display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; font-weight:600; margin-left:6px;}
+  .reduce-badge.on{background:rgba(214,69,65,.18); color:#d64541;} .reduce-badge.off{background:rgba(127,127,127,.18);} .reduce-badge.na{background:rgba(230,160,0,.2);}
+  .reduce-tag{display:inline-block; font-size:12px; padding:1px 6px; border-radius:4px; margin-top:4px; background:rgba(127,127,127,.15);}
   .facts{grid-column:1 / -1; font-size:13px; line-height:1.7; color:var(--text); margin-top:8px; padding:8px 10px; border-left:3px solid var(--border,#8884); background:rgba(127,127,127,.08); border-radius:4px;}
   .facts b{font-weight:600;}
   .src{grid-column:1 / -1; font-size:12px; line-height:1.7; color:var(--text-dim); margin-top:8px;}
@@ -335,6 +341,13 @@
         <div class="explain">안정적인 무료 소스가 없어 점수 계산에서 제외 — 나머지 90점 기준으로 재배분됨</div>
       </div>
     </div>
+  </div>
+
+  <div class="panel" id="reduce-panel" style="margin-top:16px;">
+    <div class="panel-label">비중 축소 검토 신호 — 팔거나 줄일 때를 보는 참고 정보</div>
+    <div class="notice" id="reduce-intro" style="font-size:13px; line-height:1.7; color:var(--text-dim);">불러오는 중…</div>
+    <div class="reduce-grid" id="reduce-grid"></div>
+    <div class="notice" id="reduce-foot" style="font-size:12px; line-height:1.7; color:var(--text-faint,var(--text-dim)); margin-top:10px;"></div>
   </div>
 
   </section>
@@ -890,7 +903,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-10-31.1';
+const APP_VERSION = '2026-11-01.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1282,6 +1295,7 @@ function resetToTodayData(){
 }
 function afterLoad(){
   renderVersion();
+  renderReduction();
   renderFacts();
   renderSources();
   if (!todayData) { renderNoData(); return; }
@@ -1294,6 +1308,7 @@ document.getElementById('today-tag').textContent = new Date().toLocaleDateString
   await loadTodayData();   // 오늘자 자동 갱신 값으로 슬라이더를 먼저 채운다
   afterLoad();              // 그 값으로 첫 렌더(데이터가 없으면 '데이터 없음')
   loadOos();                // 표본 외 기록(④ 탭)
+  await loadSellValidation(); renderReduction();   // 비중 축소 검증 결과
   loadScoreHistory();       // 항목별 점수 추이(① 탭, 공식 기록만 사용)
 })();
 
@@ -1358,6 +1373,60 @@ function renderFacts(){
     if (!el) { el = document.createElement('div'); el.className = 'facts'; el.dataset.k = k; exp.insertAdjacentElement('afterend', el); }
     el.innerHTML = '<b>오늘 실측값</b><br>' + html;
   });
+}
+
+/* ================= 비중 축소 검토 신호 =================
+   규칙은 claude/sell-rule-prereg-2026-10-31.md에 결과를 보기 전에 고정했다. 검증 숫자는 data/sell_rule_validation.json에서 읽는다(화면에 적은 값이 아니라 저장된 결과). */
+let sellVal = null;
+async function loadSellValidation(){
+  try { const r = await fetch('./data/sell_rule_validation.json', {cache:'no-store'}); if (r.ok) sellVal = await r.json(); } catch(e) { sellVal = null; }
+}
+function pct1(v, d = 1){ return (Number(v) * 100).toFixed(d); }
+function reduceEvidence(strategy){
+  const R = sellVal && sellVal.results; if (!R || !R.strategies || !R.strategies[strategy]) return '';
+  const st = R.strategies[strategy], h = R.strategies.H, ad = (R.adoption || {})[strategy] || {};
+  const n = Object.keys(R.episodes.H).length;
+  const mdd = `최대 낙폭 ${pct1(h.mdd, 1)}% → ${pct1(st.mdd, 1)}%`;
+  const dc = (st.cagr - h.cagr) * 100;
+  const cagr = `연 수익률 ${dc >= 0 ? '+' : '−'}${Math.abs(dc).toFixed(2)}%p`;
+  const eps = `큰 하락 ${n}번 중 ${ad.episodes_better}번에서 최대 낙폭이 줄었어요`;
+  return {text: `${R.period[0].slice(0,4)}~${R.period[1].slice(0,4)} 과거 검증(주식 20% 축소): ${mdd}, ${cagr}, ${eps}.`, passed: !!ad.all_met};
+}
+function reduceCard(name, rule, lines, strategy){
+  const on = rule && rule.on, st = on === true ? ['on', '켜짐'] : on === false ? ['off', '꺼짐'] : ['na', '판정 불가'];
+  const ev = reduceEvidence(strategy);
+  const tag = !ev ? '<span class="reduce-tag">검증 결과를 불러오지 못했어요</span>'
+    : ev.passed ? '<span class="reduce-tag">과거 검증 통과(사전 기준)</span>' : '<span class="reduce-tag">과거 검증 기준 미통과 · 참고 정보만</span>';
+  return `<div class="reduce-rule"><div class="rname">${esc(name)}<span class="reduce-badge ${st[0]}">${st[1]}</span></div>` +
+         `<div>${lines.join('<br>')}</div>${tag}${ev ? `<div style="color:var(--text-dim); margin-top:4px;">${esc(ev.text)}</div>` : ''}</div>`;
+}
+function renderReduction(){
+  const grid = document.getElementById('reduce-grid'); if (!grid) return;
+  const sig = todayData && todayData.reduction_signals;
+  const intro = document.getElementById('reduce-intro'), foot = document.getElementById('reduce-foot');
+  if (!sig) {
+    intro.textContent = '비중 축소 신호를 계산한 데이터가 없어요. 다음 자동 실행 후 다시 확인하세요.'; grid.innerHTML = ''; foot.textContent = ''; return;
+  }
+  const t = sig.thresholds || {};
+  const f = (v, d = 0) => (v === null || v === undefined || !Number.isFinite(Number(v))) ? '—' : Number(v).toFixed(d);
+  const r1 = sig.R1 || {}, r2 = sig.R2 || {}, r3 = sig.R3 || {};
+  const onVal = [r2, r3].filter(r => r.on === true).length;
+  intro.innerHTML = `주식 비중을 줄일지 볼 때 참고하는 신호예요. 규칙은 결과를 보기 전에 고정했고, 과거 데이터로 한 번만 검증했어요. ` +
+    (onVal === 0 ? '<b>검증을 통과한 규칙은 지금 모두 꺼져 있어요</b>(줄여야 한다는 신호 없음).'
+                 : `<b>검증을 통과한 규칙 ${onVal}개가 켜져 있어요.</b> 검증에서 본 축소 폭은 규칙 하나당 주식 ${sig.validated_cut_pp}%p였어요.` + (onVal === 2 ? ' 두 규칙이 동시에 켜졌을 때의 폭은 검증하지 않았어요.' : ''));
+  grid.innerHTML =
+    reduceCard('추세 이탈', r2, [
+      `S&P 500 종가 ${f(r2.close, 2)} · 200일 이동평균 ${f(r2.sma200, 2)}`,
+      `최근 1년 고점 대비 낙폭(drawdown) ${f(r2.drawdown_pct, 1)}%`,
+      `켜지는 조건: 종가가 200일 이동평균 아래이고 낙폭이 ${t.drawdown_pct}% 이상`], 'S2') +
+    reduceCard('신용 불안', r3, [
+      `Baa 신용 스프레드 백분위 ${f(r3.value, 0)} (1986년 이후 기준)`,
+      `켜지는 조건: 백분위 ${t.credit_percentile} 이상(스프레드가 역사적으로 넓은 구간)`], 'S3') +
+    reduceCard('시장이 비쌈', r1, [
+      `CAPE 백분위 ${f(r1.value, 0)} (최근 30년 기준)`,
+      `켜지는 조건: 백분위 ${t.cape_percentile} 이상`], 'S1');
+  foot.innerHTML = '한계: 큰 하락 4번을 포함한 과거 결과라 앞으로도 같다는 보장이 없어요. 현금 수익률 0%, 거래비용·세금 제외, 입력 데이터가 발표 시점 기준(PIT)이 아니에요. ' +
+    '규칙은 매주 첫 거래일 종가로 판정하고 다음 거래일에 집행하는 방식으로 검증했어요(화면은 매일 상태를 보여줘요). 내 보유 비중에 맞춘 금액 계산은 하지 않아요.';
 }
 
 /* ================= 데이터 출처 표시 =================
@@ -1489,6 +1558,7 @@ async function loadScoreHistory(){
    같은 설명 칸 안에서는 같은 용어를 처음 한 번만 표시한다. 점수 계산에는 관여하지 않는다. */
 const GLOSS = [
   {k:'hy', t:'하이일드(HY)', m:['하이일드','정크본드'], d:'하이일드(High Yield) 채권이에요. 신용등급이 낮아(투기등급) 부도 위험이 큰 대신 이자를 많이 주는 회사채예요. 정크본드라고도 불러요.', n:'"하이일드 채권 약세", "정크본드 금리 급등"'},
+  {k:'sma200', t:'200일 이동평균', m:['200일 이동평균','200일선'], d:'최근 200거래일 종가의 평균이에요. 가격이 이 선 아래로 내려가면 장기 추세가 꺾였다고 보는 사람이 많아서, 시장 추세를 가늠하는 기준으로 자주 쓰여요.', n:'"200일선 이탈", "200일 이동평균 하회"'},
   {k:'baa', t:'Baa 등급·투자등급', m:['Baa','투자등급','BAA10Y'], d:'무디스 신용등급에서 Baa는 투자등급 가운데 가장 낮은 단계예요(S&P 기준 BBB). 하이일드(투기등급)보다 한 단계 위라 부도 위험이 상대적으로 낮아요. 점수의 신용 항목은 이 등급 회사채 금리와 10년 국채 금리의 차이(BAA10Y)를 써요.', n:'"투자등급 회사채 스프레드", "BBB 스프레드"'},
   {k:'oas', t:'가산금리·스프레드(OAS)', m:['HY 스프레드','HY OAS','OAS','가산금리','스프레드'], d:'여기서는 하이일드 채권 금리가 미국 국채 금리보다 얼마나 더 높은지를 뜻해요(OAS는 옵션조정스프레드).\n예: 국채 4%, 하이일드 7%이면 3%p(300bp)예요. 클수록 투자자들이 위험을 크게 본다는 뜻이에요.', n:'"하이일드 스프레드 확대/축소", "신용 스프레드 급등"'},
   {k:'bp', t:'bp(베이시스포인트)', m:['bp'], d:'0.01%p예요. 100bp = 1%p. 금리 뉴스에서 "50bp 인하"는 금리를 0.5%p 내렸다는 뜻이에요.', n:'"25bp 인상", "스프레드 300bp"'},
