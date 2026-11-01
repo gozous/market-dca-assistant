@@ -48,3 +48,9 @@ def _no_network_hy_reference(monkeypatch):
 def _no_network_sell_validation(monkeypatch):
     from scripts import sell_rule_validation
     monkeypatch.setattr(sell_rule_validation, "collect", lambda: {"note": "test"})
+
+
+@pytest.fixture(autouse=True)
+def _no_network_buy_validation(monkeypatch):
+    from scripts import buy_signal_validation
+    monkeypatch.setattr(buy_signal_validation, "collect", lambda: {"note": "test"})

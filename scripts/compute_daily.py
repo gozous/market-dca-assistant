@@ -91,6 +91,25 @@ def _write_sell_rule_validation():
             pass
 
 
+def _write_buy_signal_validation():
+    """매수 신호 검증(점수 무관). 결과 파일이 없을 때만 한 번 실행한다. 어떤 오류가 나도 본 계산을 막지 않는다."""
+    path = DATA_DIR / "buy_signal_validation.json"
+    err_path = DATA_DIR / "buy_signal_validation_error.json"
+    try:
+        if path.exists():
+            return
+        from scripts import buy_signal_validation
+        _atomic_write_json(path, buy_signal_validation.collect())
+        if err_path.exists():
+            err_path.unlink()
+    except Exception as e:
+        print(f"[warn] 매수 신호 검증 실패(점수에는 영향 없음): {e}")
+        try:
+            _atomic_write_json(err_path, {"generated_at_utc": datetime.now(timezone.utc).isoformat(), "error": ds.describe_error(e)})
+        except Exception:
+            pass
+
+
 def _write_indicator_overlap(max_age_days=7):
     """지표 중복 분석(점수 무관). 파일이 없거나 오래됐을 때만 다시 만든다. 어떤 오류가 나도 본 계산을 막지 않는다."""
     path = DATA_DIR / "indicator_overlap.json"
@@ -391,6 +410,7 @@ def main():
     _log_reduction_signals(payload)
     _write_indicator_overlap()
     _write_sell_rule_validation()
+    _write_buy_signal_validation()
 
     latest_path = DATA_DIR / "latest.json"
     if _latest_should_update(latest_path, payload):
