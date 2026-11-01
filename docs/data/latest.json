@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-31T15:57:20.125656+00:00",
+  "generated_at_utc": "2026-11-01T05:20:35.598144+00:00",
   "rules_version": "v5-baa-credit-2026-10-31",
   "score_status": "complete",
   "missing_items": [],
@@ -662,14 +662,14 @@
     }
   },
   "price_crosscheck": {
-    "checked": 8,
+    "checked": 9,
     "window": 10,
     "tolerance": 0.002,
     "worst_date": "2026-10-23",
     "worst_yahoo": 7623.68017578125,
     "worst_fred": 7623.68,
     "worst_diff_pct": 0.0,
-    "last_checked_date": "2026-10-28"
+    "last_checked_date": "2026-10-29"
   },
   "reduction_signals": {
     "thresholds": {
