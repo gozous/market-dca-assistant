@@ -447,14 +447,20 @@
   <section class="tab-pane" id="pane-rebal" role="tabpanel" aria-labelledby="tab-rebal" hidden>
     <div class="panel">
       <div class="panel-label">Rebalancing — 목표 비중과 시장 신호를 같이 보기</div>
-      <div class="rb-note">자산군 단위로 현재 금액과 목표 비중을 넣으면 목표에서 얼마나 벗어났는지, 목표로 돌리려면 얼마를 사고팔아야 하는지 계산해요. 입력한 값은 이 브라우저 안에서만 계산하고 서버나 저장소로 보내지 않아요(이 기기의 브라우저에만 저장, 지우려면 아래 ‘초기화’). ‘미국 주식’은 S&amp;P 500 기준 신호가 적용되는 자산군이에요.</div>
+      <div class="rb-note">자산군별 현재 금액과 목표 비중을 넣으면, <b>자산군 합계</b> 기준으로 목표에서 얼마나 벗어났는지와 사고팔 금액을 계산해요. 이번 달 신규 납입금이 있으면 모자란 자산군에 먼저 채우고, 그래도 허용 범위를 벗어난 만큼만 사고팔아요. 입력한 값은 이 브라우저 안에서만 계산하고 서버나 저장소로 보내지 않아요(이 기기의 브라우저에만 저장, 지우려면 ‘초기화’). ‘미국 주식’은 S&amp;P 500 기준 신호가 적용되는 자산군이에요. 세금·거래비용·환율은 계산에 넣지 않았어요.</div>
       <div class="rb-wrap"><table class="rb-table" id="rb-table"></table></div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;">
         <button class="rb-btn" id="rb-add" type="button">+ 자산 추가</button>
         <button class="rb-btn" id="rb-reset" type="button">초기화</button>
-        <label style="font-size:13px; color:var(--text-dim);">허용 범위 ±<input class="rb-in" id="rb-band" type="number" min="0.5" max="50" step="0.5" value="5" style="width:70px; text-align:right;">%p</label>
+      </div>
+      <div style="display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); margin-top:12px; font-size:13px; color:var(--text-dim);">
+        <label>허용 범위 ±<input class="rb-in" id="rb-band" type="number" min="0.5" max="50" step="0.5" value="5" style="width:70px; text-align:right;">%p (자산군 합계 기준)</label>
+        <label>이번 달 신규 납입(원) <input class="rb-in" id="rb-deposit" type="number" min="0" step="1" placeholder="0" style="width:130px; text-align:right;"></label>
+        <label>신호로 미국 주식 목표를 낮춘 폭 <input class="rb-in" id="rb-cut" type="number" min="0" max="100" step="0.5" placeholder="0" style="width:70px; text-align:right;">%p, 그만큼은
+          <select class="rb-in" id="rb-dest"><option value="cash">현금·기타</option><option value="bond">채권</option><option value="eq">기타 주식</option></select>로</label>
       </div>
       <div id="rb-sum" class="rb-note"></div>
+      <div class="rb-wrap"><table class="rb-table" id="rb-result"></table></div>
       <div id="rb-sig"></div>
     </div>
   </section>
@@ -934,7 +940,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-01.3';
+const APP_VERSION = '2026-11-05.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1349,107 +1355,140 @@ document.getElementById('today-tag').textContent = new Date().toLocaleDateString
 /* ================= ⑤ 리밸런싱 =================
    자산군 단위. 입력은 브라우저 안에서만 계산하고, 저장은 이 기기의 localStorage(편의용)뿐이다. */
 const RB_CLASSES = [['us','미국 주식'],['eq','기타 주식'],['bond','채권'],['cash','현금·기타']];
-const RB_KEY = 'dca-rebal-v1';
-let rbRows = [{n:'', c:'us', amt:'', tgt:''}, {n:'', c:'bond', amt:'', tgt:''}, {n:'', c:'cash', amt:'', tgt:''}];
-let rbBand = 5;
+const RB_NAME = Object.fromEntries(RB_CLASSES);
+const RB_KEY = 'dca-rebal-v2';
+const rbBlank = () => [{n:'', c:'us', amt:'', tgt:''}, {n:'', c:'bond', amt:'', tgt:''}, {n:'', c:'cash', amt:'', tgt:''}];
+let rbRows = rbBlank();
+let rbOpt = {band: 5, deposit: '', cut: '', dest: 'cash'};
 const rbEsc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function rbLoad(){ try { const o = JSON.parse(localStorage.getItem(RB_KEY) || 'null'); if (o && Array.isArray(o.rows) && o.rows.length) { rbRows = o.rows.slice(0, 30).map(r => ({n:String(r.n||''), c:RB_CLASSES.some(x=>x[0]===r.c)?r.c:'us', amt:r.amt, tgt:r.tgt})); if (Number.isFinite(o.band) && o.band > 0) rbBand = o.band; } } catch (e) {} }
-function rbSave(){ try { localStorage.setItem(RB_KEY, JSON.stringify({rows: rbRows, band: rbBand})); } catch (e) {} }
-/* 순수 계산: rows=[{amt,tgt,...}] → {total, tgtSum, items:[{cur,tgt,drift,out,delta}]}; 입력이 비었거나 숫자가 아니면 0으로 보지 않고 null */
-function rebalCalc(rows, band){
-  const num = v => (v === '' || v === null || v === undefined) ? null : (Number.isFinite(Number(v)) ? Number(v) : null);
-  const amts = rows.map(r => num(r.amt)), tgts = rows.map(r => num(r.tgt));
-  const total = amts.reduce((a, v) => a + (v !== null && v >= 0 ? v : 0), 0);
-  const tgtSum = tgts.reduce((a, v) => a + (v !== null && v >= 0 ? v : 0), 0);
-  const items = rows.map((r, i) => {
-    const a = amts[i], t = tgts[i];
-    if (a === null || a < 0 || t === null || t < 0 || total <= 0) return null;
-    const cur = a / total * 100, drift = cur - t, want = total * t / 100;
-    return {cur, tgt: t, drift, out: Math.abs(drift) > band, delta: want - a};
+function rbLoad(){ try { const o = JSON.parse(localStorage.getItem(RB_KEY) || 'null'); if (o && Array.isArray(o.rows) && o.rows.length) { rbRows = o.rows.slice(0, 30).map(r => ({n:String(r.n||''), c:RB_NAME[r.c]?r.c:'us', amt:r.amt, tgt:r.tgt})); if (o.opt && typeof o.opt === 'object') rbOpt = {band: Number(o.opt.band) > 0 ? Number(o.opt.band) : 5, deposit: o.opt.deposit ?? '', cut: o.opt.cut ?? '', dest: RB_NAME[o.opt.dest] && o.opt.dest !== 'us' ? o.opt.dest : 'cash'}; } } catch (e) {} }
+function rbSave(){ try { localStorage.setItem(RB_KEY, JSON.stringify({rows: rbRows, opt: rbOpt})); } catch (e) {} }
+const rbNum = v => (v === '' || v === null || v === undefined) ? null : (Number.isFinite(Number(v)) ? Number(v) : null);
+/* 순수 계산. 허용 범위는 자산군 합계로 판정한다.
+   cut: 신호로 미국 주식 목표를 낮춘 폭(%p), dest: 그 비중을 옮겨 놓는 자산군. 납입금은 납입 후 목표에 모자란 자산군에 먼저 배분한다. */
+function rebalCalc(rows, opt){
+  const band = Number(opt.band) > 0 ? Number(opt.band) : 5;
+  const deposit = Math.max(0, rbNum(opt.deposit) || 0);
+  const amtBy = {}, tgtBy = {};
+  let total = 0, tgtSum = 0;
+  rows.forEach(r => {
+    const a = rbNum(r.amt), t = rbNum(r.tgt);
+    if (a !== null && a >= 0) { amtBy[r.c] = (amtBy[r.c] || 0) + a; total += a; }
+    if (t !== null && t >= 0) { tgtBy[r.c] = (tgtBy[r.c] || 0) + t; tgtSum += t; }
   });
-  return {total, tgtSum, items};
+  const effT = Object.assign({}, tgtBy);
+  let cutApplied = 0;
+  const cut = Math.max(0, rbNum(opt.cut) || 0);
+  if (cut > 0 && tgtBy.us > 0 && opt.dest && opt.dest !== 'us') {
+    cutApplied = Math.min(cut, tgtBy.us);
+    effT.us = tgtBy.us - cutApplied;
+    effT[opt.dest] = (effT[opt.dest] || 0) + cutApplied;
+  }
+  const keys = RB_CLASSES.map(x => x[0]).filter(k => amtBy[k] !== undefined || tgtBy[k] !== undefined);
+  const out = {total, deposit, tgtSum, band, cutApplied, rows: rows.map(r => { const a = rbNum(r.amt); return (a !== null && a >= 0 && total > 0) ? a / total * 100 : null; }), classes: []};
+  if (total <= 0 || !keys.length) return out;
+  const T2 = total + deposit, sumEff = keys.reduce((x, k) => x + (effT[k] || 0), 0);
+  const want = {}, short = {};
+  keys.forEach(k => { want[k] = T2 * (effT[k] || 0) / 100; short[k] = Math.max(0, want[k] - (amtBy[k] || 0)); });
+  const S = keys.reduce((x, k) => x + short[k], 0);
+  const alloc = {};
+  keys.forEach(k => alloc[k] = 0);
+  if (deposit > 0) {
+    if (S > 0) { const used = Math.min(deposit, S); keys.forEach(k => alloc[k] = used * short[k] / S);
+      const rest = deposit - used; if (rest > 0 && sumEff > 0) keys.forEach(k => alloc[k] += rest * (effT[k] || 0) / sumEff); }
+    else if (sumEff > 0) keys.forEach(k => alloc[k] = deposit * (effT[k] || 0) / sumEff);
+  }
+  keys.forEach(k => {
+    const amt = amtBy[k] || 0, tg = effT[k] || 0, amt2 = amt + alloc[k];
+    const cur = amt / total * 100, cur2 = amt2 / T2 * 100, drift2 = cur2 - tg, isOut = Math.abs(drift2) > band;
+    const edge = drift2 > band ? T2 * (tg + band) / 100 - amt2 : (drift2 < -band ? T2 * (tg - band) / 100 - amt2 : 0);
+    out.classes.push({c: k, amt, tgt: tgtBy[k] || 0, tgtEff: tg, cur, drift: cur - tg, alloc: alloc[k], cur2, drift2, out: isOut, toTarget: want[k] - amt2, toEdge: edge});
+  });
+  return out;
 }
 const rbWon = v => Math.round(v).toLocaleString('ko-KR') + '원';
-function renderRebalSignals(res, rows){
+const rbSigned = v => (v > 0 ? '+' : (v < 0 ? '−' : '')) + Math.abs(v).toFixed(1);
+const rbTrade = v => Math.abs(v) < 1 ? '—' : (v > 0 ? '+' : '−') + rbWon(Math.abs(v)) + (v > 0 ? ' 매수' : ' 매도');
+function renderRebalSignals(res){
   const el = document.getElementById('rb-sig'); if (!el) return;
   const sig = todayData && todayData.reduction_signals;
-  const r = todayData && todayData.result;
-  const ok = todayData && todayData.score_status === 'complete' && r && Number.isFinite(Number(r.buy_pct));
-  const usIdx = rows.map((x, i) => x.c === 'us' ? i : -1).filter(i => i >= 0);
-  const usOver = usIdx.some(i => res.items[i] && res.items[i].out && res.items[i].drift > 0);
-  const anyUnder = res.items.some(it => it && it.out && it.drift < 0);
-  let h = '<b>오늘의 시장 신호</b><br>';
-  if (!sig) { h += '비중 축소 신호 데이터가 없어요.<br>'; }
+  const snap = todayData && todayData.price_snapshot;
+  const asof = snap && snap.sp500_date ? `S&amp;P 500 종가 ${esc(snap.sp500_date)} 기준` : '기준일 알 수 없음';
+  const us = res.classes.find(c => c.c === 'us');
+  const anyOut = res.classes.some(c => c.out);
+  let h = `<b>오늘의 시장 신호</b> <span style="color:var(--text-faint);">(${asof}, 검증은 주 단위 판정이고 이 화면은 매일 갱신돼요)</span><br>`;
+  const names = {R2:'추세 이탈', R3:'신용 불안', R1:'시장이 비쌈'};
+  const st = k => !sig || !sig[k] ? '판단 불가' : (sig[k].on === true ? '켜짐' : (sig[k].on === false ? '꺼짐' : '판단 불가'));
+  if (!sig) h += '신호 데이터가 없어요.<br>';
   else {
+    h += ['R2','R3'].map(k => `${names[k]}: <b>${st(k)}</b>`).join(' · ') + ' (과거 검증에서 참고 가치가 있다고 본 규칙)<br>';
+    h += `${names.R1}: <b>${st('R1')}</b> (과거 검증을 통과하지 못해 참고만 해요)<br>`;
     const on = ['R2','R3'].filter(k => sig[k] && sig[k].on === true).length;
-    const names = {R2:'추세 이탈', R3:'신용 불안', R1:'시장이 비쌈'};
-    h += ['R2','R3','R1'].map(k => `${names[k]}: <b>${sig[k] && sig[k].on === true ? '켜짐' : (sig[k] && sig[k].on === false ? '꺼짐' : '알 수 없음')}</b>${sig[k] && sig[k].validated ? '' : ' (과거 검증 미통과·참고용)'}`).join(' · ') + '<br>';
-    h += on === 0 ? '검증을 통과한 축소 규칙은 지금 모두 꺼져 있어요. ' : `검증을 통과한 축소 규칙 ${on}개가 켜져 있어요(검증에서 본 폭은 규칙 하나당 주식 ${sig.validated_cut_pp}%p${on === 2 ? ', 두 규칙 동시 켜짐은 미검증' : ''}). `;
+    h += on === 0 ? '추세 이탈과 신용 불안은 지금 모두 꺼져 있어요.' : `추세 이탈·신용 불안 중 ${on}개가 켜져 있어요. 검증에서 본 축소는 규칙 하나당 주식 20%였고(주식 100%를 80%로), ${on === 2 ? '두 개가 동시에 켜졌을 때는 검증하지 않았어요. ' : ''}과거 결과는 2000~2009년 하락장에 크게 의존해요.`;
+    if (us && us.tgt > 0) h += `<br>같은 비율을 지금 미국 주식 목표 ${us.tgt.toFixed(1)}%에 적용하면 ${(us.tgt * 0.8).toFixed(1)}%(−${(us.tgt * 0.2).toFixed(1)}%p)예요. 이 숫자를 자동으로 반영하지는 않아요. 줄이기로 했다면 위 칸에 직접 넣으세요.`;
   }
-  h += ok ? `<br>참고 매수 비중 ${Number(r.buy_pct).toFixed(0)}% (매수 점수 ${Number(r.total_score).toFixed(0)}점, 점수는 아직 효과가 검증되지 않았어요).` : '<br>매수 점수는 오늘 산출 불가예요.';
   h += '<br><br><b>이 화면의 읽는 법</b><br>';
-  const anyOut = res.items.some(it => it && it.out);
-  if (!anyOut) h += '모든 자산이 허용 범위 안이라 리밸런싱 필요는 없어요. 신호가 켜져 있어도 목표 비중 자체를 바꾸라는 뜻은 아니에요.';
+  if (!res.classes.length) h += '현재 금액과 목표 %를 넣으면 계산해요.';
+  else if (!anyOut) h += '납입금까지 반영해도 모든 자산군이 허용 범위 안이라 거래할 필요가 없어요.';
   else {
-    if (usOver) h += '• 미국 주식이 목표보다 크게 많아요. 파는 쪽(비중 축소)을 고려하는 상황이고, 위 신호가 켜져 있으면 그만큼 근거가 더해져요. 꺼져 있으면 목표 비중까지만 맞추는 정도로 보는 것이 신호와 어긋나지 않아요.<br>';
-    if (anyUnder) h += '• 목표보다 모자란 자산이 있어요. 새 돈으로 채우는 편이 매도·세금 없이 맞추는 방법이에요. 주식을 채울 때 시기는 참고 매수 비중을 보되, 그 효과는 검증되지 않았어요.<br>';
-    h += '• 이 화면은 신호 상태와 계산만 보여줘요. 목표 비중이나 매매 시점을 대신 정해주지 않아요.';
+    h += '• 허용 범위를 벗어난 자산군만 거래 대상이에요. ‘목표까지’는 목표 비중으로 완전히 돌리는 금액, ‘범위 경계까지’는 범위 안으로만 들어오는 최소 금액이에요(거래를 줄이려면 후자).<br>';
+    h += '• 모자란 자산군은 신규 납입금으로 먼저 채우는 편이 매도·세금 없이 맞추는 방법이에요.<br>';
   }
+  h += (res.classes.length ? '• ' : '') + '이 화면은 신호 상태와 계산만 보여줘요. 목표 비중이나 매매 시점을 대신 정해주지 않아요. 매수 점수는 이 화면에서 쓰지 않아요(실제 매수는 고정 DCA, 점수는 ① 탭에서 참고만).';
   el.innerHTML = `<div class="rb-sig">${h}</div>`;
+}
+function rbRenderResult(res){
+  const rt = document.getElementById('rb-result'), sum = document.getElementById('rb-sum');
+  const bad = Math.abs(res.tgtSum - 100) > 0.05;
+  sum.innerHTML = `합계 현재 ${rbWon(res.total)}${res.deposit > 0 ? ` + 신규 납입 ${rbWon(res.deposit)}` : ''} · 목표 비중 합 ${res.tgtSum.toFixed(1)}%` +
+    (bad && res.tgtSum > 0 ? ' <b class="rb-under">— 100%가 아니에요. 목표 비중 합을 100%로 맞춰주세요(계산은 입력한 값 그대로 해요).</b>' : '') +
+    (res.cutApplied > 0 ? ` · 미국 주식 목표를 ${res.cutApplied.toFixed(1)}%p 낮춰 계산 중` : '');
+  if (!res.classes.length) { rt.innerHTML = ''; return; }
+  rt.innerHTML = '<tr><th>자산군</th><th>현재 %</th><th>목표 %</th><th>차이(%p)</th><th>납입 배분</th><th>납입 후 차이</th><th>판정</th><th>목표까지</th><th>범위 경계까지</th></tr>' +
+    res.classes.map(c => {
+      const cls = c.out ? (c.drift2 > 0 ? 'rb-over' : 'rb-under') : 'rb-ok';
+      const tg = c.tgtEff !== c.tgt ? `${c.tgtEff.toFixed(1)} <span style="color:var(--text-faint);">(원래 ${c.tgt.toFixed(1)})</span>` : c.tgt.toFixed(1);
+      return `<tr><td>${RB_NAME[c.c]}</td><td>${c.cur.toFixed(1)}%</td><td>${tg}%</td><td>${rbSigned(c.drift)}</td>` +
+        `<td>${c.alloc >= 1 ? '+' + rbWon(c.alloc) : '—'}</td><td class="${cls}">${rbSigned(c.drift2)}</td>` +
+        `<td class="${cls}">${c.out ? (c.drift2 > 0 ? '범위 초과' : '범위 미달') : '범위 안'}</td>` +
+        `<td>${c.out ? rbTrade(c.toTarget) : '거래 불필요'}</td><td>${c.out ? rbTrade(c.toEdge) : '—'}</td></tr>`;
+    }).join('');
 }
 function renderRebal(){
   const tb = document.getElementById('rb-table'); if (!tb) return;
-  const res = rebalCalc(rbRows, rbBand);
+  const res = rebalCalc(rbRows, rbOpt);
   const opt = c => RB_CLASSES.map(([k, l]) => `<option value="${k}"${k === c ? ' selected' : ''}>${l}</option>`).join('');
-  tb.innerHTML = '<tr><th>이름</th><th>자산군</th><th>현재 금액(원)</th><th>목표 %</th><th>현재 %</th><th>차이(%p)</th><th>목표까지(원)</th><th></th></tr>' +
-    rbRows.map((r, i) => {
-      const it = res.items[i];
-      const cls = !it ? '' : (!it.out ? 'rb-ok' : (it.drift > 0 ? 'rb-over' : 'rb-under'));
-      const act = !it ? '—' : (Math.abs(it.delta) < 1 ? '—' : (it.delta > 0 ? '+' : '−') + rbWon(Math.abs(it.delta)) + (it.delta > 0 ? ' 매수' : ' 매도'));
-      return `<tr data-i="${i}"><td><input type="text" data-f="n" value="${rbEsc(r.n)}" placeholder="예: 미국 주식 ETF" aria-label="이름"></td>` +
-        `<td><select data-f="c" aria-label="자산군">${opt(r.c)}</select></td>` +
-        `<td><input type="number" min="0" step="1" data-f="amt" value="${rbEsc(r.amt)}" aria-label="현재 금액"></td>` +
-        `<td><input type="number" min="0" max="100" step="0.1" data-f="tgt" value="${rbEsc(r.tgt)}" aria-label="목표 비중"></td>` +
-        `<td>${it ? it.cur.toFixed(1) + '%' : '—'}</td><td class="${cls}">${it ? (it.drift > 0 ? '+' : '') + it.drift.toFixed(1) + (it.out ? ' 이탈' : '') : '—'}</td>` +
-        `<td>${act}</td><td><button class="rb-btn" type="button" data-del="${i}" aria-label="행 삭제">×</button></td></tr>`;
-    }).join('');
-  const sum = document.getElementById('rb-sum');
-  const bad = Math.abs(res.tgtSum - 100) > 0.05;
-  sum.innerHTML = `합계 현재 ${rbWon(res.total)} · 목표 비중 합 ${res.tgtSum.toFixed(1)}%` + (bad && res.tgtSum > 0 ? ' <b class="rb-under">— 100%가 아니에요. 목표 비중 합을 100%로 맞춰주세요.</b>' : '');
-  renderRebalSignals(res, rbRows);
+  tb.innerHTML = '<tr><th>이름</th><th>자산군</th><th>현재 금액(원)</th><th>목표 %</th><th>현재 %</th><th></th></tr>' +
+    rbRows.map((r, i) => `<tr data-i="${i}"><td><input type="text" data-f="n" value="${rbEsc(r.n)}" placeholder="예: 미국 주식 ETF" aria-label="이름"></td>` +
+      `<td><select data-f="c" aria-label="자산군">${opt(r.c)}</select></td>` +
+      `<td><input type="number" min="0" step="1" data-f="amt" value="${rbEsc(r.amt)}" aria-label="현재 금액"></td>` +
+      `<td><input type="number" min="0" max="100" step="0.1" data-f="tgt" value="${rbEsc(r.tgt)}" aria-label="목표 비중"></td>` +
+      `<td data-pct>${res.rows[i] === null ? '—' : res.rows[i].toFixed(1) + '%'}</td><td><button class="rb-btn" type="button" data-del="${i}" aria-label="행 삭제">×</button></td></tr>`).join('');
+  document.getElementById('rb-band').value = rbOpt.band;
+  document.getElementById('rb-deposit').value = rbOpt.deposit;
+  document.getElementById('rb-cut').value = rbOpt.cut;
+  document.getElementById('rb-dest').value = rbOpt.dest;
+  rbRenderResult(res); renderRebalSignals(res);
+}
+/* 입력 중에는 입력칸을 다시 만들지 않고 계산 칸만 바꾼다 */
+function renderRebalLive(){
+  const res = rebalCalc(rbRows, rbOpt);
+  document.querySelectorAll('#rb-table tr[data-i]').forEach(tr => { const v = res.rows[Number(tr.dataset.i)]; tr.querySelector('[data-pct]').textContent = v === null ? '—' : v.toFixed(1) + '%'; });
+  rbRenderResult(res); renderRebalSignals(res);
 }
 (function rbInit(){
   rbLoad();
   const tb = document.getElementById('rb-table'); if (!tb) return;
-  document.getElementById('rb-band').value = rbBand;
-  const upd = e => {
-    const t = e.target, tr = t.closest('tr'); if (!tr || !t.dataset.f) return;
-    rbRows[Number(tr.dataset.i)][t.dataset.f] = t.value; rbSave();
-    // 입력 중 포커스를 잃지 않도록 표 전체를 다시 그리지 않고 결과 칸만 갱신
-    renderRebalCells(rebalCalc(rbRows, rbBand));
-  };
-  tb.addEventListener('input', e => { if (e.target.tagName === 'INPUT' && e.target.type === 'text') { const tr = e.target.closest('tr'); rbRows[Number(tr.dataset.i)].n = e.target.value; rbSave(); } else upd(e); });
-  tb.addEventListener('change', e => { if (e.target.tagName === 'SELECT') { upd(e); renderRebal(); } });
+  tb.addEventListener('input', e => { const t = e.target, tr = t.closest('tr'); if (!tr || !t.dataset.f) return; rbRows[Number(tr.dataset.i)][t.dataset.f] = t.value; rbSave(); renderRebalLive(); });
+  tb.addEventListener('change', e => { if (e.target.tagName === 'SELECT') { const tr = e.target.closest('tr'); rbRows[Number(tr.dataset.i)].c = e.target.value; rbSave(); renderRebal(); } });
   tb.addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (!d) return; if (rbRows.length > 1) rbRows.splice(Number(d.dataset.del), 1); else rbRows[0] = {n:'', c:'us', amt:'', tgt:''}; rbSave(); renderRebal(); });
   document.getElementById('rb-add').onclick = () => { if (rbRows.length < 30) { rbRows.push({n:'', c:'eq', amt:'', tgt:''}); rbSave(); renderRebal(); } };
-  document.getElementById('rb-reset').onclick = () => { rbRows = [{n:'', c:'us', amt:'', tgt:''}, {n:'', c:'bond', amt:'', tgt:''}, {n:'', c:'cash', amt:'', tgt:''}]; rbBand = 5; document.getElementById('rb-band').value = 5; try { localStorage.removeItem(RB_KEY); } catch (e) {} renderRebal(); };
-  document.getElementById('rb-band').addEventListener('input', e => { const v = Number(e.target.value); if (Number.isFinite(v) && v > 0) { rbBand = v; rbSave(); const res = rebalCalc(rbRows, rbBand); renderRebalCells(res); } });
+  document.getElementById('rb-reset').onclick = () => { rbRows = rbBlank(); rbOpt = {band: 5, deposit: '', cut: '', dest: 'cash'}; try { localStorage.removeItem(RB_KEY); } catch (e) {} renderRebal(); };
+  const bind = (id, key, num) => document.getElementById(id).addEventListener('input', e => { const v = e.target.value; if (key === 'band') { const n = Number(v); if (!(n > 0)) return; rbOpt.band = n; } else rbOpt[key] = v; rbSave(); renderRebalLive(); });
+  bind('rb-band', 'band'); bind('rb-deposit', 'deposit'); bind('rb-cut', 'cut');
+  document.getElementById('rb-dest').addEventListener('change', e => { rbOpt.dest = e.target.value; rbSave(); renderRebalLive(); });
   renderRebal();
 })();
-/* 입력 중에는 입력칸을 다시 만들지 않고 계산 칸(현재 %, 차이, 목표까지)과 요약·신호만 바꾼다 */
-function renderRebalCells(res){
-  const trs = document.querySelectorAll('#rb-table tr[data-i]');
-  trs.forEach(tr => {
-    const i = Number(tr.dataset.i), it = res.items[i], td = tr.querySelectorAll('td');
-    const cls = !it ? '' : (!it.out ? 'rb-ok' : (it.drift > 0 ? 'rb-over' : 'rb-under'));
-    td[4].textContent = it ? it.cur.toFixed(1) + '%' : '—';
-    td[5].className = cls; td[5].textContent = it ? (it.drift > 0 ? '+' : '') + it.drift.toFixed(1) + (it.out ? ' 이탈' : '') : '—';
-    td[6].textContent = !it ? '—' : (Math.abs(it.delta) < 1 ? '—' : (it.delta > 0 ? '+' : '−') + rbWon(Math.abs(it.delta)) + (it.delta > 0 ? ' 매수' : ' 매도'));
-  });
-  const bad = Math.abs(res.tgtSum - 100) > 0.05;
-  document.getElementById('rb-sum').innerHTML = `합계 현재 ${rbWon(res.total)} · 목표 비중 합 ${res.tgtSum.toFixed(1)}%` + (bad && res.tgtSum > 0 ? ' <b class="rb-under">— 100%가 아니에요. 목표 비중 합을 100%로 맞춰주세요.</b>' : '');
-  renderRebalSignals(res, rbRows);
-}
 
 /* ================= 오늘 실측값 (latest.json의 input_details) =================
    백엔드가 실제로 받은 값만 담겨 있다. 없으면 그 줄을 그리지 않는다(추정으로 채우지 않는다). */
