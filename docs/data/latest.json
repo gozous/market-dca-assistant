@@ -1,12 +1,12 @@
 {
-  "generated_at_utc": "2026-11-05T01:41:55.936520+00:00",
+  "generated_at_utc": "2026-11-05T06:53:57.901438+00:00",
   "rules_version": "v5-baa-credit-2026-10-31",
   "score_status": "complete",
   "missing_items": [],
   "inputs": {
     "drawdown_pct": 1.6665970364766691,
     "cape_percentile": 94.72222222222221,
-    "fear_greed": 27.2857142857143,
+    "fear_greed": 27.3142857142857,
     "credit_spread_percentile": 8.70800274267803,
     "hy_3y_percentile": 86.4795918367347,
     "ism": 20.9,
@@ -89,7 +89,7 @@
       7688.6201
     ],
     "sp500_series_start": "2026-08-12",
-    "nasdaq100_close": 28437.166015625,
+    "nasdaq100_close": 28437.169921875,
     "nasdaq100_date": "2026-11-04",
     "nasdaq100_series": [
       29742.5996,
@@ -151,10 +151,10 @@
       28384.8496,
       27989.8203,
       28180.2598,
-      28437.166
+      28437.1699
     ],
     "nasdaq100_series_start": "2026-08-12",
-    "nasdaq100_drawdown_pct": 8.926667529454846,
+    "nasdaq100_drawdown_pct": 8.926655019234776,
     "macro": {
       "usd_krw": {
         "value": 1340.5799560546875,
@@ -224,11 +224,10 @@
         ]
       },
       "dxy": {
-        "value": 101.36100006103516,
-        "date": "2026-11-04",
-        "series_start": "2026-08-12",
+        "value": 101.25900268554688,
+        "date": "2026-11-05",
+        "series_start": "2026-08-13",
         "series": [
-          100.01,
           99.96,
           99.67,
           99.64,
@@ -287,7 +286,8 @@
           101.88,
           101.75,
           101.87,
-          101.361
+          101.51,
+          101.259
         ]
       },
       "us_2y": {
@@ -579,7 +579,7 @@
         "score": 18.2,
         "max_score": 20,
         "reason": "지금 투자 심리는 '공포' 상태예요",
-        "raw_value": 27.2857142857143
+        "raw_value": 27.3142857142857
       },
       "rate_credit": {
         "score": 0.9,
@@ -617,16 +617,17 @@
       "low": 13.323667656863929,
       "high": 44.197939761040566,
       "median": 27.65854035573658,
-      "month_ago_value": 40.58087409538742
+      "month_ago_value": 40.58087409538742,
+      "lagged_percentile": 94.72222222222221
     },
     "fear_greed": {
-      "value": 27.2857142857143,
+      "value": 27.3142857142857,
       "rating": "fear",
-      "timestamp": "2026-11-04T23:59:55+00:00",
-      "previous_close": 19.0915113871636,
-      "week_ago": 34.4,
-      "month_ago": 38.199999999999996,
-      "year_ago": 20.94285714285714
+      "timestamp": "2026-11-05T01:00:00+00:00",
+      "previous_close": 27.2857142857143,
+      "week_ago": 30.7672268907563,
+      "month_ago": 43.08571428571429,
+      "year_ago": 23.057142857142857
     },
     "credit_spread_percentile": {
       "value": 1.54,
