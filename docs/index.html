@@ -1592,7 +1592,7 @@ function reduceCard(name, rule, lines, strategy){
   const on = rule && rule.on, st = on === true ? ['on', '켜짐'] : on === false ? ['off', '꺼짐'] : ['na', '판정 불가'];
   const ev = reduceEvidence(strategy);
   const tag = !ev ? '<span class="reduce-tag">검증 결과를 불러오지 못했어요</span>'
-    : ev.passed ? '<span class="reduce-tag">과거 검증 통과(사전 기준)</span>' : '<span class="reduce-tag">과거 검증 기준 미통과 · 참고 정보만</span>';
+    : ev.passed ? '<span class="reduce-tag">과거 검증 기준 통과(참고 수준, 2000년대 의존)</span>' : '<span class="reduce-tag">과거 검증 기준 미통과 · 참고 정보만</span>';
   return `<div class="reduce-rule"><div class="rname">${esc(name)}<span class="reduce-badge ${st[0]}">${st[1]}</span></div>` +
          `<div>${lines.join('<br>')}</div>${tag}${ev ? `<div style="color:var(--text-dim); margin-top:4px;">${esc(ev.text)}</div>` : ''}</div>`;
 }
@@ -1607,9 +1607,14 @@ function renderReduction(){
   const f = (v, d = 0) => (v === null || v === undefined || !Number.isFinite(Number(v))) ? '—' : Number(v).toFixed(d);
   const r1 = sig.R1 || {}, r2 = sig.R2 || {}, r3 = sig.R3 || {};
   const onVal = [r2, r3].filter(r => r.on === true).length;
-  intro.innerHTML = `주식 비중을 줄일지 볼 때 참고하는 신호예요. 규칙은 결과를 보기 전에 고정했고, 과거 데이터로 한 번만 검증했어요. ` +
-    (onVal === 0 ? '<b>검증을 통과한 규칙은 지금 모두 꺼져 있어요</b>(줄여야 한다는 신호 없음).'
-                 : `<b>검증을 통과한 규칙 ${onVal}개가 켜져 있어요.</b> 검증에서 본 축소 폭은 규칙 하나당 주식 ${sig.validated_cut_pp}%p였어요.` + (onVal === 2 ? ' 두 규칙이 동시에 켜졌을 때의 폭은 검증하지 않았어요.' : ''));
+  const snap = todayData && todayData.price_snapshot;
+  const asof = snap && snap.sp500_date ? ` (S&P 500 종가 ${esc(snap.sp500_date)} 기준)` : '';
+  const buy = todayData && todayData.result && Number.isFinite(Number(todayData.result.buy_pct)) ? Number(todayData.result.buy_pct) : null;
+  const conflict = onVal > 0 && buy !== null && buy >= 100;
+  intro.innerHTML = `주식 비중을 줄일지 볼 때 참고하는 신호예요${asof}. 규칙은 결과를 보기 전에 고정했고, 과거 데이터로 한 번만 검증했어요. ` +
+    (onVal === 0 ? '<b>과거 검증에서 참고 가치가 있다고 본 두 규칙(추세 이탈·신용 불안)은 지금 모두 꺼져 있어요</b>(줄여야 한다는 신호 없음). “참고 가치”는 큰 하락 4번 가운데 2000~2009년에 이득이 몰려 있다는 뜻이라 확정된 효과가 아니에요.'
+                 : `<b>두 규칙 중 ${onVal}개가 켜져 있어요.</b> 검증에서 본 축소 폭은 규칙 하나당 주식 ${sig.validated_cut_pp}%(주식 100%를 80%로)였어요.` + (onVal === 2 ? ' 두 규칙이 동시에 켜졌을 때의 폭은 검증하지 않았어요.' : '')) +
+    (conflict ? `<br><b>주의: 지금 참고 매수 비중은 ${buy}%인데 같은 시장 상태에서 축소 규칙이 켜져 있어요.</b> 두 지표는 같은 입력(낙폭·신용 스프레드)을 반대로 읽어요. 매수 점수는 “불안할수록 사볼 만하다”, 축소 규칙은 “불안하면 줄인다”예요. 과거 검증은 둘 중 어느 쪽도 일관되게 맞는다는 근거를 주지 못했어요(매수 점수는 5개 모두 “불확실”). 둘이 충돌하면 어느 한쪽을 따르라는 뜻이 아니라, 고정 DCA와 목표 비중을 유지하는 기본으로 돌아가라는 신호로 읽는 편이 안전해요.` : '');
   grid.innerHTML =
     reduceCard('추세 이탈', r2, [
       `S&P 500 종가 ${f(r2.close, 2)} · 200일 이동평균 ${f(r2.sma200, 2)}`,
