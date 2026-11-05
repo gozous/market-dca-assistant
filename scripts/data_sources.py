@@ -481,9 +481,15 @@ def _parse_cape_percentile(xls_bytes: bytes, lookback_years: int) -> Optional[fl
         if not history:
             _note_fail("cape_percentile", "CAPE 과거 값이 부족해 백분위를 계산하지 못함", "fetch_cape_percentile")
             return None
+        # 참고: 과거 검증(매수·매도 규칙)은 '직전 달 값'을 썼다. 라이브는 파일의 마지막 행(진행 중인 달)을 쓰므로 둘의 차이를 기록만 한다(점수에는 쓰지 않는다).
+        lagged_pct = None
+        lagged_hist = series.iloc[:-2].tail(window_size).tolist() if len(series) > 2 else []
+        if lagged_hist:
+            lagged_pct = _percentile_rank(lagged_hist, float(series.iloc[-2]))
         _set_detail("cape_percentile", value=current_cape, date=cape_date, lookback_years=lookback_years,
                     low=float(min(history)), high=float(max(history)), median=float(sorted(history)[len(history) // 2]),
-                    month_ago_value=float(series.iloc[-2]) if len(series) > 1 else None)
+                    month_ago_value=float(series.iloc[-2]) if len(series) > 1 else None,
+                    lagged_percentile=lagged_pct)
         return _percentile_rank(history, current_cape)
     except Exception as e:
         _note_fail("cape_percentile", "CAPE 파일 해석 실패: " + describe_error(e) + " (Shiller 파일 구조 변경 가능성)", "fetch_cape_percentile")

@@ -1504,6 +1504,7 @@ function factsFor(key, det, snap){
     if (has(det.value)) parts.push(`Shiller CAPE <b>${nf(det.value, 1)}</b>${det.date ? ` (${esc(det.date)} 월간 값)` : ''}`);
     if (has(det.low) && has(det.high)) parts.push(`최근 ${esc(det.lookback_years)}년 범위 ${nf(det.low, 1)} ~ ${nf(det.high, 1)}, 중앙값 ${nf(det.median, 1)}`);
     if (has(det.month_ago_value)) parts.push(`직전 월 ${nf(det.month_ago_value, 1)}`);
+    if (has(det.lagged_percentile)) parts.push(`참고: 직전 월 값 기준 백분위 <b>${nf(det.lagged_percentile, 0)}</b> (과거 검증은 이 방식, 점수는 마지막 월 값 기준)`);
     const m = /^(\d{4})-(\d{2})$/.exec(det.date || '');
     if (m) {
       const now = new Date(); const gap = (now.getFullYear() - Number(m[1])) * 12 + (now.getMonth() + 1 - Number(m[2]));
