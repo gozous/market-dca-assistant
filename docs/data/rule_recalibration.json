@@ -1,0 +1,186 @@
+{
+  "generated_at_utc": "2026-11-06T06:30:30.380553+00:00",
+  "prereg": "claude/rule-recalibration-prereg-2026-11-06.md",
+  "period": [
+    "1991-01-02",
+    "2026-11-05"
+  ],
+  "control_test": {
+    "R2": {
+      "weekly_on_share": 0.1624799572421165,
+      "on_runs": 30,
+      "n_controls": 1000,
+      "actual": {
+        "mdd": -0.5048007219765764,
+        "cagr": 0.09073282192289156,
+        "final_ratio": 0.9981165507398227,
+        "episodes_better": 4,
+        "criteria": {
+          "a_total_mdd_lower": true,
+          "b_episodes_mdd_lower_at_least_3_of_4": true,
+          "c_cagr_loss_within_0_5pp": true,
+          "d_windows_share_ge_H_at_least_50pct_and_min_ratio_at_least_0_85": true
+        },
+        "all_met": true
+      },
+      "control_all_met_share": 0.046,
+      "control_criteria_pass_share": {
+        "a_total_mdd_lower": 0.495,
+        "b_episodes_mdd_lower_at_least_3_of_4": 0.185,
+        "c_cagr_loss_within_0_5pp": 0.834,
+        "d_windows_share_ge_H_at_least_50pct_and_min_ratio_at_least_0_85": 0.185
+      },
+      "control_mdd": {
+        "p05": -0.5754033340814649,
+        "p50": -0.5677538774277279,
+        "p95": -0.5056552105963398
+      },
+      "control_cagr": {
+        "p05": 0.08465415629573071,
+        "p50": 0.08761964008637346,
+        "p95": 0.09139625180528958
+      },
+      "control_final_ratio": {
+        "p05": 0.8169418986646695,
+        "p50": 0.9009280729789968,
+        "p95": 1.020107780728545
+      },
+      "p_mdd": 0.044,
+      "p_cagr": 0.096,
+      "p_episodes": 0.021,
+      "verdict": "대조군과 구별됨",
+      "weak_discriminator": false
+    },
+    "R3": {
+      "weekly_on_share": 0.18492784607161947,
+      "on_runs": 18,
+      "n_controls": 1000,
+      "actual": {
+        "mdd": -0.5008355862980941,
+        "cagr": 0.09312893026228353,
+        "final_ratio": 1.079787143826427,
+        "episodes_better": 3,
+        "criteria": {
+          "a_total_mdd_lower": true,
+          "b_episodes_mdd_lower_at_least_3_of_4": true,
+          "c_cagr_loss_within_0_5pp": true,
+          "d_windows_share_ge_H_at_least_50pct_and_min_ratio_at_least_0_85": true
+        },
+        "all_met": true
+      },
+      "control_all_met_share": 0.041,
+      "control_criteria_pass_share": {
+        "a_total_mdd_lower": 0.408,
+        "b_episodes_mdd_lower_at_least_3_of_4": 0.134,
+        "c_cagr_loss_within_0_5pp": 0.751,
+        "d_windows_share_ge_H_at_least_50pct_and_min_ratio_at_least_0_85": 0.179
+      },
+      "control_mdd": {
+        "p05": -0.5785691268678943,
+        "p50": -0.5677538774277284,
+        "p95": -0.4934934055663971
+      },
+      "control_cagr": {
+        "p05": 0.08402376678150494,
+        "p50": 0.08729984738852059,
+        "p95": 0.09154867472920422
+      },
+      "control_final_ratio": {
+        "p05": 0.800095769383367,
+        "p50": 0.8914822485702327,
+        "p95": 1.0252264866854235
+      },
+      "p_mdd": 0.083,
+      "p_cagr": 0.01,
+      "p_episodes": 0.134,
+      "verdict": "대조군과 구별 안 됨",
+      "weak_discriminator": false
+    }
+  },
+  "bootstrap_sensitivity": {
+    "252": {
+      "drawdown_pct": {
+        "rho_all": 0.049252123389932456,
+        "ci95": [
+          -0.16282723457474702,
+          0.27323699841666904
+        ],
+        "verdict": "불확실"
+      },
+      "cape_pct": {
+        "rho_all": 0.04463004549192631,
+        "ci95": [
+          -0.14694972991827251,
+          0.27646663100675795
+        ],
+        "verdict": "불확실"
+      },
+      "baa_pct": {
+        "rho_all": -0.1629481306598875,
+        "ci95": [
+          -0.37861007239456235,
+          0.08947749071029805
+        ],
+        "verdict": "불확실"
+      },
+      "philly": {
+        "rho_all": 0.04534526073045654,
+        "ci95": [
+          -0.14541882621867325,
+          0.2396501299882701
+        ],
+        "verdict": "불확실"
+      },
+      "composite": {
+        "rho_all": -0.03820196144527565,
+        "ci95": [
+          -0.2567426712813702,
+          0.21070021007735037
+        ],
+        "verdict": "불확실"
+      }
+    },
+    "504": {
+      "drawdown_pct": {
+        "rho_all": 0.049252123389932456,
+        "ci95": [
+          -0.17700510709930928,
+          0.2791169647157355
+        ],
+        "verdict": "불확실"
+      },
+      "cape_pct": {
+        "rho_all": 0.04463004549192631,
+        "ci95": [
+          -0.17937389765756304,
+          0.3420253747185857
+        ],
+        "verdict": "불확실"
+      },
+      "baa_pct": {
+        "rho_all": -0.1629481306598875,
+        "ci95": [
+          -0.40039607293588525,
+          0.11824640537686963
+        ],
+        "verdict": "불확실"
+      },
+      "philly": {
+        "rho_all": 0.04534526073045654,
+        "ci95": [
+          -0.1437160372175743,
+          0.22710736947054752
+        ],
+        "verdict": "불확실"
+      },
+      "composite": {
+        "rho_all": -0.03820196144527565,
+        "ci95": [
+          -0.2706268632595829,
+          0.2262036763505666
+        ],
+        "verdict": "불확실"
+      }
+    }
+  }
+}

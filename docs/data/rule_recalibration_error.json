@@ -1,4 +1,0 @@
-{
-  "generated_at_utc": "2026-11-06T06:27:53.131957+00:00",
-  "error": "TypeError: Object of type bool is not JSON serializable"
-}
