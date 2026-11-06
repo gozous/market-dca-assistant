@@ -104,9 +104,9 @@ def _mdd(v):
 # ── 채택 기준 (a)~(d): sv.adoption과 같은 기준·허용오차 ───────────────────────
 def criteria(st: dict, h: dict, ep_better: int, sw: dict) -> dict:
     return {
-        "a_total_mdd_lower": st["mdd"] > h["mdd"] + sv.TIE_TOL,
-        "b_episodes_mdd_lower_at_least_3_of_4": ep_better >= 3,
-        "c_cagr_loss_within_0_5pp": (h["cagr"] - st["cagr"]) <= 0.005,
+        "a_total_mdd_lower": bool(st["mdd"] > h["mdd"] + sv.TIE_TOL),
+        "b_episodes_mdd_lower_at_least_3_of_4": bool(ep_better >= 3),
+        "c_cagr_loss_within_0_5pp": bool((h["cagr"] - st["cagr"]) <= 0.005),
         "d_windows_share_ge_H_at_least_50pct_and_min_ratio_at_least_0_85": bool(sw["share_ge_H"] is not None and sw["share_ge_H"] >= 0.5 and sw["min_ratio"] >= 0.85),
     }
 
@@ -128,7 +128,7 @@ class Evaluator:
             ib = int(np.searchsorted(c.index.values, np.datetime64(pd.Timestamp(b)), side="right")) - 1
             self.eps.append((ia, ib))
         self.h_vals = self.prices / self.prices[0]
-        self.h = {"mdd": _mdd(self.h_vals), "cagr": self.h_vals[-1] ** (365.25 / self.days) - 1}
+        self.h = {"mdd": _mdd(self.h_vals), "cagr": float(self.h_vals[-1] ** (365.25 / self.days) - 1)}
         self.h_eps = [_mdd(self.h_vals[a:b + 1] / self.h_vals[a]) if b > a else None for a, b in self.eps]
         self.windows = []
         for y in range(1991, 2017):
@@ -141,7 +141,7 @@ class Evaluator:
     def evaluate(self, flags: np.ndarray) -> dict:
         vals = fast_values(self.prices, flags, self.dec, 0, self.n - 1)
         final = float(vals[-1])
-        st = {"final": final, "mdd": _mdd(vals), "cagr": final ** (365.25 / self.days) - 1 if final > 0 else None}
+        st = {"final": final, "mdd": _mdd(vals), "cagr": float(final ** (365.25 / self.days) - 1) if final > 0 else None}
         ep_better = 0
         for (a, b), hm in zip(self.eps, self.h_eps):
             if hm is None or b <= a:
@@ -155,7 +155,7 @@ class Evaluator:
         r = np.array(ratios)
         sw = {"share_ge_H": float((r >= 1).mean()) if len(r) else None, "min_ratio": float(r.min()) if len(r) else None}
         crit = criteria(st, self.h, ep_better, sw)
-        return {"mdd": st["mdd"], "cagr": st["cagr"], "final_ratio": final / (self.prices[-1] / self.prices[0]), "episodes_better": ep_better,
+        return {"mdd": st["mdd"], "cagr": st["cagr"], "final_ratio": float(final / (self.prices[-1] / self.prices[0])), "episodes_better": int(ep_better),
                 "criteria": crit, "all_met": all(crit.values())}
 
 

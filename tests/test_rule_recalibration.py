@@ -93,3 +93,13 @@ def test_informative_rule_beats_controls_on_synthetic_crash():
         fl[st:st + 75] = True
     out = rr.control_test(rr.Evaluator(c), fl, n_controls=60, seed=4)
     assert out["actual"]["mdd"] > out["control_mdd"]["p95"] and out["p_mdd"] <= 0.05
+
+
+def test_result_is_json_serializable():
+    import json
+    c = _close(2600)
+    out = rr.control_test(rr.Evaluator(c), _flags(len(c), seed=9, p=0.3), n_controls=5, seed=1)
+    json.dumps(out)                                       # numpy 값이 섞이면 TypeError
+    sig = pd.DataFrame({n: np.random.default_rng(i).normal(size=len(c)) for i, n in enumerate(rr.bv.SIGNALS)}, index=c.index)
+    sig["buy_pct"] = 0.0
+    json.dumps(rr.bootstrap_sensitivity(sig, c, blocks=(126,)))
