@@ -86,7 +86,7 @@ def _aligned(sig: pd.Series, name: str) -> pd.Series:
     return sig * SIGNALS[name]
 
 
-def evaluate_signal(sig: pd.DataFrame, close: pd.Series, name: str) -> dict:
+def evaluate_signal(sig: pd.DataFrame, close: pd.Series, name: str, boot_block=None) -> dict:
     res = {"direction": SIGNALS[name], "horizons": {}}
     s = _aligned(sig[name], name)
     for h in HORIZONS:
@@ -112,7 +112,7 @@ def evaluate_signal(sig: pd.DataFrame, close: pd.Series, name: str) -> dict:
         q = pd.qcut(d["raw"].rank(method="first"), 5, labels=False)
         entry["quintile_mean_fwd_by_raw_value"] = {f"Q{i + 1}": float(d["f"][q == i].mean()) for i in range(5)}
         if h == MAIN_H:
-            entry["ci95_daily_block_bootstrap"] = block_bootstrap_ci(x, y, h)
+            entry["ci95_daily_block_bootstrap"] = block_bootstrap_ci(x, y, boot_block or h)
         res["horizons"][str(h)] = entry
     res["verdict"] = verdict(res["horizons"].get(str(MAIN_H), {}))
     return res
