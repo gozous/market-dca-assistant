@@ -64,32 +64,6 @@
   .tab-pane[hidden]{display:none;}
   @media (max-width:560px){ .tab-btn{font-size:14px; padding:11px 4px;} }
 
-  .rb-table{width:100%; border-collapse:collapse; font-size:13px; margin-top:8px;}
-  .rb-table th{font-family:var(--mono); font-size:11px; color:var(--text-faint); font-weight:400; text-align:right; padding:4px 6px; border-bottom:1px solid var(--border);}
-  .rb-table td{padding:6px; border-bottom:1px solid var(--border-soft); text-align:right; vertical-align:middle;}
-  .rb-table th:first-child,.rb-table td:first-child{text-align:left;}
-  .rb-table input,.rb-table select,.rb-in{background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px; font-size:13px; font-family:inherit; max-width:100%;}
-  .rb-table input[type=text]{width:100%; min-width:70px;} .rb-table input[type=number]{width:96px; text-align:right;}
-  .rb-over{color:var(--danger);} .rb-under{color:var(--warn);} .rb-ok{color:var(--text-dim);}
-  .rb-btn{background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-size:13px; cursor:pointer;}
-  @media (max-width:560px){
-    #rb-table,#rb-table tbody{display:block;} #rb-table tr:first-child{display:none;}
-    #rb-table tr[data-i]{display:grid; grid-template-columns:1fr 1fr 56px 36px; gap:6px; padding:8px 0; border-bottom:1px solid var(--border-soft);}
-    #rb-table td{display:block; padding:0; border:0; text-align:left; min-width:0;}
-    #rb-table td:nth-child(1){grid-column:1/-1;}
-    #rb-table td:nth-child(2){grid-column:1/2;}
-    #rb-table td:nth-child(3){grid-column:2/3;}
-    #rb-table td:nth-child(3) input,#rb-table td:nth-child(4) input,#rb-table td:nth-child(2) select{width:100%; min-width:0;}
-    #rb-table td[data-pct]{display:none;}
-    #rb-table tr[data-i]{grid-template-columns:1fr 1fr 70px 36px;}
-    #rb-table td:nth-child(4){grid-column:3/4;} #rb-table td:nth-child(6){grid-column:4/5;}
-  }
-  .rb-wrap{overflow-x:auto;} .rb-note{font-size:13px; line-height:1.7; color:var(--text-dim); margin:10px 0;}
-  .rb-verdict{border:2px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px; font-size:13px; line-height:1.7;}
-  .rb-verdict .hl{font-size:17px; font-weight:700; margin-bottom:6px;}
-  .rb-verdict.sell{border-color:var(--danger);} .rb-verdict.buy,.rb-verdict.trim,.rb-verdict.restore{border-color:var(--warn);}
-  .rb-verdict ul{margin:6px 0 0 18px; padding:0;}
-  .rb-sig{border:1px solid var(--border); border-radius:8px; padding:12px; margin-top:12px; font-size:13px; line-height:1.7;}
   .reduce-grid{display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); margin-top:10px;}
   .reduce-rule{border:1px solid var(--border,#8884); border-radius:8px; padding:12px; font-size:13px; line-height:1.7;}
   .reduce-rule .rname{font-weight:600; font-size:14px; margin-bottom:4px;}
@@ -272,7 +246,6 @@
     <button class="tab-btn" role="tab" id="tab-index" aria-controls="pane-index" aria-selected="false" onclick="showTab('index')">② 지수 추이</button>
     <button class="tab-btn" role="tab" id="tab-macro" aria-controls="pane-macro" aria-selected="false" onclick="showTab('macro')">③ 매크로</button>
     <button class="tab-btn" role="tab" id="tab-oos" aria-controls="pane-oos" aria-selected="false" onclick="showTab('oos')">④ 표본 외 기록</button>
-    <button class="tab-btn" role="tab" id="tab-rebal" aria-controls="pane-rebal" aria-selected="false" onclick="showTab('rebal')">⑤ 리밸런싱</button>
   </nav>
 
   <section class="tab-pane" id="pane-score" role="tabpanel" aria-labelledby="tab-score">
@@ -296,7 +269,7 @@
         <div class="hero-stat" style="flex:1 1 100%;">
           <div class="lbl">참고 매수 비중 (평소 정기 매수액 = 100% · 검증 미완료)</div>
           <div class="val accent" id="buy-pct">0%</div>
-          <div class="notice" style="font-size:12px; line-height:1.6; color:var(--text-dim); margin-top:6px;">이 숫자는 <b>새로 넣는 돈</b>을 얼마나 사볼지 보는 참고값이고, 과거 검증에서는 맞춘다는 근거가 확인되지 않았어요(5개 입력 모두 “불확실”). <b>이미 가진 자산의 비중</b>은 아래 ‘비중 축소 검토 신호’와 ⑤ 리밸런싱 탭에서 따로 봐요. 두 쪽이 서로 반대로 말해도(예: 점수는 사볼 만하다, 축소 신호는 줄이라) 하나를 따르라는 뜻이 아니라 고정 DCA와 목표 비중을 유지하라는 뜻으로 읽는 편이 안전해요.</div>
+          <div class="notice" style="font-size:12px; line-height:1.6; color:var(--text-dim); margin-top:6px;">이 숫자는 <b>새로 넣는 돈</b>을 얼마나 사볼지 보는 참고값이고, 과거 검증에서는 맞춘다는 근거가 확인되지 않았어요(5개 입력 모두 “불확실”). <b>이미 가진 자산의 비중</b>은 아래 ‘비중 축소 검토 신호’에서 따로 봐요. 두 쪽이 서로 반대로 말해도(예: 점수는 사볼 만하다, 축소 신호는 줄이라) 하나를 따르라는 뜻이 아니라 고정 DCA와 목표 비중을 유지하라는 뜻으로 읽는 편이 안전해요.</div>
         </div>
       </div>
       <div class="hero-stats">
@@ -461,24 +434,6 @@
       <div class="panel-label">Out-of-sample Record — 규칙 동결(2026-10-12) 이후 쌓이는 기록</div>
       <div class="notice" style="font-size:13px; line-height:1.7; color:var(--text-dim); margin-bottom:14px;">공식 기록은 시장일(S&amp;P500 종가 날짜) 하나당 한 행입니다. 같은 시장일에 다시 실행해도 기존 정상 행을 보존하고, 조회 실패한 날은 공식 기록을 만들지 않습니다(실행 이력에만 ‘실패’로 남아요). 기록이 쌓였다고 신호가 검증된 것은 아니에요.</div>
       <div id="oos-body"><div class="oos-msg">기록을 불러오는 중…</div></div>
-    </div>
-  </section>
-
-  <section class="tab-pane" id="pane-rebal" role="tabpanel" aria-labelledby="tab-rebal" hidden>
-    <div class="panel">
-      <div class="panel-label">Rebalancing — 목표 비중 맞추기</div>
-      <div class="rb-note">자산군별 현재 금액과 목표 비중을 넣으면, <b>자산군 합계</b> 기준으로 목표에서 얼마나 벗어났는지 계산해요. 이번 회차 매수액을 넣으면 목표에 모자란 자산군부터 채우는 배분을 보여줘요. 시장 상황은 판단하지 않고 비율만 다뤄요. 입력한 값은 이 브라우저 안에서만 계산하고 서버나 저장소로 보내지 않아요(이 기기의 브라우저에만 저장, 지우려면 ‘초기화’). ‘미국 주식’은 S&amp;P 500 기준 신호가 적용되는 자산군이에요. 세금·거래비용·환율은 계산에 넣지 않았어요.</div>
-      <div class="rb-wrap"><table class="rb-table" id="rb-table"></table></div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;">
-        <button class="rb-btn" id="rb-add" type="button">+ 자산 추가</button>
-        <button class="rb-btn" id="rb-reset" type="button">초기화</button>
-      </div>
-      <div style="display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); margin-top:12px; font-size:13px; color:var(--text-dim);">
-        <label>허용 범위 ±<input class="rb-in" id="rb-band" type="number" min="0.5" max="50" step="0.5" value="5" style="width:70px; text-align:right;">%p (자산군 합계 기준)</label>
-        <label>이번 회차 매수액(원) <input class="rb-in" id="rb-deposit" type="number" min="0" step="1" placeholder="0" style="width:130px; text-align:right;"></label>
-      </div>
-      <div id="rb-sum" class="rb-note"></div>
-      <div class="rb-wrap"><table class="rb-table" id="rb-result"></table></div>
     </div>
   </section>
 
@@ -957,7 +912,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-08.2';
+const APP_VERSION = '2026-11-08.3';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1318,7 +1273,7 @@ async function loadOos(){
 }
 
 /* ---------------- Tabs ---------------- */
-const TAB_IDS = ['score', 'index', 'macro', 'oos', 'rebal'];
+const TAB_IDS = ['score', 'index', 'macro', 'oos'];
 function showTab(id, persist = true){
   if (!TAB_IDS.includes(id)) id = 'score';
   TAB_IDS.forEach(t => {
@@ -1350,7 +1305,6 @@ function resetToTodayData(){
 function afterLoad(){
   renderVersion();
   renderReduction();
-  renderRebal();
   renderFacts();
   renderSources();
   if (!todayData) { renderNoData(); return; }
@@ -1363,120 +1317,11 @@ document.getElementById('today-tag').textContent = new Date().toLocaleDateString
   await loadTodayData();   // 오늘자 자동 갱신 값으로 슬라이더를 먼저 채운다
   afterLoad();              // 그 값으로 첫 렌더(데이터가 없으면 '데이터 없음')
   loadOos();                // 표본 외 기록(④ 탭)
-  await loadSellValidation(); renderReduction(); renderRebal(); loadBuyValidation(); loadRecal();   // 비중 축소 검증 결과
+  await loadSellValidation(); renderReduction(); loadBuyValidation(); loadRecal();   // 비중 축소 검증 결과
   loadScoreHistory();       // 항목별 점수 추이(① 탭, 공식 기록만 사용)
 })();
 
 
-
-/* ================= ⑤ 리밸런싱 =================
-   자산군 단위. 입력은 브라우저 안에서만 계산하고, 저장은 이 기기의 localStorage(편의용)뿐이다. */
-const RB_CLASSES = [['us','미국 대표지수 (S&P 500 등)'],['gr','성장·섹터 (나스닥·반도체 등)'],['eq','기타 주식'],['bond','채권'],['cash','현금·기타']];
-const RB_EQ = ['us','gr','eq'];
-const RB_NAME = Object.fromEntries(RB_CLASSES);
-const RB_KEY = 'dca-rebal-v2';
-const rbBlank = () => [{n:'', c:'us', amt:'', tgt:''}, {n:'', c:'bond', amt:'', tgt:''}, {n:'', c:'cash', amt:'', tgt:''}];
-let rbRows = rbBlank();
-let rbOpt = {band: 5, deposit: '', cut: '', dest: 'cash'};
-const rbEsc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function rbLoad(){ try { const o = JSON.parse(localStorage.getItem(RB_KEY) || 'null'); if (o && Array.isArray(o.rows) && o.rows.length) { rbRows = o.rows.slice(0, 30).map(r => ({n:String(r.n||''), c:RB_NAME[r.c]?r.c:'us', amt:r.amt, tgt:r.tgt})); if (o.opt && typeof o.opt === 'object') rbOpt = {band: Number(o.opt.band) > 0 ? Number(o.opt.band) : 5, deposit: o.opt.deposit ?? '', cut: '', dest: RB_NAME[o.opt.dest] && o.opt.dest !== 'us' ? o.opt.dest : 'cash'}; } } catch (e) {} }
-function rbSave(){ try { localStorage.setItem(RB_KEY, JSON.stringify({rows: rbRows, opt: rbOpt})); } catch (e) {} }
-const rbNum = v => (v === '' || v === null || v === undefined) ? null : (Number.isFinite(Number(v)) ? Number(v) : null);
-/* 순수 계산. 허용 범위는 자산군 합계로 판정한다.
-   cut: 신호로 주식 전체 목표를 낮춘 폭(주식 자산군에 목표 비율대로 나눠 적용)(%p), dest: 그 비중을 옮겨 놓는 자산군. 납입금은 납입 후 목표에 모자란 자산군에 먼저 배분한다. */
-function rebalCalc(rows, opt){
-  const band = Number(opt.band) > 0 ? Number(opt.band) : 5;
-  const deposit = Math.max(0, rbNum(opt.deposit) || 0);
-  const amtBy = {}, tgtBy = {};
-  let total = 0, tgtSum = 0;
-  rows.forEach(r => {
-    const a = rbNum(r.amt), t = rbNum(r.tgt);
-    if (a !== null && a >= 0) { amtBy[r.c] = (amtBy[r.c] || 0) + a; total += a; }
-    if (t !== null && t >= 0) { tgtBy[r.c] = (tgtBy[r.c] || 0) + t; tgtSum += t; }
-  });
-  const effT = Object.assign({}, tgtBy);
-  let cutApplied = 0;
-  const cut = Math.max(0, rbNum(opt.cut) || 0);
-  const eqT = RB_EQ.reduce((x, k) => x + (tgtBy[k] || 0), 0);
-  if (cut > 0 && eqT > 0 && opt.dest && RB_EQ.indexOf(opt.dest) < 0) {
-    cutApplied = Math.min(cut, eqT);
-    RB_EQ.forEach(k => { if (tgtBy[k]) effT[k] = tgtBy[k] - cutApplied * tgtBy[k] / eqT; });
-    effT[opt.dest] = (effT[opt.dest] || 0) + cutApplied;
-  }
-  const keys = RB_CLASSES.map(x => x[0]).filter(k => amtBy[k] !== undefined || tgtBy[k] !== undefined);
-  const out = {total, deposit, tgtSum, band, cutApplied, rows: rows.map(r => { const a = rbNum(r.amt); return (a !== null && a >= 0 && total > 0) ? a / total * 100 : null; }), classes: []};
-  if (total <= 0 || !keys.length) return out;
-  const T2 = total + deposit, sumEff = keys.reduce((x, k) => x + (effT[k] || 0), 0);
-  const want = {}, short = {};
-  keys.forEach(k => { want[k] = T2 * (effT[k] || 0) / 100; short[k] = Math.max(0, want[k] - (amtBy[k] || 0)); });
-  const S = keys.reduce((x, k) => x + short[k], 0);
-  const alloc = {};
-  keys.forEach(k => alloc[k] = 0);
-  if (deposit > 0) {
-    if (S > 0) { const used = Math.min(deposit, S); keys.forEach(k => alloc[k] = used * short[k] / S);
-      const rest = deposit - used; if (rest > 0 && sumEff > 0) keys.forEach(k => alloc[k] += rest * (effT[k] || 0) / sumEff); }
-    else if (sumEff > 0) keys.forEach(k => alloc[k] = deposit * (effT[k] || 0) / sumEff);
-  }
-  keys.forEach(k => {
-    const amt = amtBy[k] || 0, tg = effT[k] || 0, amt2 = amt + alloc[k];
-    const cur = amt / total * 100, cur2 = amt2 / T2 * 100, drift2 = cur2 - tg, isOut = Math.abs(drift2) > band;
-    const edge = drift2 > band ? T2 * (tg + band) / 100 - amt2 : (drift2 < -band ? T2 * (tg - band) / 100 - amt2 : 0);
-    out.classes.push({c: k, amt, tgt: tgtBy[k] || 0, tgtEff: tg, cur, drift: cur - tg, alloc: alloc[k], cur2, drift2, out: isOut, toTarget: want[k] - amt2, toEdge: edge});
-  });
-  return out;
-}
-const rbWon = v => Math.round(v).toLocaleString('ko-KR') + '원';
-const rbSigned = v => (v > 0 ? '+' : (v < 0 ? '−' : '')) + Math.abs(v).toFixed(1);
-const rbTrade = v => Math.abs(v) < 1 ? '—' : (v > 0 ? '+' : '−') + rbWon(Math.abs(v)) + (v > 0 ? ' 매수' : ' 매도');
-function rbRenderResult(res){
-  const rt = document.getElementById('rb-result'), sum = document.getElementById('rb-sum');
-  const bad = Math.abs(res.tgtSum - 100) > 0.05;
-  sum.innerHTML = `합계 현재 ${rbWon(res.total)}${res.deposit > 0 ? ` + 이번 회차 매수액 ${rbWon(res.deposit)}` : ''} · 목표 비중 합 ${res.tgtSum.toFixed(1)}%` +
-    (bad && res.tgtSum > 0 ? ' <b class="rb-under">— 100%가 아니에요. 목표 비중 합을 100%로 맞춰주세요(계산은 입력한 값 그대로 해요).</b>' : '') +
-    (res.cutApplied > 0 ? ` · 미국 주식 목표를 ${res.cutApplied.toFixed(1)}%p 낮춰 계산 중` : '');
-  if (!res.classes.length) { rt.innerHTML = ''; return; }
-  rt.innerHTML = '<tr><th>자산군</th><th>현재 %</th><th>목표 %</th><th>차이(%p)</th><th>이번 회차 매수</th><th>매수 후 차이</th><th>판정</th><th>목표까지</th><th>범위 경계까지</th></tr>' +
-    res.classes.map(c => {
-      const cls = c.out ? (c.drift2 > 0 ? 'rb-over' : 'rb-under') : 'rb-ok';
-      const tg = c.tgtEff !== c.tgt ? `${c.tgtEff.toFixed(1)} <span style="color:var(--text-faint);">(원래 ${c.tgt.toFixed(1)})</span>` : c.tgt.toFixed(1);
-      return `<tr><td>${RB_NAME[c.c]}</td><td>${c.cur.toFixed(1)}%</td><td>${tg}%</td><td>${rbSigned(c.drift)}</td>` +
-        `<td>${c.alloc >= 1 ? '+' + rbWon(c.alloc) : '—'}</td><td class="${cls}">${rbSigned(c.drift2)}</td>` +
-        `<td class="${cls}">${c.out ? (c.drift2 > 0 ? '범위 초과' : '범위 미달') : '범위 안'}</td>` +
-        `<td>${c.out ? rbTrade(c.toTarget) : '거래 불필요'}</td><td>${c.out ? rbTrade(c.toEdge) : '—'}</td></tr>`;
-    }).join('');
-}
-function renderRebal(){
-  const tb = document.getElementById('rb-table'); if (!tb) return;
-  const res = rebalCalc(rbRows, rbOpt);
-  const opt = c => RB_CLASSES.map(([k, l]) => `<option value="${k}"${k === c ? ' selected' : ''}>${l}</option>`).join('');
-  tb.innerHTML = '<tr><th>이름</th><th>자산군</th><th>현재 금액(원)</th><th>목표 %</th><th>현재 %</th><th></th></tr>' +
-    rbRows.map((r, i) => `<tr data-i="${i}"><td><input type="text" data-f="n" value="${rbEsc(r.n)}" placeholder="예: 미국 주식 ETF" aria-label="이름"></td>` +
-      `<td><select data-f="c" aria-label="자산군">${opt(r.c)}</select></td>` +
-      `<td><input type="number" min="0" step="1" data-f="amt" value="${rbEsc(r.amt)}" aria-label="현재 금액"></td>` +
-      `<td><input type="number" min="0" max="100" step="0.1" data-f="tgt" value="${rbEsc(r.tgt)}" aria-label="목표 비중"></td>` +
-      `<td data-pct>${res.rows[i] === null ? '—' : res.rows[i].toFixed(1) + '%'}</td><td><button class="rb-btn" type="button" data-del="${i}" aria-label="행 삭제">×</button></td></tr>`).join('');
-  document.getElementById('rb-band').value = rbOpt.band;
-  document.getElementById('rb-deposit').value = rbOpt.deposit;
-  rbRenderResult(res);
-}
-/* 입력 중에는 입력칸을 다시 만들지 않고 계산 칸만 바꾼다 */
-function renderRebalLive(){
-  const res = rebalCalc(rbRows, rbOpt);
-  document.querySelectorAll('#rb-table tr[data-i]').forEach(tr => { const v = res.rows[Number(tr.dataset.i)]; tr.querySelector('[data-pct]').textContent = v === null ? '—' : v.toFixed(1) + '%'; });
-  rbRenderResult(res);
-}
-(function rbInit(){
-  rbLoad();
-  const tb = document.getElementById('rb-table'); if (!tb) return;
-  tb.addEventListener('input', e => { const t = e.target, tr = t.closest('tr'); if (!tr || !t.dataset.f) return; rbRows[Number(tr.dataset.i)][t.dataset.f] = t.value; rbSave(); renderRebalLive(); });
-  tb.addEventListener('change', e => { if (e.target.tagName === 'SELECT') { const tr = e.target.closest('tr'); rbRows[Number(tr.dataset.i)].c = e.target.value; rbSave(); renderRebal(); } });
-  tb.addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (!d) return; if (rbRows.length > 1) rbRows.splice(Number(d.dataset.del), 1); else rbRows[0] = {n:'', c:'us', amt:'', tgt:''}; rbSave(); renderRebal(); });
-  document.getElementById('rb-add').onclick = () => { if (rbRows.length < 30) { rbRows.push({n:'', c:'eq', amt:'', tgt:''}); rbSave(); renderRebal(); } };
-  document.getElementById('rb-reset').onclick = () => { rbRows = rbBlank(); rbOpt = {band: 5, deposit: '', cut: '', dest: 'cash'}; try { localStorage.removeItem(RB_KEY); } catch (e) {} renderRebal(); };
-  const bind = (id, key, num) => document.getElementById(id).addEventListener('input', e => { const v = e.target.value; if (key === 'band') { const n = Number(v); if (!(n > 0)) return; rbOpt.band = n; } else rbOpt[key] = v; rbSave(); renderRebalLive(); });
-  bind('rb-band', 'band'); bind('rb-deposit', 'deposit');
-  renderRebal();
-})();
 
 /* ================= 오늘 실측값 (latest.json의 input_details) =================
    백엔드가 실제로 받은 값만 담겨 있다. 없으면 그 줄을 그리지 않는다(추정으로 채우지 않는다). */
@@ -1569,7 +1414,7 @@ function renderBuyValidation(){
 let recal = null;
 async function loadRecal(){
   try { const r = await fetch('./data/rule_recalibration.json', {cache:'no-store'}); if (r.ok) recal = await r.json(); } catch(e) { recal = null; }
-  renderReduction(); renderRebal();
+  renderReduction();
 }
 /* 사전 고정 대조 규칙 검정(claude/rule-recalibration-prereg-2026-11-06.md) 결과. R2→S2, R3→S3 */
 function recalFor(strategy){
@@ -1630,7 +1475,7 @@ function renderReduction(){
       `CAPE 백분위 ${f(r1.value, 0)} (최근 30년 기준)`,
       `켜지는 조건: 백분위 ${t.cape_percentile} 이상`], 'S1');
   foot.innerHTML = '한계: 큰 하락 4번을 포함한 과거 결과라 앞으로도 같다는 보장이 없어요. 현금 수익률 0%, 거래비용·세금 제외, 입력 데이터가 발표 시점 기준(PIT)이 아니에요. ' +
-    '규칙은 매주 첫 거래일 종가로 판정하고 다음 거래일에 집행하는 방식으로 검증했어요(화면은 매일 상태를 보여줘요). 내 보유 비중에 맞춘 금액 계산은 ⑤ 리밸런싱 탭에서 해요.';
+    '규칙은 매주 첫 거래일 종가로 판정하고 다음 거래일에 집행하는 방식으로 검증했어요(화면은 매일 상태를 보여줘요).';
 }
 
 /* ================= 데이터 출처 표시 =================
