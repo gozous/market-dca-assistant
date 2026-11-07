@@ -260,6 +260,15 @@
   </nav>
 
   <section class="tab-pane" id="pane-score" role="tabpanel" aria-labelledby="tab-score">
+  <div class="panel" id="reduce-panel">
+    <div class="panel-label">비중 축소 검토 신호 — 팔거나 줄일 때를 보는 참고 정보</div>
+    <div class="notice" id="reduce-intro" style="font-size:13px; line-height:1.7; color:var(--text-dim);">불러오는 중…</div>
+    <div class="reduce-grid" id="reduce-grid"></div>
+    <div class="notice" id="reduce-foot" style="font-size:12px; line-height:1.7; color:var(--text-faint,var(--text-dim)); margin-top:10px;"></div>
+  </div>
+
+  <details class="score-details" id="score-details" style="margin-top:16px;">
+    <summary style="cursor:pointer; font-size:14px; padding:10px 0; color:var(--text);"><b>매수 점수와 참고 매수 비중</b> — 효과 미검증, 참고·연구용 (눌러서 펼치기)</summary>
   <div id="whatis"><b>이 점수는 이렇게 읽어요.</b> 점수가 <b style="display:inline">높을수록</b> 시장이 싸졌거나 불안하다(낙폭이 크고, 공포가 크고, 신용 스프레드가 커졌다)는 뜻이에요. 시장 상황이 좋다는 뜻이 아니에요. 남들이 겁먹을 때 싸게 사는 역발상 관점으로 만들었고, 실제 매수는 고정 DCA로 하고 이 점수는 참고용이에요. 점수에 쓰는 항목 중 하나라도 조회에 실패하면 중립값·추정값으로 메우지 않고 점수를 계산하지 않아요(산출 불가). 점선 밑줄 친 용어는 마우스를 올리거나(모바일은 눌러서) 설명을 볼 수 있어요.</div>
   <div class="hero-grid">
     <div class="panel gauge-panel">
@@ -355,17 +364,11 @@
     </div>
   </div>
 
-  <div class="panel" id="reduce-panel" style="margin-top:16px;">
-    <div class="panel-label">비중 축소 검토 신호 — 팔거나 줄일 때를 보는 참고 정보</div>
-    <div class="notice" id="reduce-intro" style="font-size:13px; line-height:1.7; color:var(--text-dim);">불러오는 중…</div>
-    <div class="reduce-grid" id="reduce-grid"></div>
-    <div class="notice" id="reduce-foot" style="font-size:12px; line-height:1.7; color:var(--text-faint,var(--text-dim)); margin-top:10px;"></div>
-  </div>
-
   <div class="panel" id="buyval-panel" style="margin-top:16px;" hidden>
     <div class="panel-label">매수 점수는 얼마나 믿을 만한가 — 과거 검증</div>
     <div class="notice" id="buyval-body" style="font-size:13px; line-height:1.7; color:var(--text-dim);"></div>
   </div>
+  </details>
 
   </section>
 
@@ -941,7 +944,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-07.2';
+const APP_VERSION = '2026-11-07.3';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1643,7 +1646,7 @@ function renderReduction(){
       `CAPE 백분위 ${f(r1.value, 0)} (최근 30년 기준)`,
       `켜지는 조건: 백분위 ${t.cape_percentile} 이상`], 'S1');
   foot.innerHTML = '한계: 큰 하락 4번을 포함한 과거 결과라 앞으로도 같다는 보장이 없어요. 현금 수익률 0%, 거래비용·세금 제외, 입력 데이터가 발표 시점 기준(PIT)이 아니에요. ' +
-    '규칙은 매주 첫 거래일 종가로 판정하고 다음 거래일에 집행하는 방식으로 검증했어요(화면은 매일 상태를 보여줘요). 내 보유 비중에 맞춘 금액 계산은 하지 않아요.';
+    '규칙은 매주 첫 거래일 종가로 판정하고 다음 거래일에 집행하는 방식으로 검증했어요(화면은 매일 상태를 보여줘요). 내 보유 비중에 맞춘 금액 계산은 ⑤ 리밸런싱 탭에서 해요.';
 }
 
 /* ================= 데이터 출처 표시 =================
