@@ -477,8 +477,8 @@
       <div style="display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); margin-top:12px; font-size:13px; color:var(--text-dim);">
         <label>허용 범위 ±<input class="rb-in" id="rb-band" type="number" min="0.5" max="50" step="0.5" value="5" style="width:70px; text-align:right;">%p (자산군 합계 기준)</label>
         <label>이번 달 신규 납입(원) <input class="rb-in" id="rb-deposit" type="number" min="0" step="1" placeholder="0" style="width:130px; text-align:right;"></label>
-        <label>신호로 미국 주식 목표를 낮춘 폭 <input class="rb-in" id="rb-cut" type="number" min="0" max="100" step="0.5" placeholder="0" style="width:70px; text-align:right;">%p, 그만큼은
-          <select class="rb-in" id="rb-dest"><option value="cash">현금·기타</option><option value="bond">채권</option><option value="eq">기타 주식</option></select>로</label>
+        <label>신호로 주식 전체 목표를 낮춘 폭 <input class="rb-in" id="rb-cut" type="number" min="0" max="100" step="0.5" placeholder="0" style="width:70px; text-align:right;">%p, 그만큼은
+          <select class="rb-in" id="rb-dest"><option value="cash">현금·기타</option><option value="bond">채권</option></select>로</label>
       </div>
       <div id="rb-sum" class="rb-note"></div>
       <div class="rb-wrap"><table class="rb-table" id="rb-result"></table></div>
@@ -961,7 +961,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-07.6';
+const APP_VERSION = '2026-11-08.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1375,7 +1375,8 @@ document.getElementById('today-tag').textContent = new Date().toLocaleDateString
 
 /* ================= ⑤ 리밸런싱 =================
    자산군 단위. 입력은 브라우저 안에서만 계산하고, 저장은 이 기기의 localStorage(편의용)뿐이다. */
-const RB_CLASSES = [['us','미국 주식'],['eq','기타 주식'],['bond','채권'],['cash','현금·기타']];
+const RB_CLASSES = [['us','미국 대표지수 (S&P 500 등)'],['gr','성장·섹터 (나스닥·반도체 등)'],['eq','기타 주식'],['bond','채권'],['cash','현금·기타']];
+const RB_EQ = ['us','gr','eq'];
 const RB_NAME = Object.fromEntries(RB_CLASSES);
 const RB_KEY = 'dca-rebal-v2';
 const rbBlank = () => [{n:'', c:'us', amt:'', tgt:''}, {n:'', c:'bond', amt:'', tgt:''}, {n:'', c:'cash', amt:'', tgt:''}];
@@ -1386,7 +1387,7 @@ function rbLoad(){ try { const o = JSON.parse(localStorage.getItem(RB_KEY) || 'n
 function rbSave(){ try { localStorage.setItem(RB_KEY, JSON.stringify({rows: rbRows, opt: rbOpt})); } catch (e) {} }
 const rbNum = v => (v === '' || v === null || v === undefined) ? null : (Number.isFinite(Number(v)) ? Number(v) : null);
 /* 순수 계산. 허용 범위는 자산군 합계로 판정한다.
-   cut: 신호로 미국 주식 목표를 낮춘 폭(%p), dest: 그 비중을 옮겨 놓는 자산군. 납입금은 납입 후 목표에 모자란 자산군에 먼저 배분한다. */
+   cut: 신호로 주식 전체 목표를 낮춘 폭(주식 자산군에 목표 비율대로 나눠 적용)(%p), dest: 그 비중을 옮겨 놓는 자산군. 납입금은 납입 후 목표에 모자란 자산군에 먼저 배분한다. */
 function rebalCalc(rows, opt){
   const band = Number(opt.band) > 0 ? Number(opt.band) : 5;
   const deposit = Math.max(0, rbNum(opt.deposit) || 0);
@@ -1400,9 +1401,10 @@ function rebalCalc(rows, opt){
   const effT = Object.assign({}, tgtBy);
   let cutApplied = 0;
   const cut = Math.max(0, rbNum(opt.cut) || 0);
-  if (cut > 0 && tgtBy.us > 0 && opt.dest && opt.dest !== 'us') {
-    cutApplied = Math.min(cut, tgtBy.us);
-    effT.us = tgtBy.us - cutApplied;
+  const eqT = RB_EQ.reduce((x, k) => x + (tgtBy[k] || 0), 0);
+  if (cut > 0 && eqT > 0 && opt.dest && RB_EQ.indexOf(opt.dest) < 0) {
+    cutApplied = Math.min(cut, eqT);
+    RB_EQ.forEach(k => { if (tgtBy[k]) effT[k] = tgtBy[k] - cutApplied * tgtBy[k] / eqT; });
     effT[opt.dest] = (effT[opt.dest] || 0) + cutApplied;
   }
   const keys = RB_CLASSES.map(x => x[0]).filter(k => amtBy[k] !== undefined || tgtBy[k] !== undefined);
@@ -1439,7 +1441,10 @@ function rebalVerdict(res, opt, sig, recalOf){
   const strength = k => { const c = recalOf && recalOf(k === 'R2' ? 'S2' : 'S3'); return c ? (c.verdict === '대조군과 구별됨' ? '대조군과 구별됨' : '대조군과 구별 안 됨, 약한 근거') : '검증 결과 미확인'; };
   const items = [];
   const cutApplied = res.cutApplied > 0;
-  const us = res.classes.find(c => c.c === 'us');
+  const eqTgt = res.classes.filter(c => RB_EQ.indexOf(c.c) >= 0).reduce((x, c) => x + c.tgt, 0);
+  const us = eqTgt > 0 ? {tgt: eqTgt} : null;
+  const growth = res.classes.find(c => c.c === 'gr' && c.tgt > 0);
+  const grNote = growth ? ' 나스닥·반도체처럼 변동이 큰 자산은 S&P 500 기준 신호가 늦게 켜질 수 있고, 이 부분은 검증하지 않았어요.' : '';
   const T2 = res.total + res.deposit;
   const won = v => Math.round(v).toLocaleString('ko-KR') + '원';
   let level = 'none';
@@ -1448,11 +1453,11 @@ function rebalVerdict(res, opt, sig, recalOf){
   const trim = known && onList.length > 0 && !cutApplied && us && us.tgt > 0;
   if (trim) {
     const cutPP = us.tgt * 0.2, amt = T2 * cutPP / 100;
-    items.push(`<b>주식 축소 검토 시점</b>: ${onList.map(k => `${nm[k]} 켜짐(${strength(k)})`).join(', ')}. 검증에서 본 방식(주식 20% 축소)을 미국 주식 목표 ${us.tgt.toFixed(1)}%에 적용하면 ${(us.tgt * 0.8).toFixed(1)}%이고, 약 ${won(amt)}을 ${RB_NAME[opt.dest] || '현금·기타'}(으)로 옮기는 거예요. 줄이기로 하면 아래 ‘낮춘 폭’에 ${cutPP.toFixed(1)}를 넣으세요.`);
+    items.push(`<b>주식 축소 검토 시점</b>: ${onList.map(k => `${nm[k]} 켜짐(${strength(k)})`).join(', ')}. 검증에서 본 방식(주식 20% 축소)을 주식 전체 목표 ${us.tgt.toFixed(1)}%에 적용하면 ${(us.tgt * 0.8).toFixed(1)}%이고, 약 ${won(amt)}을 ${RB_NAME[opt.dest] || '현금·기타'}(으)로 옮기는 거예요. 줄이기로 하면 아래 ‘낮춘 폭’에 ${cutPP.toFixed(1)}를 넣으세요(주식 자산군에 목표 비율대로 나눠 적용돼요).${grNote}`);
     level = 'trim';
   }
   if (known && cutApplied && onList.length > 0) items.push(`축소 적용 중이고 신호도 아직 켜져 있어요(${onList.map(k => nm[k]).join(', ')}). 줄인 상태를 유지하세요.`);
-  const isEq = c => c.c === 'us' || c.c === 'eq';
+  const isEq = c => RB_EQ.indexOf(c.c) >= 0;
   const marketOn = known && onList.length > 0;           /* 추세 이탈·신용 불안 중 하나라도 켜짐 */
   const valNote = on('R1') ? ' (참고: 고평가 신호는 켜져 있어요. 다만 검증에서 효과가 확인되지 않았어요.)' : '';
   const overAll = res.classes.filter(c => c.out && c.drift2 > 0), underAll = res.classes.filter(c => c.out && c.drift2 < 0);
@@ -1466,7 +1471,7 @@ function rebalVerdict(res, opt, sig, recalOf){
     const limit = known && !marketOn && isEq(c);
     items.push(`<b>${RB_NAME[c.c]} 매도 시점</b>: 목표보다 ${c.drift2.toFixed(1)}%p 많아 허용 범위 ±${res.band}%p를 넘었어요${limit ? `. 시장 신호는 정상이지만 범위의 2배(${(2 * res.band).toFixed(0)}%p)를 넘어 리스크 한도 차원에서 정리를 권해요` : ''}. 약 ${won(Math.abs(c.toEdge))} 매도하면 범위 안, ${won(Math.abs(c.toTarget))} 매도하면 목표 비중이에요.`);
   });
-  holdSell.forEach(c => items.push(`<b>${RB_NAME[c.c]}: 비중은 ${c.drift2.toFixed(1)}%p 넘었지만 지금은 팔지 않아도 돼요</b>. 추세 이탈·신용 불안 신호가 모두 꺼져 있어 시장이 매도를 요구하지 않아요. 범위의 2배(${(2 * res.band).toFixed(0)}%p)를 넘으면 정리를 권해요.${valNote}`));
+  holdSell.forEach(c => items.push(`<b>${RB_NAME[c.c]}: 비중은 ${c.drift2.toFixed(1)}%p 넘었지만 지금은 팔지 않아도 돼요</b>. 추세 이탈·신용 불안 신호가 모두 꺼져 있어 시장이 매도를 요구하지 않아요. 범위의 2배(${(2 * res.band).toFixed(0)}%p)를 넘으면 정리를 권해요.${valNote}${c.c === 'gr' ? grNote : ''}`));
   if (restore) items.push(`<b>축소 해제(원래 목표로 복귀) 시점</b>: 추세 이탈·신용 불안 신호가 모두 꺼졌어요. 검증에서는 신호가 꺼지면 다음 주에 원래 비중으로 돌아갔어요. ‘낮춘 폭’을 0으로 되돌리세요.`);
   under.forEach(c => items.push(`<b>${RB_NAME[c.c]} 매수 시점</b>: 목표보다 ${Math.abs(c.drift2).toFixed(1)}%p 모자라 허용 범위 ±${res.band}%p를 넘었어요. ${res.deposit > 0 ? '신규 납입으로 먼저 채운 뒤에도 ' : '신규 납입이 있으면 먼저 채우고, '}부족분 약 ${won(Math.abs(c.toEdge))}을 사면 범위 안, ${won(Math.abs(c.toTarget))}을 사면 목표 비중이에요.`));
   holdBuy.forEach(c => items.push(`<b>${RB_NAME[c.c]}: 비중은 ${Math.abs(c.drift2).toFixed(1)}%p 모자라지만 지금은 사지 마세요</b>. ${onList.map(k => nm[k]).join('·')} 신호가 켜져 있어 주식을 더 사는 것은 신호와 반대예요. 신호가 꺼질 때까지 보류하고, 신규 납입은 다른 자산군에 먼저 쓰세요.`));
@@ -1496,7 +1501,8 @@ function renderRebalSignals(res){
   const sig = todayData && todayData.reduction_signals;
   const snap = todayData && todayData.price_snapshot;
   const asof = snap && snap.sp500_date ? `S&amp;P 500 종가 ${esc(snap.sp500_date)} 기준` : '기준일 알 수 없음';
-  const us = res.classes.find(c => c.c === 'us');
+  const eqSum = res.classes.filter(c => RB_EQ.indexOf(c.c) >= 0).reduce((x, c) => x + c.tgt, 0);
+  const us = eqSum > 0 ? {tgt: eqSum} : null;
   const anyOut = res.classes.some(c => c.out);
   let h = `<b>오늘의 시장 신호</b> <span style="color:var(--text-faint);">(${asof}, 검증은 주 단위 판정이고 이 화면은 매일 갱신돼요)</span><br>`;
   const names = {R2:'추세 이탈', R3:'신용 불안', R1:'시장이 비쌈'};
@@ -1507,7 +1513,7 @@ function renderRebalSignals(res){
     h += `${names.R1}: <b>${st('R1')}</b> (과거 검증을 통과하지 못해 참고만 해요)<br>`;
     const on = ['R2','R3'].filter(k => sig[k] && sig[k].on === true).length;
     h += on === 0 ? '추세 이탈과 신용 불안은 지금 모두 꺼져 있어요.' : `추세 이탈·신용 불안 중 ${on}개가 켜져 있어요. 검증에서 본 축소는 규칙 하나당 주식 20%였고(주식 100%를 80%로), ${on === 2 ? '두 개가 동시에 켜졌을 때는 검증하지 않았어요. ' : ''}과거 결과는 2000~2009년 하락장에 크게 의존해요.`;
-    if (us && us.tgt > 0) h += `<br>같은 비율을 지금 미국 주식 목표 ${us.tgt.toFixed(1)}%에 적용하면 ${(us.tgt * 0.8).toFixed(1)}%(−${(us.tgt * 0.2).toFixed(1)}%p)예요. 이 숫자를 자동으로 반영하지는 않아요. 줄이기로 했다면 위 칸에 직접 넣으세요.`;
+    if (us && us.tgt > 0) h += `<br>같은 비율을 지금 주식 전체 목표 ${us.tgt.toFixed(1)}%에 적용하면 ${(us.tgt * 0.8).toFixed(1)}%(−${(us.tgt * 0.2).toFixed(1)}%p)예요. 이 숫자를 자동으로 반영하지는 않아요. 줄이기로 했다면 위 칸에 직접 넣으세요.`;
   }
   h += '<br><br><b>이 화면의 읽는 법</b><br>';
   if (!res.classes.length) h += '현재 금액과 목표 %를 넣으면 계산해요.';
