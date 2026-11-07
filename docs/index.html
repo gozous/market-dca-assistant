@@ -940,7 +940,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-05.1';
+const APP_VERSION = '2026-11-07.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1346,7 +1346,7 @@ document.getElementById('today-tag').textContent = new Date().toLocaleDateString
   await loadTodayData();   // 오늘자 자동 갱신 값으로 슬라이더를 먼저 채운다
   afterLoad();              // 그 값으로 첫 렌더(데이터가 없으면 '데이터 없음')
   loadOos();                // 표본 외 기록(④ 탭)
-  await loadSellValidation(); renderReduction(); renderRebal(); loadBuyValidation();   // 비중 축소 검증 결과
+  await loadSellValidation(); renderReduction(); renderRebal(); loadBuyValidation(); loadRecal();   // 비중 축소 검증 결과
   loadScoreHistory();       // 항목별 점수 추이(① 탭, 공식 기록만 사용)
 })();
 
@@ -1421,7 +1421,7 @@ function renderRebalSignals(res){
   const st = k => !sig || !sig[k] ? '판단 불가' : (sig[k].on === true ? '켜짐' : (sig[k].on === false ? '꺼짐' : '판단 불가'));
   if (!sig) h += '신호 데이터가 없어요.<br>';
   else {
-    h += ['R2','R3'].map(k => `${names[k]}: <b>${st(k)}</b>`).join(' · ') + ' (과거 검증에서 참고 가치가 있다고 본 규칙)<br>';
+    h += ['R2','R3'].map(k => `${names[k]}: <b>${st(k)}</b>`).join(' · ') + ` (${recalUnclear() ? '과거 검증 결과 참고 가치가 불확실한 규칙 포함' : '과거 검증에서 참고 가치가 있다고 본 규칙'})<br>`;
     h += `${names.R1}: <b>${st('R1')}</b> (과거 검증을 통과하지 못해 참고만 해요)<br>`;
     const on = ['R2','R3'].filter(k => sig[k] && sig[k].on === true).length;
     h += on === 0 ? '추세 이탈과 신용 불안은 지금 모두 꺼져 있어요.' : `추세 이탈·신용 불안 중 ${on}개가 켜져 있어요. 검증에서 본 축소는 규칙 하나당 주식 20%였고(주식 100%를 80%로), ${on === 2 ? '두 개가 동시에 켜졌을 때는 검증하지 않았어요. ' : ''}과거 결과는 2000~2009년 하락장에 크게 의존해요.`;
@@ -1578,6 +1578,18 @@ function renderBuyValidation(){
     '<b>읽는 법:</b> “불확실”은 점수가 맞춘다는 근거도, 틀린다는 근거도 충분히 없다는 뜻이에요. 구간마다 방향이 달랐고 큰 하락이 몇 번 안 돼요. 그래서 점수는 시점을 맞추는 도구가 아니라 참고용으로만 보고, 실제 매수는 고정 DCA를 유지해요. 배당·거래비용 제외, 입력값이 발표 당시 값이 아니에요.';
   box.hidden = false;
 }
+let recal = null;
+async function loadRecal(){
+  try { const r = await fetch('./data/rule_recalibration.json', {cache:'no-store'}); if (r.ok) recal = await r.json(); } catch(e) { recal = null; }
+  renderReduction(); renderRebal();
+}
+/* 사전 고정 대조 규칙 검정(claude/rule-recalibration-prereg-2026-11-06.md) 결과. R2→S2, R3→S3 */
+function recalFor(strategy){
+  const k = {S2: 'R2', S3: 'R3'}[strategy], c = recal && recal.control_test && recal.control_test[k];
+  return c && c.verdict ? c : null;
+}
+function recalAllDistinct(){ const a = recalFor('S2'), b = recalFor('S3'); return !!(a && b && a.verdict === '대조군과 구별됨' && b.verdict === '대조군과 구별됨'); }
+function recalUnclear(){ return ['S2','S3'].some(x => { const c = recalFor(x); return c && c.verdict !== '대조군과 구별됨'; }); }
 function pct1(v, d = 1){ return (Number(v) * 100).toFixed(d); }
 function reduceEvidence(strategy){
   const R = sellVal && sellVal.results; if (!R || !R.strategies || !R.strategies[strategy]) return '';
@@ -1594,8 +1606,10 @@ function reduceCard(name, rule, lines, strategy){
   const ev = reduceEvidence(strategy);
   const tag = !ev ? '<span class="reduce-tag">검증 결과를 불러오지 못했어요</span>'
     : ev.passed ? '<span class="reduce-tag">과거 검증 기준 통과(참고 수준, 2000년대 의존)</span>' : '<span class="reduce-tag">과거 검증 기준 미통과 · 참고 정보만</span>';
+  const rc = recalFor(strategy);
+  const rtag = !rc ? '' : `<div style="color:var(--text-dim); margin-top:4px;"><b>대조 검정:</b> 켜진 비율과 전환 횟수를 맞춘 무작위 규칙 ${rc.n_controls}개 중 최대 낙폭이 같거나 더 좋은 것이 ${(rc.p_mdd * 100).toFixed(1)}%예요 → <b>${esc(rc.verdict)}</b>${rc.verdict === '대조군과 구별됨' ? '(기준 5% 이하)' : '(기준 5% 초과, 참고용)'}.</div>`;
   return `<div class="reduce-rule"><div class="rname">${esc(name)}<span class="reduce-badge ${st[0]}">${st[1]}</span></div>` +
-         `<div>${lines.join('<br>')}</div>${tag}${ev ? `<div style="color:var(--text-dim); margin-top:4px;">${esc(ev.text)}</div>` : ''}</div>`;
+         `<div>${lines.join('<br>')}</div>${tag}${ev ? `<div style="color:var(--text-dim); margin-top:4px;">${esc(ev.text)}</div>` : ''}${rtag}</div>`;
 }
 function renderReduction(){
   const grid = document.getElementById('reduce-grid'); if (!grid) return;
@@ -1613,7 +1627,7 @@ function renderReduction(){
   const buy = todayData && todayData.result && Number.isFinite(Number(todayData.result.buy_pct)) ? Number(todayData.result.buy_pct) : null;
   const conflict = onVal > 0 && buy !== null && buy >= 100;
   intro.innerHTML = `주식 비중을 줄일지 볼 때 참고하는 신호예요${asof}. 규칙은 결과를 보기 전에 고정했고, 과거 데이터로 한 번만 검증했어요. ` +
-    (onVal === 0 ? '<b>과거 검증에서 참고 가치가 있다고 본 두 규칙(추세 이탈·신용 불안)은 지금 모두 꺼져 있어요</b>(줄여야 한다는 신호 없음). “참고 가치”는 큰 하락 4번 가운데 2000~2009년에 이득이 몰려 있다는 뜻이라 확정된 효과가 아니에요.'
+    (onVal === 0 ? `<b>과거 검증에서 ${recalUnclear() ? '참고 가치가 불확실한 규칙을 포함한' : '참고 가치가 있다고 본'} 두 규칙(추세 이탈·신용 불안)은 지금 모두 꺼져 있어요</b>(줄여야 한다는 신호 없음). “참고 가치”는 큰 하락 4번 가운데 2000~2009년에 이득이 몰려 있다는 뜻이라 확정된 효과가 아니에요.`
                  : `<b>두 규칙 중 ${onVal}개가 켜져 있어요.</b> 검증에서 본 축소 폭은 규칙 하나당 주식 ${sig.validated_cut_pp}%(주식 100%를 80%로)였어요.` + (onVal === 2 ? ' 두 규칙이 동시에 켜졌을 때의 폭은 검증하지 않았어요.' : '')) +
     (conflict ? `<br><b>주의: 지금 참고 매수 비중은 ${buy}%인데 같은 시장 상태에서 축소 규칙이 켜져 있어요.</b> 두 지표는 같은 입력(낙폭·신용 스프레드)을 반대로 읽어요. 매수 점수는 “불안할수록 사볼 만하다”, 축소 규칙은 “불안하면 줄인다”예요. 과거 검증은 둘 중 어느 쪽도 일관되게 맞는다는 근거를 주지 못했어요(매수 점수는 5개 모두 “불확실”). 둘이 충돌하면 어느 한쪽을 따르라는 뜻이 아니라, 고정 DCA와 목표 비중을 유지하는 기본으로 돌아가라는 신호로 읽는 편이 안전해요.` : '');
   grid.innerHTML =
