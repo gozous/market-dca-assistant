@@ -271,6 +271,7 @@
         <div class="hero-stat" style="flex:1 1 100%;">
           <div class="lbl">참고 매수 비중 (평소 정기 매수액 = 100% · 검증 미완료)</div>
           <div class="val accent" id="buy-pct">0%</div>
+          <div class="notice" style="font-size:12px; line-height:1.6; color:var(--text-dim); margin-top:6px;">이 숫자는 <b>새로 넣는 돈</b>을 얼마나 사볼지 보는 참고값이고, 과거 검증에서는 맞춘다는 근거가 확인되지 않았어요(5개 입력 모두 “불확실”). <b>이미 가진 자산의 비중</b>은 아래 ‘비중 축소 검토 신호’와 ⑤ 리밸런싱 탭에서 따로 봐요. 두 쪽이 서로 반대로 말해도(예: 점수는 사볼 만하다, 축소 신호는 줄이라) 하나를 따르라는 뜻이 아니라 고정 DCA와 목표 비중을 유지하라는 뜻으로 읽는 편이 안전해요.</div>
         </div>
       </div>
       <div class="hero-stats">
@@ -940,7 +941,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-07.1';
+const APP_VERSION = '2026-11-07.2';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
