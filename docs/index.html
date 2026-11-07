@@ -72,6 +72,18 @@
   .rb-table input[type=text]{width:100%; min-width:70px;} .rb-table input[type=number]{width:96px; text-align:right;}
   .rb-over{color:var(--danger);} .rb-under{color:var(--warn);} .rb-ok{color:var(--text-dim);}
   .rb-btn{background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-size:13px; cursor:pointer;}
+  @media (max-width:560px){
+    #rb-table,#rb-table tbody{display:block;} #rb-table tr:first-child{display:none;}
+    #rb-table tr[data-i]{display:grid; grid-template-columns:1fr 1fr 56px 36px; gap:6px; padding:8px 0; border-bottom:1px solid var(--border-soft);}
+    #rb-table td{display:block; padding:0; border:0; text-align:left; min-width:0;}
+    #rb-table td:nth-child(1){grid-column:1/-1;}
+    #rb-table td:nth-child(2){grid-column:1/2;}
+    #rb-table td:nth-child(3){grid-column:2/3;}
+    #rb-table td:nth-child(3) input,#rb-table td:nth-child(4) input,#rb-table td:nth-child(2) select{width:100%; min-width:0;}
+    #rb-table td[data-pct]{display:none;}
+    #rb-table tr[data-i]{grid-template-columns:1fr 1fr 70px 36px;}
+    #rb-table td:nth-child(4){grid-column:3/4;} #rb-table td:nth-child(6){grid-column:4/5;}
+  }
   .rb-wrap{overflow-x:auto;} .rb-note{font-size:13px; line-height:1.7; color:var(--text-dim); margin:10px 0;}
   .rb-verdict{border:2px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px; font-size:13px; line-height:1.7;}
   .rb-verdict .hl{font-size:17px; font-weight:700; margin-bottom:6px;}
@@ -949,7 +961,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-07.4';
+const APP_VERSION = '2026-11-07.6';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1440,24 +1452,36 @@ function rebalVerdict(res, opt, sig, recalOf){
     level = 'trim';
   }
   if (known && cutApplied && onList.length > 0) items.push(`축소 적용 중이고 신호도 아직 켜져 있어요(${onList.map(k => nm[k]).join(', ')}). 줄인 상태를 유지하세요.`);
+  const isEq = c => c.c === 'us' || c.c === 'eq';
+  const marketOn = known && onList.length > 0;           /* 추세 이탈·신용 불안 중 하나라도 켜짐 */
+  const valNote = on('R1') ? ' (참고: 고평가 신호는 켜져 있어요. 다만 검증에서 효과가 확인되지 않았어요.)' : '';
+  const overAll = res.classes.filter(c => c.out && c.drift2 > 0), underAll = res.classes.filter(c => c.out && c.drift2 < 0);
+  /* 주식이 많은데 시장 신호가 정상이면 팔지 않고 두는 것을 허용한다. 단 범위의 2배를 넘으면 시장과 무관하게 정리 권장(리스크 한도) */
+  const holdSell = known && !marketOn ? overAll.filter(c => isEq(c) && c.drift2 <= 2 * res.band) : [];
+  const over = overAll.filter(c => holdSell.indexOf(c) < 0);
+  const holdBuy = marketOn ? underAll.filter(isEq) : [];
+  const under = underAll.filter(c => holdBuy.indexOf(c) < 0);
   const restore = known && cutApplied && onList.length === 0;
-  const over = res.classes.filter(c => c.out && c.drift2 > 0), under = res.classes.filter(c => c.out && c.drift2 < 0);
-  over.forEach(c => items.push(`<b>${RB_NAME[c.c]} 매도 시점</b>: 목표보다 ${c.drift2.toFixed(1)}%p 많아 허용 범위 ±${res.band}%p를 넘었어요. 약 ${won(Math.abs(c.toEdge))} 매도하면 범위 안, ${won(Math.abs(c.toTarget))} 매도하면 목표 비중이에요.`));
-  if (restore) items.push(`<b>축소 해제(원래 목표로 복귀) 시점</b>: 추세 이탈·신용 불안 신호가 모두 꺼졌어요. 검증에서는 신호가 꺼지면 다음 주에 원래 비중으로 돌아갔어요. ‘낮춘 폭’을 0으로 되돌리세요.`);
-  under.forEach(c => {
-    const hold = trim && c.c === 'us';
-    items.push(`<b>${RB_NAME[c.c]} 매수 시점</b>${hold ? '이지만 <b>보류 권장</b>' : ''}: 목표보다 ${Math.abs(c.drift2).toFixed(1)}%p 모자라 허용 범위 ±${res.band}%p를 넘었어요. ${hold ? '축소 신호가 켜져 있어 주식을 더 사는 것은 신호와 반대예요. ' : ''}${res.deposit > 0 ? '신규 납입으로 먼저 채운 뒤에도 ' : '신규 납입이 있으면 먼저 채우고, '}부족분 약 ${won(Math.abs(c.toEdge))}을 사면 범위 안, ${won(Math.abs(c.toTarget))}을 사면 목표 비중이에요.`);
+  over.forEach(c => {
+    const limit = known && !marketOn && isEq(c);
+    items.push(`<b>${RB_NAME[c.c]} 매도 시점</b>: 목표보다 ${c.drift2.toFixed(1)}%p 많아 허용 범위 ±${res.band}%p를 넘었어요${limit ? `. 시장 신호는 정상이지만 범위의 2배(${(2 * res.band).toFixed(0)}%p)를 넘어 리스크 한도 차원에서 정리를 권해요` : ''}. 약 ${won(Math.abs(c.toEdge))} 매도하면 범위 안, ${won(Math.abs(c.toTarget))} 매도하면 목표 비중이에요.`);
   });
+  holdSell.forEach(c => items.push(`<b>${RB_NAME[c.c]}: 비중은 ${c.drift2.toFixed(1)}%p 넘었지만 지금은 팔지 않아도 돼요</b>. 추세 이탈·신용 불안 신호가 모두 꺼져 있어 시장이 매도를 요구하지 않아요. 범위의 2배(${(2 * res.band).toFixed(0)}%p)를 넘으면 정리를 권해요.${valNote}`));
+  if (restore) items.push(`<b>축소 해제(원래 목표로 복귀) 시점</b>: 추세 이탈·신용 불안 신호가 모두 꺼졌어요. 검증에서는 신호가 꺼지면 다음 주에 원래 비중으로 돌아갔어요. ‘낮춘 폭’을 0으로 되돌리세요.`);
+  under.forEach(c => items.push(`<b>${RB_NAME[c.c]} 매수 시점</b>: 목표보다 ${Math.abs(c.drift2).toFixed(1)}%p 모자라 허용 범위 ±${res.band}%p를 넘었어요. ${res.deposit > 0 ? '신규 납입으로 먼저 채운 뒤에도 ' : '신규 납입이 있으면 먼저 채우고, '}부족분 약 ${won(Math.abs(c.toEdge))}을 사면 범위 안, ${won(Math.abs(c.toTarget))}을 사면 목표 비중이에요.`));
+  holdBuy.forEach(c => items.push(`<b>${RB_NAME[c.c]}: 비중은 ${Math.abs(c.drift2).toFixed(1)}%p 모자라지만 지금은 사지 마세요</b>. ${onList.map(k => nm[k]).join('·')} 신호가 켜져 있어 주식을 더 사는 것은 신호와 반대예요. 신호가 꺼질 때까지 보류하고, 신규 납입은 다른 자산군에 먼저 쓰세요.`));
   let headline;
   if (!hasInputs) { headline = '현재 금액과 목표 비중을 넣으면 판단해요'; level = trim ? 'trim' : 'none'; }
   else if (trim) headline = '지금은 주식 비중 축소를 검토할 시점이에요';
   else if (over.length) { headline = '지금은 매도할 시점이에요'; level = 'sell'; }
   else if (restore) { headline = '지금은 줄였던 비중을 되돌릴 시점이에요'; level = 'restore'; }
   else if (under.length) { headline = '지금은 매수할 시점이에요'; level = 'buy'; }
-  else { headline = '지금은 사고팔 시점이 아니에요'; level = 'none'; items.push(`모든 자산군이 허용 범위(±${res.band}%p) 안이고${known ? ', 검증된 축소 신호(추세 이탈·신용 불안)도 꺼져 있어요' : ''}. 정기 납입만 계속하면 돼요.`); }
+  else if (holdBuy.length) { headline = '비중은 모자라지만 지금은 살 시점이 아니에요'; level = 'trim'; }
+  else if (holdSell.length) { headline = '비중은 넘었지만 지금은 팔 시점이 아니에요'; level = 'none'; }
+  else { headline = '지금은 사고팔 시점이 아니에요'; level = 'none'; items.push(`모든 자산군이 허용 범위(±${res.band}%p) 안이고${known ? ', 검증된 축소 신호(추세 이탈·신용 불안)도 꺼져 있어요' : ''}. 정기 납입만 계속하면 돼요.${valNote}`); }
   if (trim && over.length) level = 'trim';
   if (!hasInputs && !trim && known) items.push(onList.length ? '' : '시장 신호만 보면 지금 축소 신호는 꺼져 있어요.');
-  const foot = '기준: 비중 이탈은 일반적인 허용 범위(밴드) 방식이고, 축소·복귀는 과거 검증을 참고한 규칙이에요. 사고팔 시점 전체를 맞춘다고 검증된 것은 아니고, 세금·비용·환율은 반영하지 않았어요. 최종 판단은 직접 하세요.';
+  const foot = '기준: 비중 이탈은 일반적인 허용 범위(밴드) 방식이고, 축소·복귀·매수 보류는 과거 검증(추세 이탈·신용 불안)을 참고한 규칙이고, ‘시장이 정상이면 주식은 범위의 2배까지 팔지 않는다’는 부분은 직접 검증하지 않은 제 판단이에요. 사고팔 시점 전체를 맞춘다고 검증된 것은 아니고, 세금·비용·환율은 반영하지 않았어요. 최종 판단은 직접 하세요.';
   return {level, headline, items: items.filter(Boolean), foot};
 }
 function renderRebalVerdict(res){
