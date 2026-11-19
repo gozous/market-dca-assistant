@@ -67,6 +67,12 @@
   .reduce-grid{display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); margin-top:10px;}
   .reduce-rule{border:1px solid var(--border,#8884); border-radius:8px; padding:12px; font-size:13px; line-height:1.7;}
   .reduce-rule .rname{font-weight:600; font-size:14px; margin-bottom:4px;}
+  .mkt-row{display:grid; grid-template-columns:150px 1fr; gap:4px 12px; padding:8px 0; border-bottom:1px solid var(--border-soft); font-size:13px; line-height:1.6;}
+  .mkt-row .nm{font-weight:600;} .mkt-row .nm .sub{display:block; font-weight:400; font-size:12px; color:var(--text-faint);}
+  .mkt-b{display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; font-weight:600; margin-right:6px;}
+  .mkt-b.s0{background:rgba(60,170,110,.18); color:#3caa6e;} .mkt-b.s1{background:rgba(230,160,0,.22); color:#e0a526;} .mkt-b.s2{background:rgba(214,69,65,.18); color:#d64541;} .mkt-b.si,.mkt-b.sn{background:rgba(127,127,127,.18);}
+  .mkt-head{font-size:17px; font-weight:700; margin:6px 0;}
+  @media (max-width:560px){ .mkt-row{grid-template-columns:1fr;} }
   .reduce-badge{display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; font-weight:600; margin-left:6px;}
   .reduce-badge.on{background:rgba(214,69,65,.18); color:#d64541;} .reduce-badge.off{background:rgba(127,127,127,.18);} .reduce-badge.na{background:rgba(230,160,0,.2);}
   .reduce-tag{display:inline-block; font-size:12px; padding:1px 6px; border-radius:4px; margin-top:4px; background:rgba(127,127,127,.15);}
@@ -249,6 +255,11 @@
   </nav>
 
   <section class="tab-pane" id="pane-score" role="tabpanel" aria-labelledby="tab-score">
+  <div class="panel" id="mkt-panel">
+    <div class="panel-label">지금 시장 상황 — 비중을 조정할 때 참고</div>
+    <div id="mkt-body" class="notice" style="font-size:13px; line-height:1.7; color:var(--text-dim);">불러오는 중…</div>
+  </div>
+
   <div class="panel" id="reduce-panel">
     <div class="panel-label">비중 축소 검토 신호 — 추세를 따라 손실을 제한하는 참고 정보(리밸런싱과 반대 방향)</div>
     <div class="notice" id="reduce-intro" style="font-size:13px; line-height:1.7; color:var(--text-dim);">불러오는 중…</div>
@@ -912,7 +923,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-19.2';
+const APP_VERSION = '2026-11-19.5';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1305,6 +1316,7 @@ function resetToTodayData(){
 function afterLoad(){
   renderVersion();
   renderReduction();
+  renderMarket();
   renderFacts();
   renderSources();
   if (!todayData) { renderNoData(); return; }
@@ -1317,7 +1329,7 @@ document.getElementById('today-tag').textContent = new Date().toLocaleDateString
   await loadTodayData();   // 오늘자 자동 갱신 값으로 슬라이더를 먼저 채운다
   afterLoad();              // 그 값으로 첫 렌더(데이터가 없으면 '데이터 없음')
   loadOos();                // 표본 외 기록(④ 탭)
-  await loadSellValidation(); renderReduction(); loadBuyValidation(); loadRecal();   // 비중 축소 검증 결과
+  await loadSellValidation(); renderReduction(); renderMarket(); loadBuyValidation(); loadRecal();   // 비중 축소 검증 결과
   loadScoreHistory();       // 항목별 점수 추이(① 탭, 공식 기록만 사용)
 })();
 
@@ -1487,6 +1499,78 @@ function renderReduction(){
     '규칙은 매주 첫 거래일 종가로 판정하고 다음 거래일에 집행하는 방식으로 검증했어요(화면은 매일 상태를 보여줘요).';
 }
 
+/* ================= 지금 시장 상황 (자동 계산, 비중 조정 참고) =================
+   latest.json의 실제 관측값만 쓴다. 값이 없거나 5일 넘게 오래됐으면 판단하지 않는다(추정·대체 없음).
+   구간 기준은 단순 표시 기준이며 과거 검증을 거치지 않았다. 뉴스·연준 전망·일정은 읽지 못한다. */
+function marketRead(d){
+  if (!d || !d.price_snapshot) return null;
+  const ps = d.price_snapshot, mc = ps.macro || {}, sig = d.reduction_signals || {}, id = d.input_details || {};
+  const refDate = ps.sp500_date ? Date.parse(ps.sp500_date) : NaN;
+  const fresh = ds => { const t = Date.parse(ds); return Number.isFinite(t) && Number.isFinite(refDate) && (refDate - t) / 864e5 <= 5; };
+  const num = v => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) ? null : Number(v);
+  const last = (arr, n) => (Array.isArray(arr) && arr.length > n) ? num(arr[arr.length - 1 - n]) : null;
+  const items = [];
+  const add = (key, name, sub, level, text) => items.push({key, name, sub, level, text});
+  const sgn = (v, dg = 1) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(dg);
+  /* S&P 500 추세 */
+  const r2 = sig.R2 || {}, spS = ps.sp500_series || [];
+  if (num(r2.close) !== null && num(r2.sma200) !== null && num(r2.drawdown_pct) !== null) {
+    let run = 0; for (let i = spS.length - 1; i > 0 && Number(spS[i]) < Number(spS[i - 1]); i--) run++;
+    const up = r2.close >= r2.sma200, dd = r2.drawdown_pct, c5 = last(spS, 5);
+    const lv = dd >= 10 ? 's2' : ((!up || dd >= 5) ? 's1' : 's0');
+    add('sp', 'S&P 500 추세', '200일 평균·낙폭', lv, `종가 ${r2.close.toFixed(0)} · 200일 평균 ${r2.sma200.toFixed(0)}(${up ? '평균 위' : '평균 아래'}) · 최근 1년 고점 대비 −${dd.toFixed(1)}%` + (run >= 3 ? ` · ${run}거래일 연속 하락` : '') + (c5 ? ` · 5거래일 전 대비 ${sgn((r2.close / c5 - 1) * 100)}%` : '') + ` (${esc(ps.sp500_date)})`);
+  } else add('sp', 'S&P 500 추세', '200일 평균·낙폭', 'sn', '값을 받지 못해 판단하지 않아요');
+  /* 나스닥 100 낙폭 */
+  const nd = num(ps.nasdaq100_drawdown_pct), spdd = num(r2.drawdown_pct);
+  if (nd !== null && ps.nasdaq100_date && fresh(ps.nasdaq100_date)) {
+    add('nd', '나스닥 100', '최근 1년 고점 대비', nd >= 10 ? 's2' : (nd >= 5 ? 's1' : 's0'), `고점 대비 −${nd.toFixed(1)}%` + (spdd !== null && nd - spdd >= 3 ? ` (S&P 500보다 ${(nd - spdd).toFixed(1)}%p 더 많이 하락)` : '') + ` (${esc(ps.nasdaq100_date)})`);
+  } else add('nd', '나스닥 100', '최근 1년 고점 대비', 'sn', '값이 없거나 오래돼 판단하지 않아요');
+  /* VIX */
+  const vx = mc.vix || {};
+  if (num(vx.value) !== null && fresh(vx.date)) {
+    const p5 = last(vx.series, 5);
+    add('vix', '변동성(VIX)', '시장이 느끼는 불안', vx.value >= 30 ? 's2' : (vx.value >= 20 ? 's1' : 's0'), `${vx.value.toFixed(1)}` + (p5 ? ` · 5거래일 전 ${p5.toFixed(1)}에서 ${sgn(vx.value - p5)}` : '') + ` (${esc(vx.date)})`);
+  } else add('vix', '변동성(VIX)', '시장이 느끼는 불안', 'sn', '값이 없거나 오래돼 판단하지 않아요');
+  /* 금리 */
+  const t10 = mc.us_10y || {}, t2 = mc.us_2y || {};
+  if (num(t10.value) !== null && fresh(t10.date)) {
+    const p20 = last(t10.series, 20), ch = p20 !== null ? t10.value - p20 : null;
+    add('rate', '미국 금리', '10년물 국채 수익률', (ch !== null && ch >= 0.5) ? 's2' : ((ch !== null && ch >= 0.25) || t10.value >= 5) ? 's1' : 's0', `10년물 ${t10.value.toFixed(2)}%` + (ch !== null ? `(20거래일 전보다 ${sgn(ch, 2)}%p)` : '') + (num(t2.value) !== null && fresh(t2.date) ? ` · 2년물 ${t2.value.toFixed(2)}%` : '') + ` (${esc(t10.date)})`);
+  } else add('rate', '미국 금리', '10년물 국채 수익률', 'sn', '값이 없거나 오래돼 판단하지 않아요');
+  /* 달러 */
+  const dx = mc.dxy || {};
+  if (num(dx.value) !== null && fresh(dx.date)) {
+    const p20 = last(dx.series, 20), ch = p20 ? (dx.value / p20 - 1) * 100 : null;
+    add('usd', '달러지수', '달러 강세 여부', ch !== null && ch >= 3 ? 's2' : (ch !== null && ch >= 1.5 ? 's1' : 's0'), `${dx.value.toFixed(2)}` + (ch !== null ? `(20거래일 전보다 ${sgn(ch)}%)` : '') + ` (${esc(dx.date)})`);
+  } else add('usd', '달러지수', '달러 강세 여부', 'sn', '값이 없거나 오래돼 판단하지 않아요');
+  /* 신용 */
+  const cr = sig.R3 || {}, hy = mc.hy_oas || {};
+  if (num(cr.value) !== null) {
+    add('credit', '신용(회사채)', 'Baa 스프레드 백분위', cr.value >= 90 ? 's2' : (cr.value >= 70 ? 's1' : 's0'), `백분위 ${cr.value.toFixed(0)}(1986년 이후 기준, 높을수록 신용 불안)` + (num(hy.value) !== null && fresh(hy.date) ? ` · 하이일드 스프레드 ${hy.value.toFixed(2)}%p` : ''));
+  } else add('credit', '신용(회사채)', 'Baa 스프레드 백분위', 'sn', '값을 받지 못해 판단하지 않아요');
+  /* 밸류에이션 */
+  const cp = sig.R1 || {};
+  if (num(cp.value) !== null) add('val', '밸류에이션(CAPE)', '주가가 비싼 정도', cp.value >= 90 ? 's2' : (cp.value >= 70 ? 's1' : 's0'), `백분위 ${cp.value.toFixed(0)}(최근 30년 기준, 높을수록 비쌈)`);
+  else add('val', '밸류에이션(CAPE)', '주가가 비싼 정도', 'sn', '값을 받지 못해 판단하지 않아요');
+  /* 심리 */
+  const fg = id.fear_greed || {};
+  if (num(fg.value) !== null) add('fg', '투자 심리', '공포·탐욕 지수(0~100)', 'si', `${fg.value.toFixed(0)}` + (num(fg.week_ago) !== null ? ` · 일주일 전 ${fg.week_ago.toFixed(0)}` : '') + `(낮을수록 공포, 등급 판정은 하지 않아요)`);
+  const graded = items.filter(x => /^s[012]$/.test(x.level)), n2 = graded.filter(x => x.level === 's2').length, n1 = graded.filter(x => x.level === 's1').length;
+  const head = !graded.length ? '판단할 자료가 없어요' : (n2 >= 1 ? '경계할 항목이 있어요' : (n1 >= 3 ? '주의할 항목이 많아요' : (n1 >= 1 ? '대체로 안정적이지만 주의할 항목이 있어요' : '대체로 안정적이에요')));
+  const caution = n2 >= 1 || n1 >= 3;
+  const tip = !graded.length ? '' : (caution ? '시장이 흔들릴 때는 하루 사이 가격 차이가 커요. 비중을 조정한다면 한 번에 하기보다 며칠~몇 주에 나눠서 하는 쪽이 가격 부담을 줄여요.' : '지금 시장 상황이 조정을 막을 만한 이유는 보이지 않아요. 정해 둔 계획대로 조정해도 돼요.');
+  return {items, head, n1, n2, tip, caution, graded: graded.length, alertNames: graded.filter(x => x.level === 's2').map(x => x.name).join(', ')};
+}
+function renderMarket(){
+  const el = document.getElementById('mkt-body'); if (!el) return;
+  const m = marketRead(todayData);
+  if (!m) { el.textContent = '시장 데이터를 불러오지 못했어요. 다음 자동 실행 후 다시 확인하세요.'; return; }
+  const lab = {s0: '안정', s1: '주의', s2: '경계', si: '참고', sn: '판단 불가'};
+  el.innerHTML = `<div class="mkt-head" style="color:var(--text);">${m.head}${m.graded ? ` <span style="font-size:13px; font-weight:400; color:var(--text-dim);">(경계 ${m.n2}개${m.n2 ? '[' + m.alertNames + ']' : ''} · 주의 ${m.n1}개 · 판정 ${m.graded}개 중)</span>` : ''}</div>` +
+    m.items.map(x => `<div class="mkt-row"><div class="nm">${x.name}<span class="sub">${x.sub}</span></div><div><span class="mkt-b ${x.level}">${lab[x.level]}</span>${x.text}</div></div>`).join('') +
+    (m.tip ? `<div style="margin-top:10px; color:var(--text);">${m.tip}</div>` : '') +
+    `<div style="margin-top:8px; font-size:12px; color:var(--text-faint,var(--text-dim));">안정·주의·경계 구간(낙폭 5%·10%, VIX 20·30, 10년물 5% 이상 또는 20거래일 +0.25·+0.5%p, 백분위 70·90 등)은 이해를 돕는 단순 표시 기준이고 과거 검증을 거치지 않았어요. 미래를 예측하는 것이 아니라 지금 상태를 정리한 거예요. 이 프로그램은 뉴스, 연준 금리 전망, 실적·이벤트 일정은 읽지 못하니 별도로 확인하세요. 값이 5일 넘게 오래됐거나 없으면 판단하지 않아요.</div>`;
+}
 /* ================= 데이터 출처 표시 =================
    각 값이 어디서 오는지 해당 카드 안에 적는다. 이름과 주소는 수집 코드(scripts/data_sources.py)가 실제로 쓰는 것과 같다. */
 const A = (t, u) => ({t, u});
