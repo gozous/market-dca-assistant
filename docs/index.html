@@ -250,7 +250,7 @@
 
   <section class="tab-pane" id="pane-score" role="tabpanel" aria-labelledby="tab-score">
   <div class="panel" id="reduce-panel">
-    <div class="panel-label">비중 축소 검토 신호 — 팔거나 줄일 때를 보는 참고 정보</div>
+    <div class="panel-label">비중 축소 검토 신호 — 추세를 따라 손실을 제한하는 참고 정보(리밸런싱과 반대 방향)</div>
     <div class="notice" id="reduce-intro" style="font-size:13px; line-height:1.7; color:var(--text-dim);">불러오는 중…</div>
     <div class="reduce-grid" id="reduce-grid"></div>
     <div class="notice" id="reduce-foot" style="font-size:12px; line-height:1.7; color:var(--text-faint,var(--text-dim)); margin-top:10px;"></div>
@@ -912,7 +912,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-19.1';
+const APP_VERSION = '2026-11-19.2';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1467,7 +1467,7 @@ function renderReduction(){
   const d2 = recalFor('S2'), d3 = recalFor('S3');
   const dtxt = (c) => c ? (c.verdict === '대조군과 구별됨' ? '우연 검정을 통과했고' : '우연 검정을 통과하지 못했고') : '검정 결과를 못 불러왔고';
   const evid = (d2 && d3) ? ` 근거는 신호마다 달라요. 추세 이탈은 ${dtxt(d2)}, 신용 불안은 ${dtxt(d3)}, 둘 다 큰 하락 4번으로만 확인해서 확정된 효과는 아니에요.` : '';
-  intro.innerHTML = `주식 비중을 줄일지 볼 때 참고하는 신호예요${asof}. 결과를 보기 전에 규칙을 정해 두고 과거 데이터로 검증했어요. ` +
+  intro.innerHTML = `주식 비중을 줄일지 볼 때 참고하는 신호예요${asof}. 결과를 보기 전에 규칙을 정해 두고 과거 데이터로 검증했어요. <b>이 신호는 추세를 따라 손실을 제한하는 방식이라, 떨어지면 더 사는 리밸런싱과 반대 방향이에요. 정해 둔 비중을 유지하는 계획이라면 따르지 않고 참고만 해도 돼요.</b> ` +
     (onVal === 0 ? `<b>추세 이탈과 신용 불안 두 신호가 지금 모두 꺼져 있어요.</b> 줄여야 한다는 신호는 없다는 뜻이에요.${evid}`
                  : `<b>두 신호 중 ${onVal}개가 켜져 있어요.</b> 검증에서 본 축소 폭은 신호 하나당 주식 ${sig.validated_cut_pp}%(주식 100%를 80%로)였어요.${evid}` + (onVal === 2 ? ' 두 신호가 동시에 켜졌을 때의 폭은 검증하지 않았어요.' : '')) +
     (conflict ? `<br><b>주의: 지금 참고 매수 비중은 ${buy}%인데 같은 시장 상태에서 축소 규칙이 켜져 있어요.</b> 두 지표는 같은 입력(낙폭·신용 스프레드)을 반대로 읽어요. 매수 점수는 “불안할수록 사볼 만하다”, 축소 규칙은 “불안하면 줄인다”예요. 과거 검증은 둘 중 어느 쪽도 일관되게 맞는다는 근거를 주지 못했어요(매수 점수는 5개 모두 “불확실”). 둘이 충돌하면 어느 한쪽을 따르라는 뜻이 아니라, 고정 DCA와 목표 비중을 유지하는 기본으로 돌아가라는 신호로 읽는 편이 안전해요.` : '');
