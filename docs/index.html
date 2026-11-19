@@ -931,7 +931,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-19.6';
+const APP_VERSION = '2026-11-19.7';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1560,6 +1560,12 @@ function marketRead(d){
   const cp = sig.R1 || {};
   if (num(cp.value) !== null) add('val', '밸류에이션(CAPE)', '주가가 비싼 정도', cp.value >= 90 ? 's2' : (cp.value >= 70 ? 's1' : 's0'), `백분위 ${cp.value.toFixed(0)}(최근 30년 기준, 높을수록 비쌈)`);
   else add('val', '밸류에이션(CAPE)', '주가가 비싼 정도', 'sn', '값을 받지 못해 판단하지 않아요');
+  /* 주식 이익수익률 vs 국채 금리 */
+  const cv = num(id.cape_percentile && id.cape_percentile.value);
+  if (cv !== null && cv > 0 && num(t10.value) !== null && fresh(t10.date)) {
+    const ey = 100 / cv;
+    add('ey', '주식 vs 국채', '이익수익률(1/CAPE)과 금리', 'si', `주식 이익수익률 약 ${ey.toFixed(1)}%(CAPE ${cv.toFixed(1)}, ${esc((id.cape_percentile.date || ''))}월) · 10년 국채 ${t10.value.toFixed(2)}% → 국채가 ${(t10.value - ey).toFixed(1)}%p ${t10.value >= ey ? '더 높아요' : '더 낮아요'}(주식이 싸졌는지 비싸졌는지 보는 참고, 등급 판정은 하지 않아요)`);
+  }
   /* 심리 */
   const fg = id.fear_greed || {};
   if (num(fg.value) !== null) add('fg', '투자 심리', '공포·탐욕 지수(0~100)', 'si', `${fg.value.toFixed(0)}` + (num(fg.week_ago) !== null ? ` · 일주일 전 ${fg.week_ago.toFixed(0)}` : '') + `(낮을수록 공포, 등급 판정은 하지 않아요)`);
@@ -1576,7 +1582,7 @@ function renderMarket(){
   const lab = {s0: '안정', s1: '주의', s2: '경계', si: '참고', sn: '판단 불가'};
   el.innerHTML = `<div class="mkt-head" style="color:var(--text);">${m.head}${m.graded ? ` <span style="font-size:13px; font-weight:400; color:var(--text-dim);">(경계 ${m.n2}개${m.n2 ? '[' + m.alertNames + ']' : ''} · 주의 ${m.n1}개 · 판정 ${m.graded}개 중)</span>` : ''}</div>` +
     m.items.map(x => `<div class="mkt-row"><div class="nm">${x.name}<span class="sub">${x.sub}</span></div><div><span class="mkt-b ${x.level}">${lab[x.level]}</span>${x.text}</div></div>`).join('') +
-    `<div style="margin-top:8px; font-size:12px; color:var(--text-faint,var(--text-dim));">안정·주의·경계 구간(낙폭 5%·10%, VIX 20·30, 10년물 5% 이상 또는 20거래일 +0.25·+0.5%p, 백분위 70·90 등)은 이해를 돕는 단순 표시 기준이고 과거 검증을 거치지 않았어요. 미래를 예측하는 것이 아니라 지금 상태를 정리한 거예요. 이 프로그램은 뉴스, 연준 금리 전망, 실적·이벤트 일정은 읽지 못하니 별도로 확인하세요. 값이 5일 넘게 오래됐거나 없으면 판단하지 않아요.</div>`;
+    `<div style="margin-top:8px; font-size:12px; color:var(--text-faint,var(--text-dim));">안정·주의·경계 구간(낙폭 5%·10%, VIX 20·30, 10년물 5% 이상 또는 20거래일 +0.25·+0.5%p, 백분위 70·90 등)은 이해를 돕는 단순 표시 기준이고 과거 검증을 거치지 않았어요. 미래를 예측하는 것이 아니라 지금 상태를 정리한 거예요. AI가 정리한 참고 자료이고 투자자문이 아니에요. 이 프로그램은 뉴스, 연준 금리 전망, 실적·이벤트 일정은 읽지 못하니 별도로 확인하세요. 값이 5일 넘게 오래됐거나 없으면 판단하지 않아요.</div>`;
 }
 function renderPlan(){
   const el = document.getElementById('plan-body'); if (!el) return;
@@ -1595,7 +1601,7 @@ function renderPlan(){
   ];
   el.innerHTML = rows.map(r => `<div class="plan-row${r[0] === cur ? ' now' : ''}"><span class="pn">${r[0] === 'D' ? 'D' : r[0]}. ${r[1]}</span>${r[0] === cur ? '<span class="pnow">← 지금 해당</span>' : ''}<br>${r[2]}</div>`).join('') +
     (line ? `<div style="margin-top:10px;">${line}</div>` : '') +
-    `<div style="margin-top:8px; font-size:12px; color:var(--text-faint,var(--text-dim));">행동 내용은 이 프로그램을 쓰는 분의 원칙(손절하지 않음, 정해진 일정으로 나눠 투입, 한도를 넘을 때만 비중 조정)에 맞춰 정한 기본값이고 효과는 검증하지 않았어요. D는 보유 비중에 따라 해당 여부가 달라서 ‘지금 해당’ 표시는 A~C 중에서만 해요.</div>`;
+    `<div style="margin-top:8px; font-size:12px; color:var(--text-faint,var(--text-dim));">행동 내용은 이 프로그램을 쓰는 분의 원칙(손절하지 않음, 정해진 일정으로 나눠 투입, 한도를 넘을 때만 비중 조정)에 맞춰 정한 기본값이고 효과는 검증하지 않았어요. D는 보유 비중에 따라 해당 여부가 달라서 ‘지금 해당’ 표시는 A~C 중에서만 해요. AI가 정리한 참고 자료이고 투자자문이 아니라서, 큰 결정은 자격 있는 전문가와 상의하세요.</div>`;
 }
 /* ================= 데이터 출처 표시 =================
    각 값이 어디서 오는지 해당 카드 안에 적는다. 이름과 주소는 수집 코드(scripts/data_sources.py)가 실제로 쓰는 것과 같다. */
