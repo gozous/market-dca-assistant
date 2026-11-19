@@ -71,6 +71,9 @@
   .mkt-row .nm{font-weight:600;} .mkt-row .nm .sub{display:block; font-weight:400; font-size:12px; color:var(--text-faint);}
   .mkt-b{display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; font-weight:600; margin-right:6px;}
   .mkt-b.s0{background:rgba(60,170,110,.18); color:#3caa6e;} .mkt-b.s1{background:rgba(230,160,0,.22); color:#e0a526;} .mkt-b.s2{background:rgba(214,69,65,.18); color:#d64541;} .mkt-b.si,.mkt-b.sn{background:rgba(127,127,127,.18);}
+  .plan-row{padding:8px 10px; border:1px solid var(--border-soft); border-radius:8px; margin-top:8px; font-size:13px; line-height:1.7;}
+  .plan-row.now{border-color:var(--warn); background:rgba(230,160,0,.08);}
+  .plan-row .pn{font-weight:700; color:var(--text);} .plan-row .pnow{font-size:12px; font-weight:600; color:var(--warn); margin-left:6px;}
   .mkt-head{font-size:17px; font-weight:700; margin:6px 0;}
   @media (max-width:560px){ .mkt-row{grid-template-columns:1fr;} }
   .reduce-badge{display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; font-weight:600; margin-left:6px;}
@@ -258,6 +261,11 @@
   <div class="panel" id="mkt-panel">
     <div class="panel-label">지금 시장 상황 — 비중을 조정할 때 참고</div>
     <div id="mkt-body" class="notice" style="font-size:13px; line-height:1.7; color:var(--text-dim);">불러오는 중…</div>
+  </div>
+
+  <div class="panel" id="plan-panel">
+    <div class="panel-label">대응 계획 — 미리 정해 두는 행동</div>
+    <div id="plan-body" class="notice" style="font-size:13px; line-height:1.7; color:var(--text-dim);">불러오는 중…</div>
   </div>
 
   <div class="panel" id="reduce-panel">
@@ -923,7 +931,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-19.5';
+const APP_VERSION = '2026-11-19.6';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1316,7 +1324,7 @@ function resetToTodayData(){
 function afterLoad(){
   renderVersion();
   renderReduction();
-  renderMarket();
+  renderMarket(); renderPlan();
   renderFacts();
   renderSources();
   if (!todayData) { renderNoData(); return; }
@@ -1329,7 +1337,7 @@ document.getElementById('today-tag').textContent = new Date().toLocaleDateString
   await loadTodayData();   // 오늘자 자동 갱신 값으로 슬라이더를 먼저 채운다
   afterLoad();              // 그 값으로 첫 렌더(데이터가 없으면 '데이터 없음')
   loadOos();                // 표본 외 기록(④ 탭)
-  await loadSellValidation(); renderReduction(); renderMarket(); loadBuyValidation(); loadRecal();   // 비중 축소 검증 결과
+  await loadSellValidation(); renderReduction(); renderMarket(); renderPlan(); loadBuyValidation(); loadRecal();   // 비중 축소 검증 결과
   loadScoreHistory();       // 항목별 점수 추이(① 탭, 공식 기록만 사용)
 })();
 
@@ -1568,8 +1576,26 @@ function renderMarket(){
   const lab = {s0: '안정', s1: '주의', s2: '경계', si: '참고', sn: '판단 불가'};
   el.innerHTML = `<div class="mkt-head" style="color:var(--text);">${m.head}${m.graded ? ` <span style="font-size:13px; font-weight:400; color:var(--text-dim);">(경계 ${m.n2}개${m.n2 ? '[' + m.alertNames + ']' : ''} · 주의 ${m.n1}개 · 판정 ${m.graded}개 중)</span>` : ''}</div>` +
     m.items.map(x => `<div class="mkt-row"><div class="nm">${x.name}<span class="sub">${x.sub}</span></div><div><span class="mkt-b ${x.level}">${lab[x.level]}</span>${x.text}</div></div>`).join('') +
-    (m.tip ? `<div style="margin-top:10px; color:var(--text);">${m.tip}</div>` : '') +
     `<div style="margin-top:8px; font-size:12px; color:var(--text-faint,var(--text-dim));">안정·주의·경계 구간(낙폭 5%·10%, VIX 20·30, 10년물 5% 이상 또는 20거래일 +0.25·+0.5%p, 백분위 70·90 등)은 이해를 돕는 단순 표시 기준이고 과거 검증을 거치지 않았어요. 미래를 예측하는 것이 아니라 지금 상태를 정리한 거예요. 이 프로그램은 뉴스, 연준 금리 전망, 실적·이벤트 일정은 읽지 못하니 별도로 확인하세요. 값이 5일 넘게 오래됐거나 없으면 판단하지 않아요.</div>`;
+}
+function renderPlan(){
+  const el = document.getElementById('plan-body'); if (!el) return;
+  const m = marketRead(todayData), sig = todayData && todayData.reduction_signals, r2 = (sig && sig.R2) || {};
+  if (!m || !m.graded) { el.textContent = '시장 데이터가 없어 대응 계획을 표시하지 않아요.'; return; }
+  const trendOn = r2.on === true, caution = m.caution;
+  const cur = trendOn ? 'C' : (caution ? 'B' : 'A');
+  const f0 = v => Number(v).toFixed(0);
+  const line = (Number.isFinite(Number(r2.high)) && Number.isFinite(Number(r2.close)) && Number.isFinite(Number(r2.sma200)))
+    ? `<b>기준선(오늘 수치)</b>: S&P 500 종가가 <b>${f0(r2.high * 0.9)} 미만</b>(최근 1년 고점 ${f0(r2.high)}의 −10%)이면서 200일 평균(${f0(r2.sma200)}) 아래이면 추세 이탈 신호가 켜져요. 지금 종가 ${f0(r2.close)}에서 ${(((r2.high * 0.9) / r2.close - 1) * 100).toFixed(1)}% 거리예요.` : '';
+  const rows = [
+    ['A', '안정 — 경계·주의 항목이 거의 없을 때', '기존 계획대로 진행해요.'],
+    ['B', '조정·흔들림 — 경계나 주의 항목이 있을 때(추세 이탈 신호는 꺼짐)', '남은 투입은 <b>기존 일정을 유지</b>하고, 앞당기거나 한꺼번에 넣지 않아요. 비중을 맞추는 거래는 한도를 넘었을 때만 하고, 며칠~몇 주에 나눠서 해요.'],
+    ['C', '추세 이탈 신호 켜짐', '<b>손절하지 않고 계획을 유지</b>해요. 투입 금액을 늘리지도 줄이지도 않아요. 이미 대부분 투입했다면 남은 매수보다 <b>지금 보유한 만큼의 하락을 버틸 수 있는지</b>가 핵심이니 감내력을 다시 확인하세요.'],
+    ['D', '비중이 한도를 넘었을 때(프로그램은 보유 비중을 몰라 직접 확인)', '목표에서 허용 한도를 넘은 <b>만큼만</b> 나눠서 사거나 팔아요. 한도 안이면 거래하지 않아요.']
+  ];
+  el.innerHTML = rows.map(r => `<div class="plan-row${r[0] === cur ? ' now' : ''}"><span class="pn">${r[0] === 'D' ? 'D' : r[0]}. ${r[1]}</span>${r[0] === cur ? '<span class="pnow">← 지금 해당</span>' : ''}<br>${r[2]}</div>`).join('') +
+    (line ? `<div style="margin-top:10px;">${line}</div>` : '') +
+    `<div style="margin-top:8px; font-size:12px; color:var(--text-faint,var(--text-dim));">행동 내용은 이 프로그램을 쓰는 분의 원칙(손절하지 않음, 정해진 일정으로 나눠 투입, 한도를 넘을 때만 비중 조정)에 맞춰 정한 기본값이고 효과는 검증하지 않았어요. D는 보유 비중에 따라 해당 여부가 달라서 ‘지금 해당’ 표시는 A~C 중에서만 해요.</div>`;
 }
 /* ================= 데이터 출처 표시 =================
    각 값이 어디서 오는지 해당 카드 안에 적는다. 이름과 주소는 수집 코드(scripts/data_sources.py)가 실제로 쓰는 것과 같다. */
