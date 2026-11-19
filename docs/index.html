@@ -912,7 +912,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-12.1';
+const APP_VERSION = '2026-11-19.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1428,19 +1428,24 @@ function reduceEvidence(strategy){
   const R = sellVal && sellVal.results; if (!R || !R.strategies || !R.strategies[strategy]) return '';
   const st = R.strategies[strategy], h = R.strategies.H, ad = (R.adoption || {})[strategy] || {};
   const n = Object.keys(R.episodes.H).length;
-  const mdd = `최대 낙폭 ${pct1(h.mdd, 1)}% → ${pct1(st.mdd, 1)}%`;
+  const mdd = `가장 크게 떨어졌을 때 그냥 들고 있으면 ${pct1(h.mdd, 1)}%, 이 규칙을 따르면 ${pct1(st.mdd, 1)}%`;
   const dc = (st.cagr - h.cagr) * 100;
-  const cagr = `연 수익률 ${dc >= 0 ? '+' : '−'}${Math.abs(dc).toFixed(2)}%p`;
-  const eps = `큰 하락 ${n}번 중 ${ad.episodes_better}번에서 최대 낙폭이 줄었어요`;
-  return {text: `${R.period[0].slice(0,4)}~${R.period[1].slice(0,4)} 과거 검증(주식 20% 축소): ${mdd}, ${cagr}, ${eps}.`, passed: !!ad.all_met};
+  const cagr = `연 수익률 차이는 ${dc >= 0 ? '+' : '−'}${Math.abs(dc).toFixed(2)}%p${Math.abs(dc) < 0.5 ? '(거의 같음)' : ''}`;
+  const eps = `큰 하락 ${n}번 중 ${ad.episodes_better}번에서 덜 떨어졌어요`;
+  return {text: `${R.period[0].slice(0,4)}~${R.period[1].slice(0,4)}년에 이 규칙으로 주식을 20% 줄였다면: ${mdd}였어요. ${cagr}이고, ${eps}.`, passed: !!ad.all_met};
 }
 function reduceCard(name, rule, lines, strategy){
   const on = rule && rule.on, st = on === true ? ['on', '켜짐'] : on === false ? ['off', '꺼짐'] : ['na', '판정 불가'];
   const ev = reduceEvidence(strategy);
-  const tag = !ev ? '<span class="reduce-tag">검증 결과를 불러오지 못했어요</span>'
-    : ev.passed ? '<span class="reduce-tag">과거 검증 기준 통과(참고 수준, 2000년대 의존)</span>' : '<span class="reduce-tag">과거 검증 기준 미통과 · 참고 정보만</span>';
   const rc = recalFor(strategy);
-  const rtag = !rc ? '' : `<div style="color:var(--text-dim); margin-top:4px;"><b>대조 검정:</b> 켜진 비율과 전환 횟수를 맞춘 무작위 규칙 ${rc.n_controls}개 중 최대 낙폭이 같거나 더 좋은 것이 ${(rc.p_mdd * 100).toFixed(1)}%예요 → <b>${esc(rc.verdict)}</b>${rc.verdict === '대조군과 구별됨' ? '(기준 5% 이하)' : '(기준 5% 초과, 참고용)'}.</div>`;
+  const distinct = rc && rc.verdict === '대조군과 구별됨';
+  const tagText = !ev ? '검증 결과를 불러오지 못했어요'
+    : !ev.passed ? '과거 기록에서 효과가 확인되지 않았어요 · 참고만 하세요'
+    : !rc ? '과거 기록에서는 효과가 있었어요(큰 하락 4번뿐이라 확정은 아니에요)'
+    : distinct ? '과거 기록에서 효과가 있었고 우연으로 보기 어려워요(다만 큰 하락 4번뿐이고 2000년대에 이득이 몰려 있어요)'
+    : '과거 기록에서는 효과가 있었지만 우연일 가능성을 배제하지 못해요 · 근거 약함';
+  const tag = `<span class="reduce-tag">${tagText}</span>`;
+  const rtag = !rc ? '' : `<div style="color:var(--text-dim); margin-top:4px;"><b>우연 검정:</b> 이 규칙과 켜지는 비율·횟수는 같지만 시점은 무작위인 규칙 ${rc.n_controls}개와 비교했어요. 그중 낙폭을 이 규칙만큼(또는 더) 줄인 것이 ${(rc.p_mdd * 100).toFixed(1)}%였어요(5% 이하면 우연이 아닌 듯하다고 봐요) → <b>${distinct ? '우연으로 보기 어려워요' : '우연으로 배제하지 못해요'}</b>.</div>`;
   return `<div class="reduce-rule"><div class="rname">${esc(name)}<span class="reduce-badge ${st[0]}">${st[1]}</span></div>` +
          `<div>${lines.join('<br>')}</div>${tag}${ev ? `<div style="color:var(--text-dim); margin-top:4px;">${esc(ev.text)}</div>` : ''}${rtag}</div>`;
 }
@@ -1459,22 +1464,26 @@ function renderReduction(){
   const asof = snap && snap.sp500_date ? ` (S&P 500 종가 ${esc(snap.sp500_date)} 기준)` : '';
   const buy = todayData && todayData.result && Number.isFinite(Number(todayData.result.buy_pct)) ? Number(todayData.result.buy_pct) : null;
   const conflict = onVal > 0 && buy !== null && buy >= 100;
-  intro.innerHTML = `주식 비중을 줄일지 볼 때 참고하는 신호예요${asof}. 규칙은 결과를 보기 전에 고정했고, 과거 데이터로 한 번만 검증했어요. ` +
-    (onVal === 0 ? `<b>과거 검증에서 ${recalUnclear() ? '참고 가치가 불확실한 규칙을 포함한' : '참고 가치가 있다고 본'} 두 규칙(추세 이탈·신용 불안)은 지금 모두 꺼져 있어요</b>(줄여야 한다는 신호 없음). “참고 가치”는 큰 하락 4번 가운데 2000~2009년에 이득이 몰려 있다는 뜻이라 확정된 효과가 아니에요.`
-                 : `<b>두 규칙 중 ${onVal}개가 켜져 있어요.</b> 검증에서 본 축소 폭은 규칙 하나당 주식 ${sig.validated_cut_pp}%(주식 100%를 80%로)였어요.` + (onVal === 2 ? ' 두 규칙이 동시에 켜졌을 때의 폭은 검증하지 않았어요.' : '')) +
+  const d2 = recalFor('S2'), d3 = recalFor('S3');
+  const dtxt = (c) => c ? (c.verdict === '대조군과 구별됨' ? '우연 검정을 통과했고' : '우연 검정을 통과하지 못했고') : '검정 결과를 못 불러왔고';
+  const evid = (d2 && d3) ? ` 근거는 신호마다 달라요. 추세 이탈은 ${dtxt(d2)}, 신용 불안은 ${dtxt(d3)}, 둘 다 큰 하락 4번으로만 확인해서 확정된 효과는 아니에요.` : '';
+  intro.innerHTML = `주식 비중을 줄일지 볼 때 참고하는 신호예요${asof}. 결과를 보기 전에 규칙을 정해 두고 과거 데이터로 검증했어요. ` +
+    (onVal === 0 ? `<b>추세 이탈과 신용 불안 두 신호가 지금 모두 꺼져 있어요.</b> 줄여야 한다는 신호는 없다는 뜻이에요.${evid}`
+                 : `<b>두 신호 중 ${onVal}개가 켜져 있어요.</b> 검증에서 본 축소 폭은 신호 하나당 주식 ${sig.validated_cut_pp}%(주식 100%를 80%로)였어요.${evid}` + (onVal === 2 ? ' 두 신호가 동시에 켜졌을 때의 폭은 검증하지 않았어요.' : '')) +
     (conflict ? `<br><b>주의: 지금 참고 매수 비중은 ${buy}%인데 같은 시장 상태에서 축소 규칙이 켜져 있어요.</b> 두 지표는 같은 입력(낙폭·신용 스프레드)을 반대로 읽어요. 매수 점수는 “불안할수록 사볼 만하다”, 축소 규칙은 “불안하면 줄인다”예요. 과거 검증은 둘 중 어느 쪽도 일관되게 맞는다는 근거를 주지 못했어요(매수 점수는 5개 모두 “불확실”). 둘이 충돌하면 어느 한쪽을 따르라는 뜻이 아니라, 고정 DCA와 목표 비중을 유지하는 기본으로 돌아가라는 신호로 읽는 편이 안전해요.` : '');
   grid.innerHTML =
     reduceCard('추세 이탈', r2, [
       `S&P 500 종가 ${f(r2.close, 2)} · 200일 이동평균 ${f(r2.sma200, 2)}`,
-      `최근 1년 고점 대비 낙폭(drawdown) ${f(r2.drawdown_pct, 1)}%`,
-      `켜지는 조건: 종가가 200일 이동평균 아래이고 낙폭이 ${t.drawdown_pct}% 이상`], 'S2') +
+      `최근 1년 고점 대비 낙폭${f(r2.drawdown_pct, 1)}%`,
+      `켜지는 조건: 종가가 200일 이동평균 아래이고, 고점 대비 낙폭이 ${t.drawdown_pct}% 이상(둘 다 해당할 때만)`,
+      (r2.on === false && r2.close < r2.sma200 && r2.drawdown_pct < t.drawdown_pct) ? `→ 종가는 평균 아래지만 낙폭이 ${t.drawdown_pct}%보다 작아서 꺼져 있어요` : (r2.on === false && r2.close >= r2.sma200 ? '→ 종가가 평균 위라서 꺼져 있어요' : '')].filter(Boolean), 'S2') +
     reduceCard('신용 불안', r3, [
       `Baa 신용 스프레드 백분위 ${f(r3.value, 0)} (1986년 이후 기준)`,
       `켜지는 조건: 백분위 ${t.credit_percentile} 이상(스프레드가 역사적으로 넓은 구간)`], 'S3') +
     reduceCard('시장이 비쌈', r1, [
       `CAPE 백분위 ${f(r1.value, 0)} (최근 30년 기준)`,
       `켜지는 조건: 백분위 ${t.cape_percentile} 이상`], 'S1');
-  foot.innerHTML = '한계: 큰 하락 4번을 포함한 과거 결과라 앞으로도 같다는 보장이 없어요. 현금 수익률 0%, 거래비용·세금 제외, 입력 데이터가 발표 시점 기준(PIT)이 아니에요. ' +
+  foot.innerHTML = '한계: 큰 하락 4번을 포함한 과거 결과라 앞으로도 같다는 보장이 없어요. 현금 이자 0%, 거래비용·세금 제외, 과거 경제지표를 발표 당시 값이 아니라 나중에 수정된 값으로 썼어요. ' +
     '규칙은 매주 첫 거래일 종가로 판정하고 다음 거래일에 집행하는 방식으로 검증했어요(화면은 매일 상태를 보여줘요).';
 }
 
