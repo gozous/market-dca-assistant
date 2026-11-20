@@ -258,6 +258,11 @@
   </nav>
 
   <section class="tab-pane" id="pane-score" role="tabpanel" aria-labelledby="tab-score">
+  <div class="panel" id="sum-panel">
+    <div class="panel-label">요약 — 지금 무엇을 하면 되나</div>
+    <div id="sum-body" style="font-size:14px; line-height:1.8; color:var(--text);">불러오는 중…</div>
+  </div>
+
   <div class="panel" id="mkt-panel">
     <div class="panel-label">지금 시장 상황 — 비중을 조정할 때 참고</div>
     <div id="mkt-body" class="notice" style="font-size:13px; line-height:1.7; color:var(--text-dim);">불러오는 중…</div>
@@ -378,7 +383,16 @@
   </div>
   </details>
 
-  </section>
+    <div class="panel" id="limits-panel" style="margin-top:16px;">
+    <div class="panel-label">한계 — 위 내용을 읽을 때 꼭 알아둘 점</div>
+    <div class="notice" style="font-size:12px; line-height:1.8; color:var(--text-dim);">
+      1) 안정·주의·경계 구간(낙폭 5%·10%, VIX 20·30, 10년물 5% 이상 또는 20거래일 +0.25·+0.5%p, 달러지수 20거래일 +1.5%·+3%, 백분위 70·90)과 대응 계획의 행동은 이 프로그램을 쓰는 분의 원칙에 맞춰 정한 기본값이고, 과거 검증을 거치지 않았어요.<br>
+      2) 조정장 신호·신용 불안의 과거 검증은 큰 하락 4번뿐이라 앞으로도 같다는 보장이 없어요. 현금 이자 0%, 거래비용·세금 제외, 과거 경제지표는 발표 당시 값이 아니라 나중에 수정된 값이에요. 규칙은 매주 첫 거래일 종가로 판정해 다음 거래일에 집행하는 방식으로 검증했어요(화면은 매일 상태를 보여줘요).<br>
+      3) 이 프로그램은 뉴스, 연준 금리 전망, 실적·이벤트 일정을 읽지 못해요. 값이 5일 넘게 오래됐거나 없으면 판단하지 않아요.<br>
+      4) 미래를 예측하는 것이 아니라 지금 상태를 정리한 AI 참고 자료이고 투자자문이 아니에요. 큰 결정은 자격 있는 전문가와 상의하세요.
+    </div>
+  </div>
+</section>
 
   <section class="tab-pane" id="pane-index" role="tabpanel" aria-labelledby="tab-index" hidden>
   <div class="idx-grid">
@@ -931,7 +945,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-20.3';
+const APP_VERSION = '2026-11-20.4';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1324,7 +1338,7 @@ function resetToTodayData(){
 function afterLoad(){
   renderVersion();
   renderReduction();
-  renderMarket(); renderPlan();
+  renderMarket(); renderPlan(); renderSummary();
   renderFacts();
   renderSources();
   if (!todayData) { renderNoData(); return; }
@@ -1337,7 +1351,7 @@ document.getElementById('today-tag').textContent = new Date().toLocaleDateString
   await loadTodayData();   // 오늘자 자동 갱신 값으로 슬라이더를 먼저 채운다
   afterLoad();              // 그 값으로 첫 렌더(데이터가 없으면 '데이터 없음')
   loadOos();                // 표본 외 기록(④ 탭)
-  await loadSellValidation(); renderReduction(); renderMarket(); renderPlan(); loadBuyValidation(); loadRecal();   // 비중 축소 검증 결과
+  await loadSellValidation(); renderReduction(); renderMarket(); renderPlan(); renderSummary(); loadBuyValidation(); loadRecal();   // 비중 축소 검증 결과
   loadScoreHistory();       // 항목별 점수 추이(① 탭, 공식 기록만 사용)
 })();
 
@@ -1460,14 +1474,15 @@ function reduceCard(name, rule, lines, strategy){
   const rc = recalFor(strategy);
   const distinct = rc && rc.verdict === '대조군과 구별됨';
   const tagText = !ev ? '검증 결과를 불러오지 못했어요'
-    : !ev.passed ? '과거 기록에서 효과가 확인되지 않았어요 · 참고만 하세요'
-    : !rc ? '과거 기록에서는 효과가 있었어요(큰 하락 4번뿐이라 확정은 아니에요)'
-    : distinct ? '과거 기록에서 효과가 있었고 우연으로 보기 어려워요(다만 큰 하락 4번뿐이고 2000년대에 이득이 몰려 있어요)'
-    : '과거 기록에서는 효과가 있었지만 우연일 가능성을 배제하지 못해요 · 근거 약함';
+    : !ev.passed ? '효과가 확인되지 않았어요 · 참고만 하세요'
+    : !rc ? '과거 기록에서는 효과가 있었어요(확정은 아니에요)'
+    : distinct ? '과거 기록에서 효과가 있었고 우연으로 보기 어려워요'
+    : '과거 기록에서 효과가 있었지만 우연일 수 있어요 · 근거 약함';
   const tag = `<span class="reduce-tag">${tagText}</span>`;
-  const rtag = !rc ? '' : `<div style="color:var(--text-dim); margin-top:4px;"><b>우연 검정:</b> 이 규칙과 켜지는 비율·횟수는 같지만 시점은 무작위인 규칙 ${rc.n_controls}개와 비교했어요. 그중 낙폭을 이 규칙만큼(또는 더) 줄인 것이 ${(rc.p_mdd * 100).toFixed(1)}%였어요(5% 이하면 우연이 아닌 듯하다고 봐요) → <b>${distinct ? '우연으로 보기 어려워요' : '우연으로 배제하지 못해요'}</b>.</div>`;
+  const rtag = !rc ? '' : `<div style="margin-top:4px;"><b>우연 검정:</b> 이 규칙과 켜지는 비율·횟수는 같지만 시점은 무작위인 규칙 ${rc.n_controls}개와 비교했어요. 그중 낙폭을 이 규칙만큼(또는 더) 줄인 것이 ${(rc.p_mdd * 100).toFixed(1)}%였어요(5% 이하면 우연이 아닌 듯하다고 봐요) → <b>${distinct ? '우연으로 보기 어려워요' : '우연으로 배제하지 못해요'}</b>.</div>`;
+  const detail = (ev || rc) ? `<details style="margin-top:6px; color:var(--text-dim);"><summary style="cursor:pointer;">자세히 (검증 수치)</summary>${ev ? `<div style="margin-top:4px;">${esc(ev.text)}</div>` : ''}${rtag}</details>` : '';
   return `<div class="reduce-rule"><div class="rname">${esc(name)}<span class="reduce-badge ${st[0]}">${st[1]}</span></div>` +
-         `<div>${lines.join('<br>')}</div>${tag}${ev ? `<div style="color:var(--text-dim); margin-top:4px;">${esc(ev.text)}</div>` : ''}${rtag}</div>`;
+         `<div>${lines.join('<br>')}</div>${tag}${detail}</div>`;
 }
 function renderReduction(){
   const grid = document.getElementById('reduce-grid'); if (!grid) return;
@@ -1484,27 +1499,20 @@ function renderReduction(){
   const asof = snap && snap.sp500_date ? ` (S&P 500 종가 ${esc(snap.sp500_date)} 기준)` : '';
   const buy = todayData && todayData.result && Number.isFinite(Number(todayData.result.buy_pct)) ? Number(todayData.result.buy_pct) : null;
   const conflict = onVal > 0 && buy !== null && buy >= 100;
-  const d2 = recalFor('S2'), d3 = recalFor('S3');
-  const dtxt = (c) => c ? (c.verdict === '대조군과 구별됨' ? '우연 검정을 통과했고' : '우연 검정을 통과하지 못했고') : '검정 결과를 못 불러왔고';
-  const evid = (d2 && d3) ? ` 근거는 신호마다 달라요. 조정장 신호는 ${dtxt(d2)}, 신용 불안은 ${dtxt(d3)}, 둘 다 큰 하락 4번으로만 확인해서 확정된 효과는 아니에요.` : '';
-  intro.innerHTML = `주식 비중을 줄일지 볼 때 참고하는 신호예요${asof}. 결과를 보기 전에 규칙을 정해 두고 과거 데이터로 검증했어요. <b>이 신호는 추세를 따라 손실을 제한하는 방식이라, 떨어지면 더 사는 리밸런싱과 반대 방향이에요. 정해 둔 비중을 유지하는 계획이라면 따르지 않고 참고만 해도 돼요.</b> ` +
-    (onVal === 0 ? `<b>조정장 신호와 신용 불안 두 신호가 지금 모두 꺼져 있어요.</b> 줄여야 한다는 신호는 없다는 뜻이에요.${evid}`
-                 : `<b>두 신호 중 ${onVal}개가 켜져 있어요.</b> 검증에서 본 축소 폭은 신호 하나당 주식 ${sig.validated_cut_pp}%(주식 100%를 80%로)였어요.${evid}` + (onVal === 2 ? ' 두 신호가 동시에 켜졌을 때의 폭은 검증하지 않았어요.' : '')) +
+  intro.innerHTML = `주식 비중을 줄일지 볼 때 참고하는 신호예요${asof}. <b>손절 성격이라 떨어지면 더 사는 리밸런싱과 반대 방향이에요. 정해 둔 비중을 유지하는 계획이라면 참고만 하세요.</b> ` +
+    (onVal === 0 ? `조정장 신호와 신용 불안은 지금 모두 꺼져 있어요(줄여야 한다는 신호 없음).`
+                 : `<b>두 신호 중 ${onVal}개가 켜져 있어요.</b> 검증에서 본 축소 폭은 신호 하나당 주식 ${sig.validated_cut_pp}%(100%→80%)였어요.` + (onVal === 2 ? ' 두 신호가 동시에 켜졌을 때의 폭은 검증하지 않았어요.' : '')) +
     (conflict ? `<br><b>주의: 지금 참고 매수 비중은 ${buy}%인데 같은 시장 상태에서 축소 규칙이 켜져 있어요.</b> 두 지표는 같은 입력(낙폭·신용 스프레드)을 반대로 읽어요. 매수 점수는 “불안할수록 사볼 만하다”, 축소 규칙은 “불안하면 줄인다”예요. 과거 검증은 둘 중 어느 쪽도 일관되게 맞는다는 근거를 주지 못했어요(매수 점수는 5개 모두 “불확실”). 둘이 충돌하면 어느 한쪽을 따르라는 뜻이 아니라, 고정 DCA와 목표 비중을 유지하는 기본으로 돌아가라는 신호로 읽는 편이 안전해요.` : '');
   grid.innerHTML =
     reduceCard('조정장 신호 (200일선 아래 + 고점 대비 −10%)', r2, [
-      `S&P 500 종가 ${f(r2.close, 2)} · 200일 이동평균 ${f(r2.sma200, 2)}`,
-      `최근 1년 고점 대비 낙폭${f(r2.drawdown_pct, 1)}%`,
-      `켜지는 조건: 종가가 200일 이동평균 아래이고, 고점 대비 낙폭이 ${t.drawdown_pct}% 이상(둘 다 해당할 때만)`,
+      `지금: 종가 ${f(r2.close, 0)} · 200일 평균 ${f(r2.sma200, 0)} · 고점 대비 −${f(r2.drawdown_pct, 1)}%`,
+      `켜지는 조건: 200일 평균 아래 <b>그리고</b> 고점 대비 −${t.drawdown_pct}% 이상`,
       (r2.on === false && r2.close < r2.sma200 && r2.drawdown_pct < t.drawdown_pct) ? `→ 종가는 평균 아래지만 낙폭이 ${t.drawdown_pct}%보다 작아서 꺼져 있어요` : (r2.on === false && r2.close >= r2.sma200 ? '→ 종가가 평균 위라서 꺼져 있어요' : '')].filter(Boolean), 'S2') +
     reduceCard('신용 불안', r3, [
-      `Baa 신용 스프레드 백분위 ${f(r3.value, 0)} (1986년 이후 기준)`,
-      `켜지는 조건: 백분위 ${t.credit_percentile} 이상(스프레드가 역사적으로 넓은 구간)`], 'S3') +
+      `지금: Baa 스프레드 백분위 ${f(r3.value, 0)} · 켜지는 조건: ${t.credit_percentile} 이상`], 'S3') +
     reduceCard('시장이 비쌈', r1, [
-      `CAPE 백분위 ${f(r1.value, 0)} (최근 30년 기준)`,
-      `켜지는 조건: 백분위 ${t.cape_percentile} 이상`], 'S1');
-  foot.innerHTML = '한계: 큰 하락 4번을 포함한 과거 결과라 앞으로도 같다는 보장이 없어요. 현금 이자 0%, 거래비용·세금 제외, 과거 경제지표를 발표 당시 값이 아니라 나중에 수정된 값으로 썼어요. ' +
-    '규칙은 매주 첫 거래일 종가로 판정하고 다음 거래일에 집행하는 방식으로 검증했어요(화면은 매일 상태를 보여줘요).';
+      `지금: CAPE 백분위 ${f(r1.value, 0)} · 켜지는 조건: ${t.cape_percentile} 이상`], 'S1');
+  foot.textContent = '';
 }
 
 /* ================= 지금 시장 상황 (자동 계산, 비중 조정 참고) =================
@@ -1581,34 +1589,50 @@ function renderMarket(){
   if (!m) { el.textContent = '시장 데이터를 불러오지 못했어요. 다음 자동 실행 후 다시 확인하세요.'; return; }
   const lab = {s0: '안정', s1: '주의', s2: '경계', si: '참고', sn: '판단 불가'};
   el.innerHTML = `<div class="mkt-head" style="color:var(--text);">${m.head}${m.graded ? ` <span style="font-size:13px; font-weight:400; color:var(--text-dim);">(경계 ${m.n2}개${m.n2 ? '[' + m.alertNames + ']' : ''} · 주의 ${m.n1}개 · 판정 ${m.graded}개 중)</span>` : ''}</div>` +
-    m.items.map(x => `<div class="mkt-row"><div class="nm">${x.name}<span class="sub">${x.sub}</span></div><div><span class="mkt-b ${x.level}">${lab[x.level]}</span>${x.text}</div></div>`).join('') +
-    `<div style="margin-top:8px; font-size:12px; color:var(--text-faint,var(--text-dim));">안정·주의·경계 구간(낙폭 5%·10%, VIX 20·30, 10년물 5% 이상 또는 20거래일 +0.25·+0.5%p, 백분위 70·90 등)은 이해를 돕는 단순 표시 기준이고 과거 검증을 거치지 않았어요. 미래를 예측하는 것이 아니라 지금 상태를 정리한 거예요. AI가 정리한 참고 자료이고 투자자문이 아니에요. 이 프로그램은 뉴스, 연준 금리 전망, 실적·이벤트 일정은 읽지 못하니 별도로 확인하세요. 값이 5일 넘게 오래됐거나 없으면 판단하지 않아요.</div>`;
+    m.items.map(x => `<div class="mkt-row"><div class="nm">${x.name}<span class="sub">${x.sub}</span></div><div><span class="mkt-b ${x.level}">${lab[x.level]}</span>${x.text}</div></div>`).join('');
 }
+function planState(){
+  const m = marketRead(todayData), sig = todayData && todayData.reduction_signals, r2 = (sig && sig.R2) || {};
+  if (!m || !m.graded) return null;
+  const okR2 = ['high', 'close', 'sma200'].every(k => Number.isFinite(Number(r2[k])));
+  return {m, r2, okR2, cur: r2.on === true ? 'C' : (m.caution ? 'B' : 'A'), f0: v => Number(v).toFixed(0), trig: okR2 ? Number(r2.high) * 0.9 : null};
+}
+const PLAN_ROWS = {
+  A: ['안정 — 경계·주의 항목이 거의 없을 때', '기존 계획대로 진행해요.'],
+  B: ['조정·흔들림 — 경계나 주의 항목이 있을 때(조정장 신호는 꺼짐)', '남은 투입은 <b>기존 일정을 유지</b>하고, 앞당기거나 한꺼번에 넣지 않아요. 비중을 맞추는 거래는 한도를 넘었을 때만 하고, 며칠~몇 주에 나눠서 해요.'],
+  C: ['조정장 신호 켜짐', '<b>손절하지 않고 계획을 유지</b>해요. 투입 금액을 늘리지도 줄이지도 않아요. 이미 대부분 투입했다면 남은 매수보다 <b>지금 보유한 만큼의 하락을 버틸 수 있는지</b>가 핵심이니 감내력을 다시 확인하세요.'],
+  D: ['비중이 한도를 넘었을 때(프로그램은 보유 비중을 몰라 직접 확인)', '월 1회 비중을 확인해요. 주식 대 현금이 목표에서 <b>절대 ±5%p</b>(목표 70%면 65~75%)를 벗어나면 <b>목표(70%)로</b> 나눠서 되돌리고, 안이면 거래하지 않아요. 개별 종목은 목표의 25% 정도를 기준으로 써요. 허용 범위가 너무 넓으면(예: 상대 20%는 주식이 두 배 넘게 올라야 작동) 사실상 리밸런싱을 하지 않게 돼요.']
+};
 function renderPlan(){
   const el = document.getElementById('plan-body'); if (!el) return;
-  const m = marketRead(todayData), sig = todayData && todayData.reduction_signals, r2 = (sig && sig.R2) || {};
-  if (!m || !m.graded) { el.textContent = '시장 데이터가 없어 대응 계획을 표시하지 않아요.'; return; }
-  const trendOn = r2.on === true, caution = m.caution;
-  const cur = trendOn ? 'C' : (caution ? 'B' : 'A');
-  const f0 = v => Number(v).toFixed(0);
-  const line = (Number.isFinite(Number(r2.high)) && Number.isFinite(Number(r2.close)) && Number.isFinite(Number(r2.sma200)))
-    ? `<b>기준선(오늘 수치)</b>: S&P 500 종가가 <b>${f0(r2.high * 0.9)} 미만</b>(최근 1년 고점 ${f0(r2.high)}의 −10%)이면서 200일 평균(${f0(r2.sma200)}) 아래이면 조정장 신호가 켜져요. 지금 종가 ${f0(r2.close)}에서 ${(((r2.high * 0.9) / r2.close - 1) * 100).toFixed(1)}% 거리예요.` : '';
-  const rows = [
-    ['A', '안정 — 경계·주의 항목이 거의 없을 때', '기존 계획대로 진행해요.'],
-    ['B', '조정·흔들림 — 경계나 주의 항목이 있을 때(조정장 신호는 꺼짐)', '남은 투입은 <b>기존 일정을 유지</b>하고, 앞당기거나 한꺼번에 넣지 않아요. 비중을 맞추는 거래는 한도를 넘었을 때만 하고, 며칠~몇 주에 나눠서 해요.'],
-    ['C', '조정장 신호 켜짐', '<b>손절하지 않고 계획을 유지</b>해요. 투입 금액을 늘리지도 줄이지도 않아요. 이미 대부분 투입했다면 남은 매수보다 <b>지금 보유한 만큼의 하락을 버틸 수 있는지</b>가 핵심이니 감내력을 다시 확인하세요.'],
-    ['D', '비중이 한도를 넘었을 때(프로그램은 보유 비중을 몰라 직접 확인)', '월 1회 비중을 확인해요. 주식 대 현금이 목표에서 <b>절대 ±5%p</b>(목표 70%면 65~75%)를 벗어나면 <b>목표(70%)로</b> 나눠서 되돌리고, 안이면 거래하지 않아요. 개별 종목은 목표의 25% 정도를 기준으로 써요. 허용 범위가 너무 넓으면(예: 상대 20%는 주식이 두 배 넘게 올라야 작동) 사실상 리밸런싱을 하지 않게 돼요.']
-  ];
+  const st = planState();
+  if (!st) { el.textContent = '시장 데이터가 없어 대응 계획을 표시하지 않아요.'; return; }
+  const {r2, okR2, cur, f0, trig} = st;
   const W0 = 70, C0 = 30, BAND = 5;
+  const row = k => `<div class="plan-row${k === cur ? ' now' : ''}"><span class="pn">${k}. ${PLAN_ROWS[k][0]}</span>${k === cur ? '<span class="pnow">← 지금 해당</span>' : ''}<br>${PLAN_ROWS[k][1]}</div>`;
+  const line = okR2 ? `<b>기준선(오늘 수치)</b>: S&P 500 종가가 <b>${f0(trig)} 미만</b>(최근 1년 고점 ${f0(r2.high)}의 −10%)이면서 200일 평균(${f0(r2.sma200)}) 아래이면 조정장 신호가 켜져요. 지금 종가 ${f0(r2.close)}에서 ${((trig / r2.close - 1) * 100).toFixed(1)}% 거리예요.` : '';
   const lad = [10, 20, 30, 40, 50].map(dn => {
     const S = W0 * (1 - dn / 100), T = S + C0, w = S / T * 100, out = Math.abs(w - W0) > BAND, buy = out ? Math.max(0, W0 / 100 * T - S) : 0;
     const lvl = Number.isFinite(Number(r2.high)) ? ` (S&P 500 약 ${f0(r2.high * (1 - dn / 100))})` : '';
     return `<tr><td>−${dn}%${lvl}</td><td>${w.toFixed(1)}%</td><td>${out ? `현금의 <b>${(buy / C0 * 100).toFixed(0)}%</b> 투입 → 현금 ${(100 - buy / C0 * 100).toFixed(0)}% 남음` : '범위 안 · 거래 없음'}</td></tr>`;
   }).join('');
-  const ladder = `<div class="plan-row"><span class="pn">E. 하락 단계별 현금 투입표 — 주식 70 : 현금 30을 유지할 때</span><br>주식 평가액이 고점에서 떨어진 정도별로, 70%로 되돌리기 위해 쓰는 현금이에요(허용 범위 ±${BAND}%p를 벗어날 때만 거래).<div class="rb-wrap" style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; margin-top:6px; font-size:13px;"><tr style="color:var(--text-faint,var(--text-dim)); text-align:left;"><th>주식 하락</th><th>주식 비중</th><th>대응</th></tr>${lad}</table></div><span style="font-size:12px; color:var(--text-faint,var(--text-dim));">S&P 500 수치는 S&P 500이 최근 1년 고점(${Number.isFinite(Number(r2.high)) ? f0(r2.high) : '—'})에서 같은 비율로 떨어졌을 때의 값이에요. 실제 기준은 보유한 주식 전체의 평가액이고, 나스닥이 더 크게 빠지면 이 단계에 먼저 도달해요. 현금은 70%를 넘겨서는 쓰지 않는 기준이라 주식이 반토막 나도 현금의 절반 이상이 남아요.</span></div>`;
-  el.innerHTML = rows.map(r => `<div class="plan-row${r[0] === cur ? ' now' : ''}"><span class="pn">${r[0] === 'D' ? 'D' : r[0]}. ${r[1]}</span>${r[0] === cur ? '<span class="pnow">← 지금 해당</span>' : ''}<br>${r[2]}</div>`).join('') +
-    (line ? `<div style="margin-top:10px;">${line}</div>` : '') + ladder +
-    `<div style="margin-top:8px; font-size:12px; color:var(--text-faint,var(--text-dim));">행동 내용은 이 프로그램을 쓰는 분의 원칙(손절하지 않음, 정해진 일정으로 나눠 투입, 한도를 넘을 때만 비중 조정)에 맞춰 정한 기본값이고 효과는 검증하지 않았어요. D는 보유 비중에 따라 해당 여부가 달라서 ‘지금 해당’ 표시는 A~C 중에서만 해요. AI가 정리한 참고 자료이고 투자자문이 아니라서, 큰 결정은 자격 있는 전문가와 상의하세요.</div>`;
+  const ladder = `<div class="plan-row"><span class="pn">E. 하락 단계별 현금 투입표 — 주식 70 : 현금 30을 유지할 때</span><br>주식 평가액이 고점에서 떨어진 정도별로, 70%로 되돌리기 위해 쓰는 현금이에요(허용 범위 ±${BAND}%p를 벗어날 때만 거래).<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; margin-top:6px; font-size:13px;"><tr style="color:var(--text-faint,var(--text-dim)); text-align:left;"><th>주식 하락</th><th>주식 비중</th><th>대응</th></tr>${lad}</table></div><span style="font-size:12px; color:var(--text-faint,var(--text-dim));">S&P 500 수치는 최근 1년 고점(${okR2 ? f0(r2.high) : '—'})에서 같은 비율로 떨어졌을 때의 값이에요. 실제 기준은 보유한 주식 전체의 평가액이고, 나스닥이 더 크게 빠지면 이 단계에 먼저 도달해요. 현금은 70%를 넘겨서는 쓰지 않는 기준이에요.</span></div>`;
+  const others = ['A', 'B', 'C'].filter(k => k !== cur);
+  el.innerHTML = row(cur) + (line ? `<div style="margin-top:10px;">${line}</div>` : '') + row('D') + ladder +
+    `<details style="margin-top:8px;"><summary style="cursor:pointer; font-size:13px;">해당하지 않는 상황 보기(${others.join('·')})</summary>${others.map(row).join('')}</details>`;
+}
+function renderSummary(){
+  const el = document.getElementById('sum-body'); if (!el) return;
+  const st = planState();
+  if (!st) { el.textContent = '시장 데이터가 없어 요약을 표시하지 않아요. 다음 자동 실행 후 다시 확인하세요.'; return; }
+  const {m, r2, okR2, cur, f0, trig} = st;
+  const act = {A: '기존 계획대로 진행해요.', B: '남은 투입은 기존 일정을 유지하고, 앞당기거나 한꺼번에 넣지 않아요.', C: '손절하지 않고 계획을 유지해요(감내력을 다시 확인하세요).'};
+  const nm = {A: '안정', B: '조정·흔들림', C: '조정장 신호 켜짐'};
+  const asof = todayData.price_snapshot && todayData.price_snapshot.sp500_date ? ` (S&P 500 종가 ${esc(todayData.price_snapshot.sp500_date)} 기준)` : '';
+  el.innerHTML = `<div><b>지금 상태</b>${asof}: ${m.head} <span style="color:var(--text-dim); font-size:13px;">(경계 ${m.n2}개${m.n2 ? '[' + m.alertNames + ']' : ''} · 주의 ${m.n1}개)</span></div>` +
+    `<div><b>해당하는 대응</b>: ${nm[cur]} — ${act[cur]}</div>` +
+    (okR2 ? `<div><b>바뀌는 기준</b>: S&P 500 종가가 ${f0(trig)} 아래로 내려가고 200일 평균(${f0(r2.sma200)}) 아래이면 조정장 신호가 켜져요(지금 종가 ${f0(r2.close)}에서 ${((trig / r2.close - 1) * 100).toFixed(1)}%).</div>` : '') +
+    `<div style="font-size:12px; color:var(--text-faint,var(--text-dim)); margin-top:4px;">※ 참고용이에요. 효과가 검증되지 않은 기준이 포함돼 있고 투자자문이 아니에요(맨 아래 ‘한계’ 참고).</div>`;
 }
 /* ================= 데이터 출처 표시 =================
    각 값이 어디서 오는지 해당 카드 안에 적는다. 이름과 주소는 수집 코드(scripts/data_sources.py)가 실제로 쓰는 것과 같다. */
