@@ -931,7 +931,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-19.7';
+const APP_VERSION = '2026-11-20.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1597,7 +1597,7 @@ function renderPlan(){
     ['A', '안정 — 경계·주의 항목이 거의 없을 때', '기존 계획대로 진행해요.'],
     ['B', '조정·흔들림 — 경계나 주의 항목이 있을 때(추세 이탈 신호는 꺼짐)', '남은 투입은 <b>기존 일정을 유지</b>하고, 앞당기거나 한꺼번에 넣지 않아요. 비중을 맞추는 거래는 한도를 넘었을 때만 하고, 며칠~몇 주에 나눠서 해요.'],
     ['C', '추세 이탈 신호 켜짐', '<b>손절하지 않고 계획을 유지</b>해요. 투입 금액을 늘리지도 줄이지도 않아요. 이미 대부분 투입했다면 남은 매수보다 <b>지금 보유한 만큼의 하락을 버틸 수 있는지</b>가 핵심이니 감내력을 다시 확인하세요.'],
-    ['D', '비중이 한도를 넘었을 때(프로그램은 보유 비중을 몰라 직접 확인)', '목표에서 허용 한도를 넘은 <b>만큼만</b> 나눠서 사거나 팔아요. 한도 안이면 거래하지 않아요.']
+    ['D', '비중이 한도를 넘었을 때(프로그램은 보유 비중을 몰라 직접 확인)', '월 1회 비중을 확인해요. 주식 대 현금이 목표에서 <b>절대 ±5%p</b>(목표 70%면 65~75%)를 벗어나면 <b>경계선까지만</b> 나눠서 되돌리고, 안이면 거래하지 않아요. 개별 종목은 목표의 25% 정도를 기준으로 써요. 허용 범위가 너무 넓으면(예: 상대 20%는 주식이 두 배 넘게 올라야 작동) 사실상 리밸런싱을 하지 않게 돼요.']
   ];
   el.innerHTML = rows.map(r => `<div class="plan-row${r[0] === cur ? ' now' : ''}"><span class="pn">${r[0] === 'D' ? 'D' : r[0]}. ${r[1]}</span>${r[0] === cur ? '<span class="pnow">← 지금 해당</span>' : ''}<br>${r[2]}</div>`).join('') +
     (line ? `<div style="margin-top:10px;">${line}</div>` : '') +
