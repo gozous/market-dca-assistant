@@ -82,6 +82,9 @@
   .facts{grid-column:1 / -1; font-size:13px; line-height:1.7; color:var(--text); margin-top:8px; padding:8px 10px; border-left:3px solid var(--border,#8884); background:rgba(127,127,127,.08); border-radius:4px;}
   .facts b{font-weight:600;}
   .src{grid-column:1 / -1; font-size:12px; line-height:1.7; color:var(--text-dim); margin-top:8px;}
+  .exp-more{grid-column:1 / -1; margin-top:6px; font-size:12.5px; color:var(--text-dim);}
+  .exp-more summary,.src summary{cursor:pointer;}
+  .exp-more .explain{margin-top:6px; padding-top:6px;}
   .src a{color:inherit; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:2px;}
   .src a:hover{color:var(--text);}
   .hist{grid-column:1 / -1; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-soft);}
@@ -945,7 +948,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-21.1';
+const APP_VERSION = '2026-11-21.2';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1006,28 +1009,28 @@ function localCompute(inputs){
   const techText =
     `S&P500이 최근 1년(약 252거래일) 최고 종가보다 ${f1(Math.max(0,dd))}% 낮아요. 이 낙폭은 ${ddState}\n` +
     `점수 ${f1(pTech)}/30 · 낙폭이 클수록 싸게 살 기회로 보고 점수를 높게 줘요(낙폭 40%면 만점). 지금보다 5%p 더 빠지면 약 ${f1(techScore(dd+5))}점이 돼요.\n` +
+    `참고 매수 비중 가산: ${extra ? `+${extra}%p` : '없음(낙폭 10% 이상부터 적용)'}\n§` +
     `낙폭이 크면 참고 매수 비중(평소 정기 매수액 = 100%)에 가산이 더 얹혀요:\n` +
-    `· 낙폭 10% 이상 → +20%p\n· 낙폭 20% 이상 → +50%p\n· 낙폭 30% 이상 → +100%p (구간끼리 더하지 않고 해당 구간 값 하나만 적용)\n` +
-    `지금은 낙폭 ${f1(Math.max(0,dd))}%라서 ${extra ? `+${extra}%p가 가산돼요` : '가산이 없어요(10% 이상부터 적용)'}.`;
+    `· 낙폭 10% 이상 → +20%p\n· 낙폭 20% 이상 → +50%p\n· 낙폭 30% 이상 → +100%p (구간끼리 더하지 않고 해당 구간 값 하나만 적용)`;
   const valLabel = cape<20 ? '꽤 저렴한 편' : cape<40 ? '다소 저렴한 편' : cape<60 ? '평균 근처' : cape<80 ? '다소 비싼 편' : '비싼 편';
   const valText =
     `CAPE(Shiller PE)의 백분위가 ${Math.round(cape)}예요. CAPE는 주가를 물가 반영 10년 평균 이익으로 나눈 값이라 클수록 비싸다는 뜻이에요. 백분위 ${Math.round(cape)}는 최근 30년 월별 값 100개 중 ${Math.round(cape)}개가 지금보다 낮거나 같았다는 뜻이고, ${valLabel}이에요.\n` +
-    `점수 ${f1(pVal)}/20 · 싸면 점수가 높아요(백분위 0이면 20점, 100이면 0점).\n` +
+    `점수 ${f1(pVal)}/20 · 싸면 점수가 높아요(백분위 0이면 20점, 100이면 0점).\n§` +
     `${cape>=90 ? '고평가권 경고 기준(90) 이상이에요. ' : ''}비싸다고 곧 하락한다는 뜻은 아니고, 장기 기대수익을 가늠하는 참고 지표예요.`;
   const fgState = fg<=24?'극단적 공포':fg<=44?'공포':fg<=55?'중립':fg<=75?'탐욕':'극단적 탐욕';
   const fearText =
     `CNN Fear & Greed Index가 ${Math.round(fg)}점으로 '${fgState}'예요(CNN 기준: 0~24 극단적 공포 · 25~44 공포 · 45~55 중립 · 56~75 탐욕 · 76~100 극단적 탐욕).\n` +
-    `점수 ${f1(pFear)}/20 · 공포일수록 점수가 높아요. 남들이 겁먹고 팔 때 가격이 싸졌을 가능성이 있다고 보는 역발상이에요(지수 20 이하 20점 ~ 100 0점, 사이는 직선으로 계산).\n` +
+    `점수 ${f1(pFear)}/20 · 공포일수록 점수가 높아요(지수 20 이하 20점 ~ 100 0점, 사이는 직선).\n§남들이 겁먹고 팔 때 가격이 싸졌을 가능성이 있다고 보는 역발상이에요.\n` +
     `${fg>=80 ? '과열(탐욕 80 이상) 경고 기준에 해당해요. ' : ''}CNN에서 값을 받지 못하면 VIX로 추정하거나 중립값으로 채우지 않아요. 이 항목을 "조회 실패"로 표시하고 종합 점수도 계산하지 않아요.`;
   const rateLabel = spread<30 ? '안정적인 편' : spread<60 ? '보통 수준' : spread<80 ? '다소 불안한 편' : '불안한 편';
   const rateText =
     `회사채 신용 스프레드의 백분위가 ${Math.round(spread)}예요. 여기서는 무디스 Baa 등급(투자등급 중 가장 낮은 단계) 회사채 금리가 미국 10년 국채 금리보다 얼마나 더 높은지(BAA10Y)를 써요. 커질수록(스프레드 확대) 투자자들이 위험을 크게 본다는 뜻이에요. 백분위 ${Math.round(spread)}는 1986년 이후 매일 값 100개 중 ${Math.round(spread)}개가 지금보다 낮거나 같았다는 뜻이고, 신용시장은 ${rateLabel}이에요. 하이일드(HY)가 아니라 투자등급 채권 지표이고, HY는 FRED가 3년치만 제공해서 아래에 참고로 같이 보여줘요.\n` +
-    `점수 ${f1(pRate)}/10 · 스프레드가 클수록(신용이 불안할수록) 점수가 높아요. 위기 때 가격이 싸지는 경향 때문이에요. 점수가 높다는 건 시장이 좋다는 뜻이 아니라 불안하다는 뜻이에요(0이면 0점, 100이면 10점).\n` +
+    `점수 ${f1(pRate)}/10 · 스프레드가 클수록(신용이 불안할수록) 점수가 높아요. 위기 때 가격이 싸지는 경향 때문이에요. 점수가 높다는 건 시장이 좋다는 뜻이 아니라 불안하다는 뜻이에요(0이면 0점, 100이면 10점).\n§` +
     `${spread>=90 ? '신용 스트레스 경고 기준(90) 이상이에요. ' : ''}불안이 더 커질 수도 있어서, 점수가 높다고 바닥이라는 뜻은 아니에요.`;
   const macroState = ism<=-12.5 ? '뚜렷한 위축' : ism<0 ? '위축' : ism<12.5 ? '확장' : '뚜렷한 확장';
   const macroText =
     `필라델피아 연은 제조업지수(일반활동지수, 0이 기준)가 ${f1(ism)}예요. 0보다 크면 확장, 작으면 위축이고 지금은 '${macroState}'예요. 뉴스에 자주 나오는 ISM 제조업 PMI(50이 기준)와는 다른 지표예요.\n` +
-    `점수 ${f1(pMacro)}/10 · 경기가 나쁠수록 점수가 높아요. 경기 둔화가 가격에 이미 반영돼 싸졌을 수 있다고 보는 역발상이에요(−12.5 이하 10점, 0이면 5점, +12.5 이상 0점).\n` +
+    `점수 ${f1(pMacro)}/10 · 경기가 나쁠수록 점수가 높아요. 경기 둔화가 가격에 이미 반영돼 싸졌을 수 있다고 보는 역발상이에요(−12.5 이하 10점, 0이면 5점, +12.5 이상 0점).\n§` +
     `발표 시점이 월 단위라 최신 경기 흐름보다 늦을 수 있어요.`;
   return {
     total_score: total,
@@ -1052,6 +1055,18 @@ function applyResult(data, dd, missingKeys){
     ['rate', s.rate_credit, 10], ['macro', s.macro, 10],
   ];
   const KEY_OF_ROW = {tech:'drawdown_pct', val:'cape_percentile', fear:'fear_greed', rate:'credit_spread_percentile', macro:'ism'};
+  const setExp = (key, text) => {            // '§' 앞은 항상 보이고, 뒤(계산 방식·단서)는 접어 둔다
+    const exp = document.getElementById(`exp-${key}`), [head, more] = String(text).split('§');
+    exp.textContent = head.replace(/\n+$/, '');
+    let d = exp.parentNode.querySelector(`.exp-more[data-k="${key}"]`);
+    if (d) d.remove();
+    if (more && more.trim()) {
+      d = document.createElement('details'); d.className = 'exp-more'; d.dataset.k = key;
+      const sm = document.createElement('summary'); sm.textContent = '계산 방식과 단서';
+      const bd = document.createElement('div'); bd.className = 'explain'; bd.textContent = more.trim();
+      d.append(sm, bd); exp.insertAdjacentElement('afterend', d);
+    }
+  };
   rows.forEach(([key, r, max])=>{
     if (miss.includes(KEY_OF_ROW[key])) {          // 조회 실패: 점수도 설명도 만들지 않는다(값을 대체하지 않는다)
       document.getElementById(`pts-${key}`).textContent = '—';
@@ -1061,7 +1076,7 @@ function applyResult(data, dd, missingKeys){
     }
     document.getElementById(`pts-${key}`).textContent = r.score.toFixed(1);
     document.getElementById(`bar-${key}`).style.width = (r.score/max*100)+'%';
-    document.getElementById(`exp-${key}`).textContent = r.reason;
+    setExp(key, r.reason);
   });
 
   const total = Math.round(data.total_score);
@@ -1679,7 +1694,7 @@ function renderSources(){
   const dateOf = k => (macro[k] && macro[k].date) || '';
   ['tech', 'val', 'fear', 'rate', 'macro'].forEach(k => {
     const el = ensureSrc(document.getElementById('exp-' + k), k);
-    if (el) el.innerHTML = srcHtml(k, k === 'tech' ? (snap.sp500_date || '') : '');
+    if (el) el.innerHTML = '<details><summary>출처·수집 방법</summary>' + srcHtml(k, k === 'tech' ? (snap.sp500_date || '') : '') + '</details>';
   });
   [['us2y', 'us_2y'], ['us10y', 'us_10y'], ['dxy', 'dxy'], ['usdkrw', 'usd_krw'], ['vix', 'vix'], ['hy', 'hy_oas']].forEach(([id, k]) => {
     const el = ensureSrc(document.getElementById(id + '-cap'), k);
