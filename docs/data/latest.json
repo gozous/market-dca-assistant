@@ -1,17 +1,17 @@
 {
-  "generated_at_utc": "2026-11-20T02:30:07.817350+00:00",
+  "generated_at_utc": "2026-11-21T02:41:23.387367+00:00",
   "rules_version": "v5-baa-credit-2026-10-31",
   "score_status": "complete",
   "missing_items": [],
   "inputs": {
-    "drawdown_pct": 8.224911633668519,
+    "drawdown_pct": 11.61974872056868,
     "cape_percentile": 91.94444444444444,
-    "fear_greed": 18.6761904761905,
-    "credit_spread_percentile": 7.133770427634797,
-    "hy_3y_percentile": 90.19108280254777,
+    "fear_greed": 9.67368421052632,
+    "credit_spread_percentile": 10.371819960861057,
+    "hy_3y_percentile": 91.97452229299363,
     "ism": 6.3,
     "net_flow_index": null,
-    "vix": 28.440000534057617
+    "vix": 35.88999938964844
   },
   "data_quality": {
     "drawdown_pct": "live",
@@ -24,10 +24,9 @@
     "vix": "live"
   },
   "price_snapshot": {
-    "sp500_close": 7175.830078125,
-    "sp500_date": "2026-11-19",
+    "sp500_close": 6910.39013671875,
+    "sp500_date": "2026-11-20",
     "sp500_series": [
-      7730.9902,
       7711.7598,
       7686.1401,
       7631.4702,
@@ -86,13 +85,13 @@
       7416.5898,
       7340.5298,
       7323.6299,
-      7175.8301
+      7175.8301,
+      6910.3901
     ],
-    "sp500_series_start": "2026-08-27",
-    "nasdaq100_close": 26517.05078125,
-    "nasdaq100_date": "2026-11-19",
+    "sp500_series_start": "2026-08-28",
+    "nasdaq100_close": 25028.982421875,
+    "nasdaq100_date": "2026-11-20",
     "nasdaq100_series": [
-      29641.5605,
       29433.4297,
       29456.9707,
       29077.2207,
@@ -151,13 +150,14 @@
       27197.1504,
       27001.7793,
       27116.2598,
-      26517.0508
+      26517.0508,
+      25028.9824
     ],
-    "nasdaq100_series_start": "2026-08-27",
-    "nasdaq100_drawdown_pct": 15.076059948724364,
+    "nasdaq100_series_start": "2026-08-28",
+    "nasdaq100_drawdown_pct": 19.841771987603117,
     "macro": {
       "usd_krw": {
-        "value": 1339.0799560546875,
+        "value": 1334.7900390625,
         "date": "2026-11-20",
         "series_start": "2026-08-31",
         "series": [
@@ -220,15 +220,14 @@
           1335.67,
           1333.01,
           1330.4,
-          1339.08
+          1334.79
         ]
       },
       "dxy": {
-        "value": 103.91899871826172,
-        "date": "2026-11-19",
-        "series_start": "2026-08-27",
+        "value": 103.83999633789062,
+        "date": "2026-11-20",
+        "series_start": "2026-08-28",
         "series": [
-          99.16,
           99.7,
           99.43,
           99.67,
@@ -287,15 +286,15 @@
           103.55,
           103.49,
           103.86,
-          103.919
+          103.9,
+          103.84
         ]
       },
       "us_2y": {
-        "value": 4.8,
-        "date": "2026-11-18",
-        "series_start": "2026-08-24",
+        "value": 4.76,
+        "date": "2026-11-19",
+        "series_start": "2026-08-25",
         "series": [
-          4.24,
           4.17,
           4.19,
           4.2,
@@ -354,15 +353,15 @@
           4.88,
           4.83,
           4.8,
-          4.8
+          4.8,
+          4.76
         ]
       },
       "us_10y": {
-        "value": 5.07,
-        "date": "2026-11-18",
-        "series_start": "2026-08-24",
+        "value": 5.04,
+        "date": "2026-11-19",
+        "series_start": "2026-08-25",
         "series": [
-          4.7,
           4.64,
           4.66,
           4.67,
@@ -421,15 +420,15 @@
           5.15,
           5.12,
           5.1,
-          5.07
+          5.07,
+          5.04
         ]
       },
       "hy_oas": {
-        "value": 3.47,
-        "date": "2026-11-18",
-        "series_start": "2026-08-27",
+        "value": 3.52,
+        "date": "2026-11-19",
+        "series_start": "2026-08-28",
         "series": [
-          2.63,
           2.6,
           2.63,
           2.65,
@@ -488,15 +487,15 @@
           3.23,
           3.34,
           3.43,
-          3.47
+          3.47,
+          3.52
         ]
       },
       "vix": {
-        "value": 28.440000534057617,
-        "date": "2026-11-19",
-        "series_start": "2026-08-28",
+        "value": 35.88999938964844,
+        "date": "2026-11-20",
+        "series_start": "2026-08-31",
         "series": [
-          14.43,
           14.92,
           16.34,
           15.2,
@@ -555,19 +554,20 @@
           22.91,
           25.46,
           24.56,
-          28.44
+          28.44,
+          35.89
         ]
       }
     }
   },
   "result": {
-    "total_score": 31.9,
+    "total_score": 34.6,
     "sub_scores": {
       "technical": {
-        "score": 3.9,
+        "score": 6.0,
         "max_score": 30,
-        "reason": "최근 1년 최고가보다 8.2% 낮은 가격이에요",
-        "raw_value": 8.224911633668519
+        "reason": "최근 1년 최고가보다 11.6% 낮은 가격이에요",
+        "raw_value": 11.61974872056868
       },
       "valuation": {
         "score": 1.6,
@@ -579,13 +579,13 @@
         "score": 20,
         "max_score": 20,
         "reason": "지금 투자 심리는 '극단적 공포' 상태예요",
-        "raw_value": 18.6761904761905
+        "raw_value": 9.67368421052632
       },
       "rate_credit": {
-        "score": 0.7,
+        "score": 1.0,
         "max_score": 10,
-        "reason": "회사채 시장 분위기는 안정적인 편이에요(1986년 이후 하위 7%)",
-        "raw_value": 7.133770427634797
+        "reason": "회사채 시장 분위기는 안정적인 편이에요(1986년 이후 하위 10%)",
+        "raw_value": 10.371819960861057
       },
       "macro": {
         "score": 2.5,
@@ -594,7 +594,7 @@
         "raw_value": 6.3
       }
     },
-    "buy_pct": 50,
+    "buy_pct": 70,
     "risk_warnings": [
       "CAPE 역사 고평가권",
       "VIX 과열"
@@ -607,8 +607,8 @@
     "drawdown_pct": {
       "high": 7818.93017578125,
       "high_date": "2026-10-06",
-      "close": 7175.830078125,
-      "date": "2026-11-19",
+      "close": 6910.39013671875,
+      "date": "2026-11-20",
       "window": 252
     },
     "cape_percentile": {
@@ -622,38 +622,38 @@
       "lagged_percentile": 92.77777777777779
     },
     "fear_greed": {
-      "value": 18.6761904761905,
+      "value": 9.67368421052632,
       "rating": "extreme fear",
-      "timestamp": "2026-11-19T23:59:41+00:00",
-      "previous_close": 24.607722007722,
-      "week_ago": 40.3428571428571,
-      "month_ago": 19.514285714285716,
-      "year_ago": 7.857142857142857
+      "timestamp": "2026-11-20T23:59:52+00:00",
+      "previous_close": 18.6761904761905,
+      "week_ago": 37.3714285714286,
+      "month_ago": 28.742857142857144,
+      "year_ago": 5.171428571428572
     },
     "credit_spread_percentile": {
-      "value": 1.52,
-      "date": "2026-11-18",
-      "month_ago_value": 1.46,
-      "month_ago_date": "2026-10-19",
+      "value": 1.56,
+      "date": "2026-11-19",
+      "month_ago_value": 1.44,
+      "month_ago_date": "2026-10-20",
       "year_low": 1.39,
       "year_high": 1.85,
       "all_low": 1.16,
       "all_high": 6.16,
       "all_median": 2.13,
       "since": "1986-01-02",
-      "n": 10220
+      "n": 10221
     },
     "hy_3y_percentile": {
-      "value": 3.47,
-      "date": "2026-11-18",
-      "month_ago_value": 3.29,
-      "month_ago_date": "2026-10-19",
+      "value": 3.52,
+      "date": "2026-11-19",
+      "month_ago_value": 3.33,
+      "month_ago_date": "2026-10-20",
       "year_low": 2.6,
-      "year_high": 3.48,
+      "year_high": 3.52,
       "all_low": 2.59,
       "all_high": 4.61,
       "all_median": 3.02,
-      "since": "2023-11-20",
+      "since": "2023-11-21",
       "n": 786
     },
     "ism": {
@@ -671,7 +671,7 @@
     "worst_yahoo": 7340.52978515625,
     "worst_fred": 7340.53,
     "worst_diff_pct": 0.0,
-    "last_checked_date": "2026-11-18"
+    "last_checked_date": "2026-11-19"
   },
   "reduction_signals": {
     "thresholds": {
@@ -688,16 +688,16 @@
     },
     "R3": {
       "on": false,
-      "value": 7.133770427634797,
+      "value": 10.371819960861057,
       "validated": true
     },
     "R2": {
-      "on": false,
+      "on": true,
       "validated": true,
-      "close": 7175.830078125,
-      "sma200": 7348.020361328125,
+      "close": 6910.39013671875,
+      "sma200": 7348.5803125,
       "high": 7818.93017578125,
-      "drawdown_pct": 8.224911633668519
+      "drawdown_pct": 11.61974872056868
     }
   },
   "failure_reasons": {}
