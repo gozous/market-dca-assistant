@@ -945,7 +945,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-20.4';
+const APP_VERSION = '2026-11-21.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1610,7 +1610,9 @@ function renderPlan(){
   const {r2, okR2, cur, f0, trig} = st;
   const W0 = 70, C0 = 30, BAND = 5;
   const row = k => `<div class="plan-row${k === cur ? ' now' : ''}"><span class="pn">${k}. ${PLAN_ROWS[k][0]}</span>${k === cur ? '<span class="pnow">← 지금 해당</span>' : ''}<br>${PLAN_ROWS[k][1]}</div>`;
-  const line = okR2 ? `<b>기준선(오늘 수치)</b>: S&P 500 종가가 <b>${f0(trig)} 미만</b>(최근 1년 고점 ${f0(r2.high)}의 −10%)이면서 200일 평균(${f0(r2.sma200)}) 아래이면 조정장 신호가 켜져요. 지금 종가 ${f0(r2.close)}에서 ${((trig / r2.close - 1) * 100).toFixed(1)}% 거리예요.` : '';
+  const line = !okR2 ? '' : (r2.on === true
+    ? `<b>기준선(오늘 수치)</b>: 조정장 신호가 이미 켜져 있어요(종가 ${f0(r2.close)}가 ${f0(trig)} 아래이고 200일 평균 ${f0(r2.sma200)} 아래). 종가가 ${f0(trig)}(최근 1년 고점 ${f0(r2.high)}의 −10%) 이상으로 회복하면 꺼져요(지금 종가에서 +${((trig / r2.close - 1) * 100).toFixed(1)}%).`
+    : `<b>기준선(오늘 수치)</b>: S&P 500 종가가 <b>${f0(trig)} 미만</b>(최근 1년 고점 ${f0(r2.high)}의 −10%)이면서 200일 평균(${f0(r2.sma200)}) 아래이면 조정장 신호가 켜져요. 지금 종가 ${f0(r2.close)}에서 ${((trig / r2.close - 1) * 100).toFixed(1)}% 거리예요.`);
   const lad = [10, 20, 30, 40, 50].map(dn => {
     const S = W0 * (1 - dn / 100), T = S + C0, w = S / T * 100, out = Math.abs(w - W0) > BAND, buy = out ? Math.max(0, W0 / 100 * T - S) : 0;
     const lvl = Number.isFinite(Number(r2.high)) ? ` (S&P 500 약 ${f0(r2.high * (1 - dn / 100))})` : '';
@@ -1631,7 +1633,9 @@ function renderSummary(){
   const asof = todayData.price_snapshot && todayData.price_snapshot.sp500_date ? ` (S&P 500 종가 ${esc(todayData.price_snapshot.sp500_date)} 기준)` : '';
   el.innerHTML = `<div><b>지금 상태</b>${asof}: ${m.head} <span style="color:var(--text-dim); font-size:13px;">(경계 ${m.n2}개${m.n2 ? '[' + m.alertNames + ']' : ''} · 주의 ${m.n1}개)</span></div>` +
     `<div><b>해당하는 대응</b>: ${nm[cur]} — ${act[cur]}</div>` +
-    (okR2 ? `<div><b>바뀌는 기준</b>: S&P 500 종가가 ${f0(trig)} 아래로 내려가고 200일 평균(${f0(r2.sma200)}) 아래이면 조정장 신호가 켜져요(지금 종가 ${f0(r2.close)}에서 ${((trig / r2.close - 1) * 100).toFixed(1)}%).</div>` : '') +
+    (okR2 ? (r2.on === true
+      ? `<div><b>바뀌는 기준</b>: 조정장 신호가 <b>이미 켜져 있어요</b>(종가 ${f0(r2.close)}가 기준선 ${f0(trig)} 아래이고 200일 평균 ${f0(r2.sma200)} 아래). 종가가 ${f0(trig)} 이상으로 회복하면 꺼져요(지금 종가에서 +${((trig / r2.close - 1) * 100).toFixed(1)}%).</div>`
+      : `<div><b>바뀌는 기준</b>: S&P 500 종가가 ${f0(trig)} 아래로 내려가고 200일 평균(${f0(r2.sma200)}) 아래이면 조정장 신호가 켜져요(지금 종가 ${f0(r2.close)}에서 ${((trig / r2.close - 1) * 100).toFixed(1)}%).</div>`) : '') +
     `<div style="font-size:12px; color:var(--text-faint,var(--text-dim)); margin-top:4px;">※ 참고용이에요. 효과가 검증되지 않은 기준이 포함돼 있고 투자자문이 아니에요(맨 아래 ‘한계’ 참고).</div>`;
 }
 /* ================= 데이터 출처 표시 =================
