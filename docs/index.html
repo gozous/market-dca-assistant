@@ -717,8 +717,8 @@ function macroNoteBody(card, macro, payload){
       return '1달러가 몇 원인지예요. 오르면 원화 약세라서, 같은 미국 주식을 사려면 더 많은 원화가 필요해요. 해외 자산의 원화 환산 수익률에 환율 변동이 그대로 반영돼요.\n점수 계산에는 쓰이지 않는 참고 지표예요.';
     case 'vix': {
       const cur = v !== null ? v : (Number.isFinite(currentVix) ? currentVix : null);  // 카드에 보이는 값과 같은 값을 쓴다
-      const st = cur === null ? '' : cur < 15 ? '안정' : cur < 20 ? '보통' : cur < 28 ? '불안' : '과열 경고 기준(28) 이상';
-      return 'S&P 500 옵션이 반영하는 향후 한 달 변동성 기대치예요. 15 미만 안정, 15~20 보통, 20~28 불안, 28 이상이면 이 대시보드가 "VIX 과열" 경고를 띄워요.' +
+      const st = cur === null ? '' : cur < 15 ? '안정' : cur < 20 ? '보통' : cur < 28 ? '불안' : cur < 30 ? '불안(과열 경고 기준 28 이상)' : '공포(30 이상, 과열 경고 기준 28 이상)';
+      return 'S&P 500 옵션이 반영하는 향후 한 달 변동성 기대치예요. 15 미만 안정, 15~20 보통, 20~30 불안, 30 이상은 공포가 큰 구간이에요. 28 이상이면 이 대시보드가 "VIX 과열" 경고를 띄워요.' +
         (cur === null ? '' : `\n지금은 ${cur.toFixed(1)}로 "${st}" 구간이에요.`) +
         '\n점수에는 쓰이지 않고, "VIX 과열" 경고 판정에만 쓰여요. 조회에 실패하면 값을 만들어 채우지 않고 "조회 실패"로 표시해요.';
     }
@@ -757,7 +757,7 @@ function macroAction(card, macro){
       return {text: `<b>대응 참고</b> · ${state}\n${how}`, warn: up};
     }
     case 'dxy': {
-      const up = d !== null && d >= 3, down = d !== null && d <= -3;
+      const up = d !== null && d >= 1.5, down = d !== null && d <= -1.5;
       return {text: `<b>대응 참고</b> · ${up ? '최근 한 달 달러가 강해졌어요.' : down ? '최근 한 달 달러가 약해졌어요.' : '달러 흐름이 비교적 안정적이에요.'}\n` +
         (up ? '달러 강세기에는 원화 약세와 신흥국 변동성이 함께 오는 경향이 있어요. 달러 환전도 한 번에 하지 말고 나눠서 하는 것이 일반적이에요.'
             : down ? '달러 약세는 원화 환산 수익률에 불리하게 작용할 수 있어요. 환율 방향으로 매수 시점을 바꾸지는 마세요.'
@@ -773,8 +773,8 @@ function macroAction(card, macro){
     case 'vix': {
       if (v < 15) return {text: '<b>대응 참고</b> · 시장이 매우 안정적이에요.\n변동성이 낮을 때는 과신하기 쉬워요. 평소 계획대로 정기 매수만 유지하세요.', warn: false};
       if (v < 20) return {text: '<b>대응 참고</b> · 평소 수준의 변동성이에요.\n특별히 바꿀 점은 없어요. 정기 매수를 유지하세요.', warn: false};
-      if (v < 28) return {text: '<b>대응 참고</b> · 시장이 불안한 구간이에요.\n하락이 더 이어질 수 있어요. 정기 매수를 유지하되, 추가로 쓸 현금 여력과 비상금이 충분한지 점검하세요. 놀라서 파는 행동은 가장 흔한 실수예요.', warn: true};
-      return {text: '<b>대응 참고</b> · 공포가 큰 구간(VIX 28 이상)이에요.\n과거에는 이런 구간 뒤에 반등한 적도 많지만, 더 떨어진 적도 있어요. 한 번에 몰아서 사기보다 미리 정한 계획대로 나눠서 사고, 정기 매수는 그대로 유지하세요. 이 대시보드의 신호는 아직 검증 전이라 매수 비중을 바꾸는 근거로 쓰지는 않아요.', warn: true};
+      if (v < 30) return {text: '<b>대응 참고</b> · 시장이 불안한 구간이에요.\n하락이 더 이어질 수 있어요. 정기 매수를 유지하되, 추가로 쓸 현금 여력과 비상금이 충분한지 점검하세요. 놀라서 파는 행동은 가장 흔한 실수예요.', warn: true};
+      return {text: '<b>대응 참고</b> · 공포가 큰 구간(VIX 30 이상)이에요.\n과거에는 이런 구간 뒤에 반등한 적도 많지만, 더 떨어진 적도 있어요. 한 번에 몰아서 사기보다 미리 정한 계획대로 나눠서 사고, 정기 매수는 그대로 유지하세요. 이 대시보드의 신호는 아직 검증 전이라 매수 비중을 바꾸는 근거로 쓰지는 않아요.', warn: true};
     }
     case 'hy_oas': {
       if (v < 4) return {text: '<b>대응 참고</b> · 신용시장이 낙관적이에요(스프레드가 작음).\n작은 구간은 안심 신호이기도 하지만 위험이 가격에 덜 반영됐다는 뜻일 수도 있어요. 정기 매수를 유지하세요.', warn: false};
@@ -799,6 +799,9 @@ function renderMacroStrategy(payload){
   if (t10 === null || t2 === null) unknown.push('장단기 금리'); else if (t10 - t2 < 0) alerts.push(`장단기 금리 역전 (${(t10 - t2).toFixed(2)}%p)`);
   const fx = macroDelta(macro.usd_krw, 'pct');
   if (macroVal(macro, 'usd_krw') === null) unknown.push('원/달러'); else if (fx !== null && fx >= 3) alerts.push(`원/달러 한 달 ${fx.toFixed(1)}% 상승 (원화 약세)`);
+  const dx = macroDelta(macro.dxy, 'pct');
+  if (dx !== null && dx >= 1.5) alerts.push(`달러지수 한 달 +${dx.toFixed(1)}% 상승`);
+  if (t10 !== null && t10 >= 5) alerts.push(`10년 금리 ${t10.toFixed(2)}% (5% 이상)`);
   const d10 = macroDelta(macro.us_10y, 'diff');
   if (d10 !== null && d10 >= 0.25) alerts.push(`10년 금리 한 달 +${d10.toFixed(2)}%p`);
   const n = alerts.length;
@@ -810,7 +813,7 @@ function renderMacroStrategy(payload){
   box.innerHTML = `<div class="hd">대응 참고 (종합)</div><b>${head}</b>` +
     (n ? `\n· ${alerts.join('\n· ')}` : '') +
     `\n${todo}` + (unknown.length ? `\n(조회되지 않아 판단에서 빠진 항목: ${unknown.join(', ')})` : '') +
-    `\n<div class="fine">실제 매수는 고정 DCA를 기본으로 하고, 단일 지표나 뉴스로 매수·매도 시점을 바꾸지 않는 것을 원칙으로 합니다. 이 안내는 일반적으로 쓰이는 해석과 점검 항목일 뿐, 이 대시보드가 검증한 전략이나 투자 조언이 아니에요.</div>`;
+    `\n<div class="fine">비중 조정 기준은 ① 탭의 ‘대응 계획’을 따르고, 단일 지표나 뉴스로 매수·매도 시점을 바꾸지 않는 것을 원칙으로 합니다. 이 안내는 일반적으로 쓰이는 해석과 점검 항목일 뿐, 이 대시보드가 검증한 전략이나 투자 조언이 아니에요.</div>`;
 }
 function renderMacroExtras(payload){
   const macro = (payload && payload.price_snapshot && payload.price_snapshot.macro) || null;
@@ -948,7 +951,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-21.2';
+const APP_VERSION = '2026-11-23.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
