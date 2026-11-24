@@ -951,7 +951,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-24.3';
+const APP_VERSION = '2026-11-24.4';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1617,7 +1617,7 @@ function planState(){
 const PLAN_ROWS = {
   A: ['안정 — 경계·주의 항목이 거의 없을 때', '기존 계획대로 진행해요.'],
   B: ['조정·흔들림 — 경계나 주의 항목이 있을 때(조정장 판정은 해당 없음)', '남은 투입은 <b>기존 일정을 유지</b>하고, 앞당기거나 한꺼번에 넣지 않아요. 비중을 맞추는 거래는 한도를 넘었을 때만 하고, 며칠~몇 주에 나눠서 해요.'],
-  C: ['조정장 판정 해당', '<b>손절하지 않고 계획을 유지</b>해요. 투입 금액을 늘리지도 줄이지도 않아요. 이미 대부분 투입했다면 남은 매수보다 <b>지금 보유한 만큼의 하락을 버틸 수 있는지</b>가 핵심이니 감내력을 다시 확인하세요.'],
+  C: ['조정장 구간 — 조정장 판정에 해당할 때', '<b>손절하지 않고 계획을 유지</b>해요. 투입 금액을 늘리지도 줄이지도 않아요. 이미 대부분 투입했다면 남은 매수보다 <b>지금 보유한 만큼의 하락을 버틸 수 있는지</b>가 핵심이니 감내력을 다시 확인하세요.'],
   D: ['비중이 한도를 넘었을 때(프로그램은 보유 비중을 몰라 직접 확인)', '월 1회 비중을 확인해요. 주식 대 현금이 목표에서 <b>절대 ±5%p</b>(목표 70%면 65~75%)를 벗어나면 <b>목표(70%)로</b> 나눠서 되돌리고, 안이면 거래하지 않아요. 개별 종목은 목표의 25% 정도를 기준으로 써요. 허용 범위가 너무 넓으면(예: 상대 20%는 주식이 두 배 넘게 올라야 작동) 사실상 리밸런싱을 하지 않게 돼요.']
 };
 function renderPlan(){
@@ -1646,10 +1646,10 @@ function renderSummary(){
   if (!st) { el.textContent = '시장 데이터가 없어 요약을 표시하지 않아요. 다음 자동 실행 후 다시 확인하세요.'; return; }
   const {m, r2, okR2, cur, f0, trig} = st;
   const act = {A: '기존 계획대로 진행해요.', B: '남은 투입은 기존 일정을 유지하고, 앞당기거나 한꺼번에 넣지 않아요.', C: '손절하지 않고 계획을 유지해요(감내력을 다시 확인하세요).'};
-  const nm = {A: '안정', B: '조정·흔들림', C: '조정장 판정 해당'};
+  const nm = {A: '안정', B: '조정·흔들림', C: '조정장 구간'};
   const asof = todayData.price_snapshot && todayData.price_snapshot.sp500_date ? ` (S&P 500 종가 ${esc(todayData.price_snapshot.sp500_date)} 기준)` : '';
   el.innerHTML = `<div><b>지금 상태</b>${asof}: ${m.head} <span style="color:var(--text-dim); font-size:13px;">(경계 ${m.n2}개${m.n2 ? '[' + m.alertNames + ']' : ''} · 주의 ${m.n1}개)</span></div>` +
-    `<div><b>해당하는 대응</b>: ${nm[cur]} — ${act[cur]}</div>` +
+    `<div><b>지금 할 일</b>: ${nm[cur]} — ${act[cur]}</div>` +
     (okR2 ? (r2.on === true
       ? `<div><b>바뀌는 기준</b>: 조정장 판정에 <b>이미 해당해요</b>(종가 ${f0(r2.close)}가 기준선 ${f0(trig)} 아래이고 200일 평균 ${f0(r2.sma200)} 아래). 종가가 ${f0(trig)} 이상으로 회복하면 해당 없음이 돼요(지금 종가에서 +${((trig / r2.close - 1) * 100).toFixed(1)}%).</div>`
       : `<div><b>바뀌는 기준</b>: S&P 500 종가가 ${f0(trig)} 아래로 내려가고 200일 평균(${f0(r2.sma200)}) 아래이면 조정장 판정에 해당돼요(지금 종가 ${f0(r2.close)}에서 ${((trig / r2.close - 1) * 100).toFixed(1)}%).</div>`) : '') +
