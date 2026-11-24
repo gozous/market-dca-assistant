@@ -951,7 +951,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-23.1';
+const APP_VERSION = '2026-11-24.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1058,16 +1058,15 @@ function applyResult(data, dd, missingKeys){
     ['rate', s.rate_credit, 10], ['macro', s.macro, 10],
   ];
   const KEY_OF_ROW = {tech:'drawdown_pct', val:'cape_percentile', fear:'fear_greed', rate:'credit_spread_percentile', macro:'ism'};
-  const setExp = (key, text) => {            // '§' 앞은 항상 보이고, 뒤(계산 방식·단서)는 접어 둔다
+  const setExp = (key, text) => {            // '§' 앞은 핵심 줄, 뒤(계산 방식·단서)는 아래 칸에 이어서 항상 보인다(접지 않는다)
     const exp = document.getElementById(`exp-${key}`), [head, more] = String(text).split('§');
     exp.textContent = head.replace(/\n+$/, '');
     let d = exp.parentNode.querySelector(`.exp-more[data-k="${key}"]`);
     if (d) d.remove();
     if (more && more.trim()) {
-      d = document.createElement('details'); d.className = 'exp-more'; d.dataset.k = key;
-      const sm = document.createElement('summary'); sm.textContent = '계산 방식과 단서';
+      d = document.createElement('div'); d.className = 'exp-more'; d.dataset.k = key;
       const bd = document.createElement('div'); bd.className = 'explain'; bd.textContent = more.trim();
-      d.append(sm, bd); exp.insertAdjacentElement('afterend', d);
+      d.append(bd); exp.insertAdjacentElement('afterend', d);
     }
   };
   rows.forEach(([key, r, max])=>{
@@ -1498,7 +1497,7 @@ function reduceCard(name, rule, lines, strategy){
     : '과거 기록에서 효과가 있었지만 우연일 수 있어요 · 근거 약함';
   const tag = `<span class="reduce-tag">${tagText}</span>`;
   const rtag = !rc ? '' : `<div style="margin-top:4px;"><b>우연 검정:</b> 이 규칙과 켜지는 비율·횟수는 같지만 시점은 무작위인 규칙 ${rc.n_controls}개와 비교했어요. 그중 낙폭을 이 규칙만큼(또는 더) 줄인 것이 ${(rc.p_mdd * 100).toFixed(1)}%였어요(5% 이하면 우연이 아닌 듯하다고 봐요) → <b>${distinct ? '우연으로 보기 어려워요' : '우연으로 배제하지 못해요'}</b>.</div>`;
-  const detail = (ev || rc) ? `<details style="margin-top:6px; color:var(--text-dim);"><summary style="cursor:pointer;">자세히 (검증 수치)</summary>${ev ? `<div style="margin-top:4px;">${esc(ev.text)}</div>` : ''}${rtag}</details>` : '';
+  const detail = (ev || rc) ? `<div style="margin-top:6px; color:var(--text-dim);">${ev ? `<div style="margin-top:4px;">${esc(ev.text)}</div>` : ''}${rtag}</div>` : '';
   return `<div class="reduce-rule"><div class="rname">${esc(name)}<span class="reduce-badge ${st[0]}">${st[1]}</span></div>` +
          `<div>${lines.join('<br>')}</div>${tag}${detail}</div>`;
 }
@@ -1639,7 +1638,7 @@ function renderPlan(){
   const ladder = `<div class="plan-row"><span class="pn">E. 하락 단계별 현금 투입표 — 주식 70 : 현금 30을 유지할 때</span><br>주식 평가액이 고점에서 떨어진 정도별로, 70%로 되돌리기 위해 쓰는 현금이에요(허용 범위 ±${BAND}%p를 벗어날 때만 거래).<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; margin-top:6px; font-size:13px;"><tr style="color:var(--text-faint,var(--text-dim)); text-align:left;"><th>주식 하락</th><th>주식 비중</th><th>대응</th></tr>${lad}</table></div><span style="font-size:12px; color:var(--text-faint,var(--text-dim));">S&P 500 수치는 최근 1년 고점(${okR2 ? f0(r2.high) : '—'})에서 같은 비율로 떨어졌을 때의 값이에요. 실제 기준은 보유한 주식 전체의 평가액이고, 나스닥이 더 크게 빠지면 이 단계에 먼저 도달해요. 현금은 70%를 넘겨서는 쓰지 않는 기준이에요.</span></div>`;
   const others = ['A', 'B', 'C'].filter(k => k !== cur);
   el.innerHTML = row(cur) + (line ? `<div style="margin-top:10px;">${line}</div>` : '') + row('D') + ladder +
-    `<details style="margin-top:8px;"><summary style="cursor:pointer; font-size:13px;">해당하지 않는 상황 보기(${others.join('·')})</summary>${others.map(row).join('')}</details>`;
+    `<div style="margin-top:8px;"><div style="font-size:13px; color:var(--text-dim);">해당하지 않는 상황(${others.join('·')})</div>${others.map(row).join('')}</div>`;
 }
 function renderSummary(){
   const el = document.getElementById('sum-body'); if (!el) return;
@@ -1697,7 +1696,7 @@ function renderSources(){
   const dateOf = k => (macro[k] && macro[k].date) || '';
   ['tech', 'val', 'fear', 'rate', 'macro'].forEach(k => {
     const el = ensureSrc(document.getElementById('exp-' + k), k);
-    if (el) el.innerHTML = '<details><summary>출처·수집 방법</summary>' + srcHtml(k, k === 'tech' ? (snap.sp500_date || '') : '') + '</details>';
+    if (el) el.innerHTML = srcHtml(k, k === 'tech' ? (snap.sp500_date || '') : '');
   });
   [['us2y', 'us_2y'], ['us10y', 'us_10y'], ['dxy', 'dxy'], ['usdkrw', 'usd_krw'], ['vix', 'vix'], ['hy', 'hy_oas']].forEach(([id, k]) => {
     const el = ensureSrc(document.getElementById(id + '-cap'), k);
