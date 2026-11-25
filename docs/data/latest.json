@@ -1,17 +1,17 @@
 {
-  "generated_at_utc": "2026-11-24T05:26:50.546785+00:00",
+  "generated_at_utc": "2026-11-25T04:29:30.054730+00:00",
   "rules_version": "v5-baa-credit-2026-10-31",
   "score_status": "complete",
   "missing_items": [],
   "inputs": {
-    "drawdown_pct": 7.44040732974216,
+    "drawdown_pct": 7.901852531500797,
     "cape_percentile": 91.94444444444444,
-    "fear_greed": 16.9658627087199,
-    "credit_spread_percentile": 13.658154779375794,
-    "hy_3y_percentile": 96.42401021711366,
+    "fear_greed": 17.4212454212454,
+    "credit_spread_percentile": 12.365486206221874,
+    "hy_3y_percentile": 94.6360153256705,
     "ism": 6.3,
     "net_flow_index": null,
-    "vix": 26.6200008392334
+    "vix": 26.360000610351562
   },
   "data_quality": {
     "drawdown_pct": "live",
@@ -24,10 +24,9 @@
     "vix": "live"
   },
   "price_snapshot": {
-    "sp500_close": 7237.169921875,
-    "sp500_date": "2026-11-23",
+    "sp500_close": 7201.08984375,
+    "sp500_date": "2026-11-24",
     "sp500_series": [
-      7686.1401,
       7631.4702,
       7666.6001,
       7747.71,
@@ -86,13 +85,13 @@
       7323.6299,
       7175.8301,
       6910.3901,
-      7237.1699
+      7237.1699,
+      7201.0898
     ],
-    "sp500_series_start": "2026-08-31",
-    "nasdaq100_close": 26746.099609375,
-    "nasdaq100_date": "2026-11-23",
+    "sp500_series_start": "2026-09-01",
+    "nasdaq100_close": 26214.16796875,
+    "nasdaq100_date": "2026-11-24",
     "nasdaq100_series": [
-      29456.9707,
       29077.2207,
       29143.3301,
       29482.3203,
@@ -151,17 +150,17 @@
       27116.2598,
       26517.0508,
       25028.9805,
-      26746.0996
+      26746.0996,
+      26214.168
     ],
-    "nasdaq100_series_start": "2026-08-31",
-    "nasdaq100_drawdown_pct": 14.342504429712545,
+    "nasdaq100_series_start": "2026-09-01",
+    "nasdaq100_drawdown_pct": 16.046077392349712,
     "macro": {
       "usd_krw": {
-        "value": 1342.6800537109375,
-        "date": "2026-11-24",
-        "series_start": "2026-09-02",
+        "value": 1343.1400146484375,
+        "date": "2026-11-25",
+        "series_start": "2026-09-03",
         "series": [
-          1372.86,
           1358.39,
           1355.41,
           1345.0601,
@@ -220,11 +219,12 @@
           1330.4,
           1334.79,
           1344.3101,
-          1342.6801
+          1341.02,
+          1343.14
         ]
       },
       "dxy": {
-        "value": 104.30699920654297,
+        "value": 103.97599792480469,
         "date": "2026-11-24",
         "series_start": "2026-09-01",
         "series": [
@@ -287,15 +287,14 @@
           103.9,
           103.81,
           104.32,
-          104.307
+          103.976
         ]
       },
       "us_2y": {
         "value": 4.63,
-        "date": "2026-11-20",
-        "series_start": "2026-08-26",
+        "date": "2026-11-23",
+        "series_start": "2026-08-27",
         "series": [
-          4.19,
           4.2,
           4.34,
           4.34,
@@ -354,15 +353,15 @@
           4.8,
           4.8,
           4.76,
+          4.63,
           4.63
         ]
       },
       "us_10y": {
         "value": 4.92,
-        "date": "2026-11-20",
-        "series_start": "2026-08-26",
+        "date": "2026-11-23",
+        "series_start": "2026-08-27",
         "series": [
-          4.66,
           4.67,
           4.73,
           4.75,
@@ -421,15 +420,15 @@
           5.1,
           5.07,
           5.04,
+          4.92,
           4.92
         ]
       },
       "hy_oas": {
-        "value": 3.76,
-        "date": "2026-11-20",
-        "series_start": "2026-08-31",
+        "value": 3.63,
+        "date": "2026-11-23",
+        "series_start": "2026-09-01",
         "series": [
-          2.63,
           2.65,
           2.66,
           2.65,
@@ -488,15 +487,15 @@
           3.43,
           3.47,
           3.52,
-          3.76
+          3.76,
+          3.63
         ]
       },
       "vix": {
-        "value": 26.6200008392334,
-        "date": "2026-11-23",
-        "series_start": "2026-09-01",
+        "value": 26.360000610351562,
+        "date": "2026-11-24",
+        "series_start": "2026-09-02",
         "series": [
-          16.34,
           15.2,
           14.32,
           14.53,
@@ -555,19 +554,20 @@
           24.56,
           28.44,
           35.89,
-          26.62
+          26.62,
+          26.36
         ]
       }
     }
   },
   "result": {
-    "total_score": 32.1,
+    "total_score": 32.3,
     "sub_scores": {
       "technical": {
-        "score": 3.5,
+        "score": 3.7,
         "max_score": 30,
-        "reason": "최근 1년 최고가보다 7.4% 낮은 가격이에요",
-        "raw_value": 7.44040732974216
+        "reason": "최근 1년 최고가보다 7.9% 낮은 가격이에요",
+        "raw_value": 7.901852531500797
       },
       "valuation": {
         "score": 1.6,
@@ -579,13 +579,13 @@
         "score": 20,
         "max_score": 20,
         "reason": "지금 투자 심리는 '극단적 공포' 상태예요",
-        "raw_value": 16.9658627087199
+        "raw_value": 17.4212454212454
       },
       "rate_credit": {
-        "score": 1.4,
+        "score": 1.2,
         "max_score": 10,
-        "reason": "회사채 시장 분위기는 안정적인 편이에요(1986년 이후 하위 14%)",
-        "raw_value": 13.658154779375794
+        "reason": "회사채 시장 분위기는 안정적인 편이에요(1986년 이후 하위 12%)",
+        "raw_value": 12.365486206221874
       },
       "macro": {
         "score": 2.5,
@@ -606,8 +606,8 @@
     "drawdown_pct": {
       "high": 7818.93017578125,
       "high_date": "2026-10-06",
-      "close": 7237.169921875,
-      "date": "2026-11-23",
+      "close": 7201.08984375,
+      "date": "2026-11-24",
       "window": 252
     },
     "cape_percentile": {
@@ -621,38 +621,38 @@
       "lagged_percentile": 92.77777777777779
     },
     "fear_greed": {
-      "value": 16.9658627087199,
+      "value": 17.4212454212454,
       "rating": "extreme fear",
-      "timestamp": "2026-11-24T01:00:00+00:00",
+      "timestamp": "2026-11-24T23:59:52+00:00",
       "previous_close": 16.9658627087199,
       "week_ago": 25.9505791505792,
       "month_ago": 16.685714285714287,
       "year_ago": 13.685714285714285
     },
     "credit_spread_percentile": {
-      "value": 1.61,
-      "date": "2026-11-20",
-      "month_ago_value": 1.44,
-      "month_ago_date": "2026-10-21",
+      "value": 1.59,
+      "date": "2026-11-23",
+      "month_ago_value": 1.47,
+      "month_ago_date": "2026-10-23",
       "year_low": 1.39,
       "year_high": 1.85,
       "all_low": 1.16,
       "all_high": 6.16,
       "all_median": 2.13,
       "since": "1986-01-02",
-      "n": 10222
+      "n": 10223
     },
     "hy_3y_percentile": {
-      "value": 3.76,
-      "date": "2026-11-20",
-      "month_ago_value": 3.27,
-      "month_ago_date": "2026-10-21",
+      "value": 3.63,
+      "date": "2026-11-23",
+      "month_ago_value": 3.38,
+      "month_ago_date": "2026-10-23",
       "year_low": 2.6,
       "year_high": 3.76,
       "all_low": 2.59,
       "all_high": 4.61,
       "all_median": 3.02,
-      "since": "2023-11-24",
+      "since": "2023-11-27",
       "n": 784
     },
     "ism": {
@@ -670,7 +670,7 @@
     "worst_yahoo": 7340.52978515625,
     "worst_fred": 7340.53,
     "worst_diff_pct": 0.0,
-    "last_checked_date": "2026-11-20"
+    "last_checked_date": "2026-11-23"
   },
   "reduction_signals": {
     "thresholds": {
@@ -687,16 +687,16 @@
     },
     "R3": {
       "on": false,
-      "value": 13.658154779375794,
+      "value": 12.365486206221874,
       "validated": true
     },
     "R2": {
       "on": false,
       "validated": true,
-      "close": 7237.169921875,
-      "sma200": 7350.104663085937,
+      "close": 7201.08984375,
+      "sma200": 7351.286013183594,
       "high": 7818.93017578125,
-      "drawdown_pct": 7.44040732974216
+      "drawdown_pct": 7.901852531500797
     }
   },
   "failure_reasons": {}
