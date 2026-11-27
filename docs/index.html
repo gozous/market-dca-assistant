@@ -82,6 +82,7 @@
   .facts{grid-column:1 / -1; font-size:13px; line-height:1.7; color:var(--text); margin-top:8px; padding:8px 10px; border-left:3px solid var(--border,#8884); background:rgba(127,127,127,.08); border-radius:4px;}
   .facts b{font-weight:600;}
   .src{grid-column:1 / -1; font-size:12px; line-height:1.7; color:var(--text-dim); margin-top:8px;}
+  .mkt-crit{font-size:12px; color:var(--text-dim); margin-top:2px;}
   .exp-more{grid-column:1 / -1; margin-top:6px; font-size:12.5px; color:var(--text-dim);}
   .exp-more summary,.src summary{cursor:pointer;}
   .exp-more .explain{margin-top:6px; padding-top:6px;}
@@ -389,7 +390,7 @@
     <div class="panel" id="limits-panel" style="margin-top:16px;">
     <div class="panel-label">한계 — 위 내용을 읽을 때 꼭 알아둘 점</div>
     <div class="notice" style="font-size:12px; line-height:1.8; color:var(--text-dim);">
-      1) 안정·주의·경계 구간(낙폭 5%·10%, VIX 20·30, 10년물 5% 이상 또는 20거래일 +0.25·+0.5%p, 달러지수 20거래일 +1.5%·+3%, 백분위 70·90)과 대응 계획의 행동은 이 프로그램을 쓰는 분의 원칙에 맞춰 정한 기본값이고, 과거 검증을 거치지 않았어요.<br>
+      1) 기준 미만·주의·경계 구간(낙폭 5%·10%, VIX 20·30, 10년물 5% 이상 또는 20거래일 +0.25·+0.5%p, 달러지수 20거래일 +1.5%·+3%, 백분위 70·90)과 대응 계획의 행동은 이 프로그램을 쓰는 분의 원칙에 맞춰 정한 기본값이고, 과거 검증을 거치지 않았어요.<br>
       2) 조정장 판정·신용 불안 판정의 과거 검증은 큰 하락 4번뿐이라 앞으로도 같다는 보장이 없어요. 현금 이자 0%, 거래비용·세금 제외, 과거 경제지표는 발표 당시 값이 아니라 나중에 수정된 값이에요. 규칙은 매주 첫 거래일 종가로 판정해 다음 거래일에 집행하는 방식으로 검증했어요(화면은 매일 상태를 보여줘요).<br>
       3) 이 프로그램은 뉴스, 연준 금리 전망, 실적·이벤트 일정을 읽지 못해요. 값이 5일 넘게 오래됐거나 없으면 판단하지 않아요.<br>
       4) 미래를 예측하는 것이 아니라 지금 상태를 정리한 AI 참고 자료이고 투자자문이 아니에요. 큰 결정은 자격 있는 전문가와 상의하세요.
@@ -951,7 +952,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-24.4';
+const APP_VERSION = '2026-11-27.1';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1543,7 +1544,8 @@ function marketRead(d){
   const num = v => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) ? null : Number(v);
   const last = (arr, n) => (Array.isArray(arr) && arr.length > n) ? num(arr[arr.length - 1 - n]) : null;
   const items = [];
-  const add = (key, name, sub, level, text) => items.push({key, name, sub, level, text});
+  const CRIT = {sp:'주의: 200일 평균 아래 또는 낙폭 5%↑ · 경계: 낙폭 10%↑', nd:'주의: 낙폭 5%↑ · 경계: 10%↑', vix:'주의: 20↑ · 경계: 30↑', rate:'주의: 5%↑ 또는 20거래일 +0.25%p↑ · 경계: +0.5%p↑', usd:'주의: 20거래일 +1.5%↑ · 경계: +3%↑', credit:'주의: 백분위 70↑ · 경계: 90↑', val:'주의: 백분위 70↑ · 경계: 90↑'};
+  const add = (key, name, sub, level, text) => items.push({key, name, sub, level, text, crit: CRIT[key] || ''});
   const sgn = (v, dg = 1) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(dg);
   /* S&P 500 추세 */
   const r2 = sig.R2 || {}, spS = ps.sp500_series || [];
@@ -1595,7 +1597,7 @@ function marketRead(d){
   const fg = id.fear_greed || {};
   if (num(fg.value) !== null) add('fg', '투자 심리', '공포·탐욕 지수(0~100)', 'si', `${fg.value.toFixed(0)}` + (num(fg.week_ago) !== null ? ` · 일주일 전 ${fg.week_ago.toFixed(0)}` : '') + `(낮을수록 공포, 등급 판정은 하지 않아요)`);
   const graded = items.filter(x => /^s[012]$/.test(x.level)), n2 = graded.filter(x => x.level === 's2').length, n1 = graded.filter(x => x.level === 's1').length;
-  const head = !graded.length ? '판단할 자료가 없어요' : (n2 >= 1 ? '경계할 항목이 있어요' : (n1 >= 3 ? '주의할 항목이 많아요' : (n1 >= 1 ? '대체로 안정적이지만 주의할 항목이 있어요' : '대체로 안정적이에요')));
+  const head = !graded.length ? '판단할 자료가 없어요' : (n2 >= 1 ? '경계 기준에 걸린 항목이 있어요' : (n1 >= 3 ? '주의 기준에 걸린 항목이 많아요' : (n1 >= 1 ? '경계는 없지만 주의 기준에 걸린 항목이 있어요' : '정해 둔 기준에 걸린 항목이 없어요')));
   const caution = n2 >= 1 || n1 >= 3;
   const tip = !graded.length ? '' : (caution ? '시장이 흔들릴 때는 하루 사이 가격 차이가 커요. 비중을 조정한다면 한 번에 하기보다 며칠~몇 주에 나눠서 하는 쪽이 가격 부담을 줄여요.' : '지금 시장 상황이 조정을 막을 만한 이유는 보이지 않아요. 정해 둔 계획대로 조정해도 돼요.');
   return {items, head, n1, n2, tip, caution, graded: graded.length, alertNames: graded.filter(x => x.level === 's2').map(x => x.name).join(', ')};
@@ -1604,9 +1606,9 @@ function renderMarket(){
   const el = document.getElementById('mkt-body'); if (!el) return;
   const m = marketRead(todayData);
   if (!m) { el.textContent = '시장 데이터를 불러오지 못했어요. 다음 자동 실행 후 다시 확인하세요.'; return; }
-  const lab = {s0: '안정', s1: '주의', s2: '경계', si: '참고', sn: '판단 불가'};
+  const lab = {s0: '기준 미만', s1: '주의', s2: '경계', si: '참고', sn: '판단 불가'};
   el.innerHTML = `<div class="mkt-head" style="color:var(--text);">${m.head}${m.graded ? ` <span style="font-size:13px; font-weight:400; color:var(--text-dim);">(경계 ${m.n2}개${m.n2 ? '[' + m.alertNames + ']' : ''} · 주의 ${m.n1}개 · 판정 ${m.graded}개 중)</span>` : ''}</div>` +
-    m.items.map(x => `<div class="mkt-row"><div class="nm">${x.name}<span class="sub">${x.sub}</span></div><div><span class="mkt-b ${x.level}">${lab[x.level]}</span>${x.text}</div></div>`).join('');
+    m.items.map(x => `<div class="mkt-row"><div class="nm">${x.name}<span class="sub">${x.sub}</span></div><div><span class="mkt-b ${x.level}">${lab[x.level]}</span>${x.text}${x.crit ? `<div class="mkt-crit">${x.crit} (표시용 기준, 검증 안 됨)</div>` : ''}</div></div>`).join('');
 }
 function planState(){
   const m = marketRead(todayData), sig = todayData && todayData.reduction_signals, r2 = (sig && sig.R2) || {};
@@ -1615,7 +1617,7 @@ function planState(){
   return {m, r2, okR2, cur: r2.on === true ? 'C' : (m.caution ? 'B' : 'A'), f0: v => Number(v).toFixed(0), trig: okR2 ? Number(r2.high) * 0.9 : null};
 }
 const PLAN_ROWS = {
-  A: ['안정 — 경계·주의 항목이 거의 없을 때', '기존 계획대로 진행해요.'],
+  A: ['기준 미만 — 경계·주의 기준에 걸린 항목이 거의 없을 때', '기존 계획대로 진행해요.'],
   B: ['조정·흔들림 — 경계나 주의 항목이 있을 때(조정장 판정은 해당 없음)', '남은 투입은 <b>기존 일정을 유지</b>하고, 앞당기거나 한꺼번에 넣지 않아요. 비중을 맞추는 거래는 한도를 넘었을 때만 하고, 며칠~몇 주에 나눠서 해요.'],
   C: ['조정장 구간 — 조정장 판정에 해당할 때', '<b>손절하지 않고 계획을 유지</b>해요. 투입 금액을 늘리지도 줄이지도 않아요. 이미 대부분 투입했다면 남은 매수보다 <b>지금 보유한 만큼의 하락을 버틸 수 있는지</b>가 핵심이니 감내력을 다시 확인하세요.'],
   D: ['비중이 한도를 넘었을 때(프로그램은 보유 비중을 몰라 직접 확인)', '월 1회 비중을 확인해요. 주식 대 현금이 목표에서 <b>절대 ±5%p</b>(목표 70%면 65~75%)를 벗어나면 <b>목표(70%)로</b> 나눠서 되돌리고, 안이면 거래하지 않아요. 개별 종목은 목표의 25% 정도를 기준으로 써요. 허용 범위가 너무 넓으면(예: 상대 20%는 주식이 두 배 넘게 올라야 작동) 사실상 리밸런싱을 하지 않게 돼요.']
@@ -1646,7 +1648,7 @@ function renderSummary(){
   if (!st) { el.textContent = '시장 데이터가 없어 요약을 표시하지 않아요. 다음 자동 실행 후 다시 확인하세요.'; return; }
   const {m, r2, okR2, cur, f0, trig} = st;
   const act = {A: '기존 계획대로 진행해요.', B: '남은 투입은 기존 일정을 유지하고, 앞당기거나 한꺼번에 넣지 않아요.', C: '손절하지 않고 계획을 유지해요(감내력을 다시 확인하세요).'};
-  const nm = {A: '안정', B: '조정·흔들림', C: '조정장 구간'};
+  const nm = {A: '기준 미만', B: '조정·흔들림', C: '조정장 구간'};
   const asof = todayData.price_snapshot && todayData.price_snapshot.sp500_date ? ` (S&P 500 종가 ${esc(todayData.price_snapshot.sp500_date)} 기준)` : '';
   el.innerHTML = `<div><b>지금 상태</b>${asof}: ${m.head} <span style="color:var(--text-dim); font-size:13px;">(경계 ${m.n2}개${m.n2 ? '[' + m.alertNames + ']' : ''} · 주의 ${m.n1}개)</span></div>` +
     `<div><b>지금 할 일</b>: ${nm[cur]} — ${act[cur]}</div>` +
