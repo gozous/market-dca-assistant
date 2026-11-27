@@ -82,6 +82,7 @@
   .facts{grid-column:1 / -1; font-size:13px; line-height:1.7; color:var(--text); margin-top:8px; padding:8px 10px; border-left:3px solid var(--border,#8884); background:rgba(127,127,127,.08); border-radius:4px;}
   .facts b{font-weight:600;}
   .src{grid-column:1 / -1; font-size:12px; line-height:1.7; color:var(--text-dim); margin-top:8px;}
+  .mkt-mean{margin-top:4px; color:var(--text);}
   .mkt-crit{font-size:12px; color:var(--text-dim); margin-top:2px;}
   .exp-more{grid-column:1 / -1; margin-top:6px; font-size:12.5px; color:var(--text-dim);}
   .exp-more summary,.src summary{cursor:pointer;}
@@ -952,7 +953,7 @@ function setUpdatedBadge(payload){
 }
 
 // 화면 코드 버전. 화면(index.html)을 고칠 때마다 올린다. 사이트 맨 위의 이 값이 새 번호로 보이면 새 화면이 배포된 것이다.
-const APP_VERSION = '2026-11-27.2';
+const APP_VERSION = '2026-11-27.3';
 function fmtKst(iso){
   const t = new Date(iso); if (isNaN(t)) return '—';
   const p = new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).formatToParts(t)
@@ -1596,19 +1597,61 @@ function marketRead(d){
   /* 심리 */
   const fg = id.fear_greed || {};
   if (num(fg.value) !== null) add('fg', '투자 심리', '공포·탐욕 지수(0~100)', 'si', `${fg.value.toFixed(0)}` + (num(fg.week_ago) !== null ? ` · 일주일 전 ${fg.week_ago.toFixed(0)}` : '') + `(낮을수록 공포, 등급 판정은 하지 않아요)`);
+  /* ---- 항목별 의미(표시 기준과 계산값에서만 만든다. 예측·뉴스 해석 없음) ---- */
+  const MEAN = {}, f1m = v => Number(v).toFixed(1);
+  const hi = num(r2.high), trigP = hi !== null ? hi * 0.9 : null;
+  if (items.find(x => x.key === 'sp' && x.level !== 'sn')) {
+    const upM = r2.close >= r2.sma200, ddM = r2.drawdown_pct;
+    MEAN.sp = r2.on === true ? `조정장 판정에 이미 해당해요. 종가가 ${trigP !== null ? trigP.toFixed(0) + ' 이상으로 ' : ''}회복하면 해당 없음이 돼요.`
+      : !upM && trigP !== null ? `조정장 판정(고점 대비 −10%)까지 ${f1m(10 - ddM)}%p 남았어요. 종가가 ${trigP.toFixed(0)} 아래로 마감하면 해당돼요.`
+      : upM ? '200일 평균 위라서, 낙폭이 커져도 조정장 판정은 평균 아래로 내려와야 해당돼요.' : '';
+  }
+  if (items.find(x => x.key === 'nd' && x.level !== 'sn') && spdd !== null) {
+    const df = nd - spdd;
+    MEAN.nd = df >= 3 ? `S&P 500보다 ${f1m(df)}%p 더 많이 내렸어요. 지수 사이 비율을 따로 정해 뒀다면, 나스닥 쪽이 더 많이 내렸다는 점을 같이 보세요.` : `낙폭이 S&P 500과 비슷해요(차이 ${f1m(Math.abs(df))}%p).`;
+  }
+  if (items.find(x => x.key === 'vix' && x.level !== 'sn')) {
+    const v = vx.value, p5v = last(vx.series, 5), tr = p5v === null ? '' : (v < p5v ? '5거래일 전보다 내려왔지만 ' : v > p5v ? '5거래일 전보다 올랐고 ' : '');
+    MEAN.vix = v >= 20 ? `${tr}변동이 큰 구간이에요. 거래를 한다면 며칠에 나눠서 하는 쪽이 가격 부담이 적어요.` : '변동이 평소 수준이라 거래를 나눠야 할 이유는 크지 않아요.';
+  }
+  const cvM = num(id.cape_percentile && id.cape_percentile.value);
+  if (items.find(x => x.key === 'rate' && x.level !== 'sn')) {
+    if (cvM !== null && cvM > 0) { const eyM = 100 / cvM, gap = t10.value - eyM;
+      MEAN.rate = gap > 0 ? `10년 국채가 주식 이익수익률(약 ${f1m(eyM)}%)보다 ${f1m(gap)}%p 높아요. 현금·채권 이자가 상대적으로 높은 구간이라, 서둘러 현금을 줄여야 할 근거는 약해요.`
+        : `10년 국채가 주식 이익수익률(약 ${f1m(eyM)}%)보다 ${f1m(-gap)}%p 낮아요. 주식의 상대 매력이 큰 구간이에요.`; }
+  }
+  if (items.find(x => x.key === 'usd' && x.level !== 'sn')) {
+    const p20d = last(dx.series, 20), chd = p20d ? (dx.value / p20d - 1) * 100 : null;
+    if (chd !== null) MEAN.usd = chd >= 1.5 ? '달러 강세 흐름이에요. 달러 환전은 한 번에 하지 말고 나눠서 하세요.' : chd <= -1.5 ? '달러 약세 흐름이에요. 원화 환산 수익률에는 불리하지만, 환율 방향으로 거래 시점을 바꾸지는 마세요.' : '환율이 크게 움직이지 않아 환전 시점을 따로 정할 필요는 없어요.';
+  }
+  if (items.find(x => x.key === 'credit' && x.level !== 'sn')) {
+    MEAN.credit = cr.value >= 90 ? '신용 스트레스가 큰 구간이에요. 주가 하락이 신용 불안과 함께 오는 모습이에요.' : cr.value >= 70 ? '신용 시장이 불안해지는 중이에요.' : '신용 시장에는 스트레스가 없어요. 지금의 하락이 신용 위기와 함께 오는 모습은 아니에요.';
+  }
+  if (items.find(x => x.key === 'val' && x.level !== 'sn')) {
+    MEAN.val = cp.value >= 90 ? '역사적으로 비싼 구간이에요. 하락했어도 아직 싸다고 보기 어려워서, ‘저점이니 공격적으로’의 근거로는 약해요.' : cp.value >= 70 ? '다소 비싼 편이에요. 하락했어도 싼 구간까지는 아니에요.' : '역사적으로 비싸지 않아, 하락 구간의 매수 부담이 상대적으로 작아요.';
+  }
+  items.forEach(x => { x.mean = MEAN[x.key] || ''; });
+  /* 종합 해석: 위 항목에서 읽을 수 있는 현재 모습을 한 문장으로 */
+  const sumParts = [];
+  if (num(r2.drawdown_pct) !== null) sumParts.push(r2.drawdown_pct >= 10 || r2.close < r2.sma200 ? `S&P 500은 하락 중(고점 대비 −${f1m(r2.drawdown_pct)}%)` : `S&P 500은 고점 부근(−${f1m(r2.drawdown_pct)}%)`);
+  if (num(vx.value) !== null && fresh(vx.date)) sumParts.push(`변동성은 ${vx.value >= 30 ? '매우 높고' : vx.value >= 20 ? '높고' : '평소 수준이고'}(VIX ${f1m(vx.value)})`);
+  if (num(cr.value) !== null) sumParts.push(`신용 스트레스는 ${cr.value >= 70 ? '커지는 중이고' : '없고'}`);
+  if (num(cp.value) !== null) sumParts.push(`밸류에이션은 ${cp.value >= 90 ? '역사적으로 비싼 편' : cp.value >= 70 ? '다소 비싼 편' : '비싸지 않은 편'}이에요`);
+  const readLine = sumParts.length >= 2 ? sumParts.join(', ').replace(/, ([^,]*)$/, ', $1') + '.' : '';
+  const readTail = MEAN.sp && r2.on !== true && !(r2.close >= r2.sma200) ? ' ' + MEAN.sp : '';
   const graded = items.filter(x => /^s[012]$/.test(x.level)), n2 = graded.filter(x => x.level === 's2').length, n1 = graded.filter(x => x.level === 's1').length;
   const head = !graded.length ? '판단할 자료가 없어요' : (n2 >= 1 ? '경계에 해당하는 항목이 있어요' : (n1 >= 3 ? '주의에 해당하는 항목이 많아요' : (n1 >= 1 ? '경계는 없지만 주의에 해당하는 항목이 있어요' : '경계·주의에 해당하는 항목이 없어요')));
   const caution = n2 >= 1 || n1 >= 3;
   const tip = !graded.length ? '' : (caution ? '시장이 흔들릴 때는 하루 사이 가격 차이가 커요. 비중을 조정한다면 한 번에 하기보다 며칠~몇 주에 나눠서 하는 쪽이 가격 부담을 줄여요.' : '지금 시장 상황이 조정을 막을 만한 이유는 보이지 않아요. 정해 둔 계획대로 조정해도 돼요.');
-  return {items, head, n1, n2, tip, caution, graded: graded.length, alertNames: graded.filter(x => x.level === 's2').map(x => x.name).join(', ')};
+  return {items, head, n1, n2, tip, caution, readLine: readLine + readTail, graded: graded.length, alertNames: graded.filter(x => x.level === 's2').map(x => x.name).join(', ')};
 }
 function renderMarket(){
   const el = document.getElementById('mkt-body'); if (!el) return;
   const m = marketRead(todayData);
   if (!m) { el.textContent = '시장 데이터를 불러오지 못했어요. 다음 자동 실행 후 다시 확인하세요.'; return; }
   const lab = {s0: '해당 없음', s1: '주의', s2: '경계', si: '참고', sn: '판단 불가'};
-  el.innerHTML = `<div class="mkt-head" style="color:var(--text);">${m.head}${m.graded ? ` <span style="font-size:13px; font-weight:400; color:var(--text-dim);">(경계 ${m.n2}개${m.n2 ? '[' + m.alertNames + ']' : ''} · 주의 ${m.n1}개 · 판정 ${m.graded}개 중)</span>` : ''}</div>` +
-    m.items.map(x => `<div class="mkt-row"><div class="nm">${x.name}<span class="sub">${x.sub}</span></div><div><span class="mkt-b ${x.level}">${lab[x.level]}</span>${x.text}${x.crit ? `<div class="mkt-crit">${x.crit} (표시용 기준, 검증 안 됨)</div>` : ''}</div></div>`).join('');
+  el.innerHTML = (m.readLine ? `<div class="mkt-read" style="margin-bottom:8px; line-height:1.7;"><b>종합 해석</b>: ${m.readLine}</div>` : '') + `<div class="mkt-head" style="color:var(--text);">${m.head}${m.graded ? ` <span style="font-size:13px; font-weight:400; color:var(--text-dim);">(경계 ${m.n2}개${m.n2 ? '[' + m.alertNames + ']' : ''} · 주의 ${m.n1}개 · 판정 ${m.graded}개 중)</span>` : ''}</div>` +
+    m.items.map(x => `<div class="mkt-row"><div class="nm">${x.name}<span class="sub">${x.sub}</span></div><div><span class="mkt-b ${x.level}">${lab[x.level]}</span>${x.text}${x.mean ? `<div class="mkt-mean">→ ${x.mean}</div>` : ''}${x.crit ? `<div class="mkt-crit">${x.crit} (표시용 기준, 검증 안 됨)</div>` : ''}</div></div>`).join('');
 }
 function planState(){
   const m = marketRead(todayData), sig = todayData && todayData.reduction_signals, r2 = (sig && sig.R2) || {};
